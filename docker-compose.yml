@@ -1,0 +1,48 @@
+version: '3.8'
+services:
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: proyecto_iso
+      MYSQL_USER: proyecto_user
+      MYSQL_PASSWORD: change_me
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+
+  # Optional backend-js service example
+  backend-js:
+    build: ./backend-js
+    command: node src/index.js
+    environment:
+      - NODE_ENV=development
+      - DB_HOST=mysql
+      - DB_USER=proyecto_user
+      - DB_PASS=change_me
+      - DB_NAME=proyecto_iso
+    ports:
+      - "3001:3001"
+    depends_on:
+      - mysql
+
+  # Optional backend-py service example
+  backend-py:
+    build: ./backend-py
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    environment:
+      - ENV=development
+      - DB_HOST=mysql
+      - DB_USER=proyecto_user
+      - DB_PASS=change_me
+      - DB_NAME=proyecto_iso
+    ports:
+      - "8000:8000"
+    depends_on:
+      - mysql
+
+volumes:
+  db_data:
