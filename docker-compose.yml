@@ -17,32 +17,32 @@ services:
   # Optional backend-js service example
   backend-js:
     build: ./backend-js
-    command: node src/index.js
     environment:
       - NODE_ENV=development
       - DB_HOST=mysql
       - DB_USER=proyecto_user
-      - DB_PASS=change_me
+      - DB_PASSWORD=change_me
       - DB_NAME=proyecto_iso
+      - PORT=3000
+      - JWT_SECRET=dev_jwt_secret
+      - SEED_SECRET=dev_seed_secret
     ports:
-      - "3001:3001"
+      - "3000:3000"
     depends_on:
       - mysql
 
   # Optional backend-py service example
-  backend-py:
-    build: ./backend-py
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+  # backend-py removed: Python backend no longer used
+
+  frontend:
+    build: ./frontend
+    command: npm run dev -- --host 0.0.0.0
     environment:
-      - ENV=development
-      - DB_HOST=mysql
-      - DB_USER=proyecto_user
-      - DB_PASS=change_me
-      - DB_NAME=proyecto_iso
+      - VITE_BACKEND_URL=http://localhost:3000
     ports:
-      - "8000:8000"
+      - "5173:5173"
     depends_on:
-      - mysql
+      - backend-js
 
 volumes:
   db_data:

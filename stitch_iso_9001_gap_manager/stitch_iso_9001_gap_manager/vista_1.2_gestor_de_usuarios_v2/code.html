@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+
+<html class="light" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Vista 1.2: Gestor de Usuarios - Sovereign Archive</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "outline": "#757682",
+                        "on-surface-variant": "#444651",
+                        "surface-variant": "#e0e3e5",
+                        "inverse-on-surface": "#eff1f3",
+                        "surface-container-highest": "#e0e3e5",
+                        "tertiary-fixed": "#ffdbcb",
+                        "primary-fixed-dim": "#b6c4ff",
+                        "surface-container-lowest": "#ffffff",
+                        "tertiary-container": "#6e2c00",
+                        "surface-dim": "#d8dadc",
+                        "error-container": "#ffdad6",
+                        "on-tertiary-fixed": "#341100",
+                        "secondary-container": "#d5e3fc",
+                        "outline-variant": "#c5c5d3",
+                        "on-primary-fixed": "#00164e",
+                        "tertiary-fixed-dim": "#ffb691",
+                        "secondary": "#515f74",
+                        "on-tertiary": "#ffffff",
+                        "on-error-container": "#93000a",
+                        "on-secondary-fixed": "#0d1c2e",
+                        "primary-container": "#1e3a8a",
+                        "on-secondary-fixed-variant": "#3a485b",
+                        "surface-bright": "#f7f9fb",
+                        "surface": "#f7f9fb",
+                        "primary": "#00236f",
+                        "surface-container": "#eceef0",
+                        "on-surface": "#191c1e",
+                        "on-error": "#ffffff",
+                        "on-primary-container": "#90a8ff",
+                        "surface-tint": "#4059aa",
+                        "surface-container-low": "#f2f4f6",
+                        "inverse-surface": "#2d3133",
+                        "inverse-primary": "#b6c4ff",
+                        "background": "#f7f9fb",
+                        "secondary-fixed-dim": "#b9c7df",
+                        "secondary-fixed": "#d5e3fc",
+                        "on-primary-fixed-variant": "#264191",
+                        "on-background": "#191c1e",
+                        "on-secondary": "#ffffff",
+                        "on-tertiary-fixed-variant": "#773205",
+                        "surface-container-high": "#e6e8ea",
+                        "primary-fixed": "#dce1ff",
+                        "on-secondary-container": "#57657a",
+                        "tertiary": "#4b1c00",
+                        "on-primary": "#ffffff",
+                        "error": "#ba1a1a",
+                        "on-tertiary-container": "#f39461"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "fontFamily": {
+                        "headline": ["Inter"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface">
+<!-- SideNavBar Shell -->
+<aside class="h-screen w-64 fixed left-0 top-0 bg-slate-50 dark:bg-slate-950 flex flex-col py-4 border-r border-slate-200 dark:border-slate-800 z-50">
+<div class="mb-10 px-6">
+<h1 class="text-lg font-black text-blue-900 dark:text-blue-400">GAP Análisis</h1>
+<p class="text-[10px] font-medium text-slate-500 uppercase tracking-widest mt-1">ISO 9001:2015 Portal</p>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 py-3 text-slate-600 dark:text-slate-400 font-sans tracking-tight text-sm pl-6 hover:bg-slate-100 dark:hover:bg-slate-900 hover:text-blue-800 dark:hover:text-blue-300 transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span>Panel Principal</span>
+</a>
+<a class="flex items-center gap-3 py-3 text-slate-600 dark:text-slate-400 font-sans tracking-tight text-sm pl-6 hover:bg-slate-100 dark:hover:bg-slate-900 hover:text-blue-800 dark:hover:text-blue-300 transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="workspaces">workspaces</span>
+<span>Espacios de Trabajo</span>
+</a>
+<!-- Active Tab: Users / Usuarios -->
+<a class="flex items-center gap-3 py-3 text-blue-900 dark:text-blue-400 font-bold border-l-4 border-blue-900 dark:border-blue-500 pl-6 bg-slate-100 dark:bg-slate-900" href="#">
+<span class="material-symbols-outlined" data-icon="group">group</span>
+<span>Usuarios</span>
+</a>
+</nav>
+</aside>
+<!-- TopNavBar Shell -->
+<header class="fixed top-0 right-0 left-64 h-16 z-40 bg-white/80 dark:bg-slate-900/80 border-b border-slate-100/50 dark:border-slate-800/50 shadow-sm dark:shadow-none backdrop-blur-md flex justify-between items-center px-6 w-auto">
+<div class="flex items-center gap-4 flex-1">
+<!-- Search bar removed from top header -->
+</div>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-4">
+<button class="p-2 text-slate-600 hover:text-primary transition-colors relative">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full"></span>
+</button>
+</div>
+<div class="h-8 w-[1px] bg-outline-variant/30"></div>
+<div class="flex items-center gap-3">
+<div class="text-right">
+<p class="text-xs font-bold text-blue-900 dark:text-slate-100">Usuario Administrador</p>
+<p class="text-[10px] text-slate-500">Gerente ISO</p>
+</div>
+<img alt="Admin User Profile" class="w-10 h-10 rounded-full border-2 border-white shadow-sm object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAk1qnFXvx2IoDuczDhWJkWVESYy5TE3QslQ7lLN_wK2mSq-fECLo__CIRcSZ9qquBFK096gyN8GTaDjB5bvXsaYKW9sTBEUaAvik7tfGQGgqL6M4CsgFh1IMVrRDE5cszqKu7N_yHYuphXAAh5mH5jOypu5K4QlG5LaTadxijQEyEl8erLBYATkl5xz9eBSPYsRwBnY0FhBB5En2Ur0sJ4x-LJkBmwJwOuGKLVE_hJRlErysbpf7UcOcmK9iKI4fVZD5SIS7A3KsQA"/>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="ml-64 pt-16 min-h-screen">
+<div class="p-8 max-w-7xl mx-auto">
+<!-- Page Header Section -->
+<div class="flex justify-between items-end mb-8">
+<div>
+<h2 class="text-3xl font-black tracking-tight text-blue-900 mb-1">Gestor de Usuarios</h2>
+<p class="text-on-secondary-fixed-variant font-medium">Administración de accesos y perfiles del sistema ISO 9001.</p>
+</div>
+<button class="flex items-center gap-2 bg-gradient-to-r from-primary to-primary-container text-white px-6 py-3 rounded-xl font-bold text-sm hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-base">person_add</span>
+                    Nuevo Usuario
+                </button>
+</div>
+<!-- Dashboard Stats -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+<div class="bg-surface-container-lowest p-6 rounded-xl relative overflow-hidden group">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-primary"></div>
+<p class="text-xs font-bold text-on-secondary-container uppercase tracking-wider mb-2">Total Usuarios</p>
+<h3 class="text-4xl font-black text-primary tracking-tighter">148</h3>
+<div class="mt-4 flex items-center gap-1 text-[10px] font-bold text-primary-container">
+<span class="material-symbols-outlined text-xs">trending_up</span>
+                        +12 este mes
+                    </div>
+</div>
+</div>
+<!-- Search Bar in Main Content -->
+<div class="mb-6 relative max-w-md">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline text-lg">search</span>
+<input class="w-full bg-surface-container-lowest border border-outline-variant/30 rounded-full py-3 pl-12 pr-4 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all outline-none" placeholder="Buscar usuarios o roles..." type="text"/>
+</div>
+<!-- Main Data Table Container -->
+<div class="bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm shadow-primary/5">
+<div class="px-6 py-4 bg-surface-container-low flex justify-between items-center">
+<div class="flex items-center gap-4">
+<button class="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-on-secondary-fixed-variant hover:bg-white rounded-lg transition-colors">
+<span class="material-symbols-outlined text-sm">filter_list</span>
+                            Filtrar
+                        </button>
+</div>
+<div class="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
+                        Mostrando 10 de 148 usuarios
+                    </div>
+</div>
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low/50">
+<th class="px-6 py-4 text-[10px] font-bold text-on-secondary-container uppercase tracking-widest">Nombre y Email</th>
+<th class="px-6 py-4 text-[10px] font-bold text-on-secondary-container uppercase tracking-widest">Rol</th>
+<th class="px-6 py-4 text-[10px] font-bold text-on-secondary-container uppercase tracking-widest">Workspace / Cliente</th>
+<th class="px-6 py-4 text-[10px] font-bold text-on-secondary-container uppercase tracking-widest">Estado</th>
+<th class="px-6 py-4 text-[10px] font-bold text-on-secondary-container uppercase tracking-widest text-right">Acciones</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-surface-container">
+<!-- Row 1 -->
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="px-6 py-5">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-primary-fixed flex items-center justify-center text-primary font-bold text-sm">JD</div>
+<div>
+<p class="text-sm font-bold text-blue-900">Julián Domínguez</p>
+<p class="text-xs text-slate-500">j.dominguez@globalcorp.com</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-5">
+<span class="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter bg-primary-container text-on-primary-container">Admin</span>
+</td>
+<td class="px-6 py-5">
+<p class="text-sm font-medium text-on-secondary-fixed-variant">Tenancy Global</p>
+<p class="text-[10px] text-slate-400 font-medium">Sede Principal</p>
+</td>
+<td class="px-6 py-5">
+<div class="flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+<span class="text-xs font-bold text-blue-900">Activo</span>
+</div>
+</td>
+<td class="px-6 py-5 text-right">
+<div class="flex justify-end gap-1">
+<button class="p-2 text-slate-400 hover:text-primary hover:bg-white rounded-lg transition-all" title="Editar">
+<span class="material-symbols-outlined text-xl">edit</span>
+</button>
+<button class="flex items-center gap-1.5 px-3 py-1.5 bg-tertiary-container text-on-tertiary-container rounded-lg text-[10px] font-bold hover:opacity-90 transition-all uppercase tracking-widest" title="Re-send Invitation"><span class="material-symbols-outlined text-sm">forward_to_inbox</span>Re-enviar</button><button class="p-2 text-slate-400 hover:text-error hover:bg-white rounded-lg transition-all" title="Eliminar">
+<span class="material-symbols-outlined text-xl">delete</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="px-6 py-5">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-secondary-fixed flex items-center justify-center text-on-secondary-fixed font-bold text-sm">MC</div>
+<div>
+<p class="text-sm font-bold text-blue-900">Mariana Casillas</p>
+<p class="text-xs text-slate-500">m.casillas@logistic-pro.mx</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-5">
+<span class="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter bg-secondary-container text-on-secondary-container">Evaluador</span>
+</td>
+<td class="px-6 py-5">
+<p class="text-sm font-medium text-on-secondary-fixed-variant">Logistic Pro North</p>
+<p class="text-[10px] text-slate-400 font-medium">Cliente Externo</p>
+</td>
+<td class="px-6 py-5">
+<div class="flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+<span class="text-xs font-bold text-blue-900">Activo</span>
+</div>
+</td>
+<td class="px-6 py-5 text-right">
+<div class="flex justify-end gap-1">
+<button class="p-2 text-slate-400 hover:text-primary hover:bg-white rounded-lg transition-all" title="Editar">
+<span class="material-symbols-outlined text-xl">edit</span>
+</button>
+<button class="flex items-center gap-1.5 px-3 py-1.5 bg-tertiary-container text-on-tertiary-container rounded-lg text-[10px] font-bold hover:opacity-90 transition-all uppercase tracking-widest" title="Re-send Invitation"><span class="material-symbols-outlined text-sm">forward_to_inbox</span>Re-enviar</button><button class="p-2 text-slate-400 hover:text-error hover:bg-white rounded-lg transition-all" title="Eliminar">
+<span class="material-symbols-outlined text-xl">delete</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 3 (Pending State) -->
+<tr class="hover:bg-surface-container-low transition-colors group bg-surface-container-low/20">
+<td class="px-6 py-5">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-tertiary-fixed flex items-center justify-center text-tertiary font-bold text-sm">RS</div>
+<div>
+<p class="text-sm font-bold text-blue-900">Roberto Sánchez</p>
+<p class="text-xs text-slate-500">r.sanchez@quality.org</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-5">
+<span class="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter bg-outline-variant/30 text-on-surface-variant">Responsable SGC</span>
+</td>
+<td class="px-6 py-5">
+<p class="text-sm font-medium text-on-secondary-fixed-variant">Sovereign Internal</p>
+<p class="text-[10px] text-slate-400 font-medium">Dpto. Calidad</p>
+</td>
+<td class="px-6 py-5">
+<div class="flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-tertiary"></span>
+<span class="text-xs font-bold text-tertiary">Pendiente</span>
+</div>
+</td>
+<td class="px-6 py-5 text-right">
+<div class="flex justify-end gap-1">
+<button class="flex items-center gap-1.5 px-3 py-1.5 bg-tertiary-container text-on-tertiary-container rounded-lg text-[10px] font-bold hover:opacity-90 transition-all uppercase tracking-widest" title="Re-send Invitation">
+<span class="material-symbols-outlined text-sm">forward_to_inbox</span>
+                                        Re-enviar
+                                    </button>
+<button class="p-2 text-slate-400 hover:text-error hover:bg-white rounded-lg transition-all" title="Eliminar">
+<span class="material-symbols-outlined text-xl">delete</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="px-6 py-5">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-primary-fixed flex items-center justify-center text-primary font-bold text-sm">EA</div>
+<div>
+<p class="text-sm font-bold text-blue-900">Elena Aranda</p>
+<p class="text-xs text-slate-500">earanda@compliance-labs.com</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-5">
+<span class="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter bg-secondary-container text-on-secondary-container">Evaluador</span>
+</td>
+<td class="px-6 py-5">
+<p class="text-sm font-medium text-on-secondary-fixed-variant">Compliance Labs</p>
+<p class="text-[10px] text-slate-400 font-medium">Proveedor Estándar</p>
+</td>
+<td class="px-6 py-5">
+<div class="flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+<span class="text-xs font-bold text-blue-900">Activo</span>
+</div>
+</td>
+<td class="px-6 py-5 text-right">
+<div class="flex justify-end gap-1">
+<button class="p-2 text-slate-400 hover:text-primary hover:bg-white rounded-lg transition-all" title="Editar">
+<span class="material-symbols-outlined text-xl">edit</span>
+</button>
+<button class="flex items-center gap-1.5 px-3 py-1.5 bg-tertiary-container text-on-tertiary-container rounded-lg text-[10px] font-bold hover:opacity-90 transition-all uppercase tracking-widest" title="Re-send Invitation"><span class="material-symbols-outlined text-sm">forward_to_inbox</span>Re-enviar</button><button class="p-2 text-slate-400 hover:text-error hover:bg-white rounded-lg transition-all" title="Eliminar">
+<span class="material-symbols-outlined text-xl">delete</span>
+</button>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+<!-- Pagination Subtle Footer -->
+<div class="px-8 py-6 bg-surface-container-low/30 flex justify-between items-center">
+<p class="text-xs font-medium text-slate-500">Página 1 de 15</p>
+<div class="flex gap-2">
+<button class="px-4 py-2 bg-white text-slate-400 font-bold text-xs rounded-lg cursor-not-allowed opacity-50">Anterior</button>
+<button class="px-4 py-2 bg-white text-primary font-bold text-xs rounded-lg hover:shadow-sm transition-all">Siguiente</button>
+</div>
+</div>
+</div>
+<!-- Contextual Help / ISO Reminder -->
+<div class="mt-12 p-6 bg-primary/5 rounded-2xl flex items-start gap-4">
+<div class="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">info</span>
+</div>
+<div>
+<h4 class="text-sm font-black text-blue-900 uppercase tracking-wider mb-1">Nota de Cumplimiento ISO 9001</h4>
+<p class="text-xs leading-relaxed text-on-secondary-fixed-variant max-w-2xl">
+                        Asegúrese de que todos los usuarios con roles de 'Admin' o 'Responsable SGC' hayan completado su capacitación de seguridad de la información. El sistema audita automáticamente todos los cambios de roles y accesos para cumplir con la cláusula 7.2 de Competencia.
+                    </p>
+</div>
+</div>
+</div>
+</main>
+</body></html>

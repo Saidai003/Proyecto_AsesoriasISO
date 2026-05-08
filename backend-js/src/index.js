@@ -1,12 +1,49 @@
 require('dotenv').config();
-const express = require('express')
-const app = express()
-const port = process.env.PORT || 3001
+const express = require('express');
+const bcrypt = require('bcryptjs');
+const {pool, testConnection} = require('./db');
 
-app.use(express.json())
+const app = express();
+const PORT = process.env.PORT || 3000;
 
-app.get('/api/ping', (req, res) => {
-  res.json({ pong: true, env: process.env.NODE_ENV || 'development' })
+const cookieParser = require('cookie-parser')
+const { signAccessToken, createRefreshSession, revokeRefreshSession, getSession, requireAuth, requireRole } = require('./auth');
+app.use(cookieParser());
+
+// Middleware
+app.use(express.json());
+
+// Simple CORS middleware for local development (moved to middleware file)
+const devCors = require('./middleware/cors');
+app.use(devCors);
+
+// Test database connection
+testConnection().then(() => console.log('DB connection OK')).catch(err => console.error('DB connection failed', err));
+
+// Mount feature routers (routes are implemented in src/routes/*)
+const authRouter = require('./routes/auth');
+const usersRouter = require('./routes/users');
+const operationalRouter = require('./routes/operational');
+const seedRouter = require('./routes/seed');
+
+app.use('/auth', authRouter);
+app.use('/api/users', usersRouter);
+app.use('/api/operational', operationalRouter);
+app.use('/seed', seedRouter); // development-only seed endpoint
+
+app.get('/', (req, res) => {
+    res.send('Hello, World!');
 })
 
-app.listen(port, () => console.log(`backend-js running on ${port}`))
+// Start server
+app.listen(PORT, () => {
+    console.log(`Server listening on port ${PORT}`);
+});
+
+// Basic graceful shutdown
+process.on('SIGINT', () => {
+    console.log('Shutting down server...');
+    process.exit();
+});
+
+module.exports = app;
