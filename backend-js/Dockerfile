@@ -3,4 +3,5 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm install --only=production || true
 COPY . .
-CMD ["node", "src/index.js"]
+RUN chmod +x ./scripts/wait-for-db.sh || true
+CMD ["sh", "-c", "./scripts/wait-for-db.sh && node src/index.js"]
