@@ -1,0 +1,3 @@
+Admin: email admin@demo.local — contraseña Password123!
+Evaluador: email evaluador@demo.local — contraseña Password123!
+Responsable SGC: email responsable@demo.local — contraseña Password123!

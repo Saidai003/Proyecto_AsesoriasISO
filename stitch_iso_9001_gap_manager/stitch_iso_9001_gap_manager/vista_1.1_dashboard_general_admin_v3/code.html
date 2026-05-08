@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+
+<html class="light" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>GAP Análisis - Dashboard General</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-secondary": "#ffffff",
+                        "surface-container-low": "#f2f4f6",
+                        "on-error-container": "#93000a",
+                        "background": "#f7f9fb",
+                        "outline": "#757682",
+                        "secondary-fixed": "#d5e3fc",
+                        "surface-dim": "#d8dadc",
+                        "on-primary-fixed": "#00164e",
+                        "on-surface": "#191c1e",
+                        "on-secondary-container": "#57657a",
+                        "on-primary-container": "#90a8ff",
+                        "outline-variant": "#c5c5d3",
+                        "on-primary": "#ffffff",
+                        "inverse-on-surface": "#eff1f3",
+                        "on-secondary-fixed-variant": "#3a485b",
+                        "primary-fixed": "#dce1ff",
+                        "error": "#ba1a1a",
+                        "on-primary-fixed-variant": "#264191",
+                        "primary": "#00236f",
+                        "on-tertiary-fixed": "#341100",
+                        "surface-bright": "#f7f9fb",
+                        "secondary-fixed-dim": "#b9c7df",
+                        "inverse-primary": "#b6c4ff",
+                        "on-tertiary": "#ffffff",
+                        "on-tertiary-container": "#f39461",
+                        "primary-container": "#1e3a8a",
+                        "error-container": "#ffdad6",
+                        "surface": "#f7f9fb",
+                        "inverse-surface": "#2d3133",
+                        "secondary-container": "#d5e3fc",
+                        "on-surface-variant": "#444651",
+                        "on-background": "#191c1e",
+                        "tertiary-container": "#6e2c00",
+                        "surface-container": "#eceef0",
+                        "on-secondary-fixed": "#0d1c2e",
+                        "tertiary-fixed": "#ffdbcb",
+                        "surface-tint": "#4059aa",
+                        "primary-fixed-dim": "#b6c4ff",
+                        "on-tertiary-fixed-variant": "#773205",
+                        "surface-container-lowest": "#ffffff",
+                        "tertiary-fixed-dim": "#ffb691",
+                        "on-error": "#ffffff",
+                        "surface-variant": "#e0e3e5",
+                        "surface-container-highest": "#e0e3e5",
+                        "secondary": "#515f74",
+                        "surface-container-high": "#e6e8ea",
+                        "tertiary": "#4b1c00"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "fontFamily": {
+                        "headline": ["Inter"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; background-color: #f7f9fb; color: #191c1e; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .glass-nav { backdrop-filter: blur(20px); }
+        .tonal-gradient { background: linear-gradient(135deg, #00236f 0%, #1e3a8a 100%); }
+    </style>
+</head>
+<body class="flex min-h-screen bg-surface">
+<!-- SideNavBar -->
+<aside class="h-screen w-64 fixed left-0 top-0 bg-slate-50 border-r border-slate-200 flex flex-col py-4 z-50">
+<div class="px-6 mb-8">
+<h1 class="text-lg font-black text-blue-900 leading-tight">GAP Análisis</h1>
+<p class="text-[10px] uppercase tracking-widest text-slate-500 font-bold">ISO 9001:2015 Portal</p>
+</div>
+<nav class="flex-1 space-y-1 px-3">
+<a class="flex items-center px-3 py-2 text-blue-900 font-bold border-l-4 border-blue-900 bg-slate-100 transition-all scale-98" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="dashboard">dashboard</span>
+<span class="text-sm font-sans tracking-tight">Panel Principal</span>
+</a>
+<a class="flex items-center px-3 py-2 text-slate-600 hover:bg-slate-100 hover:text-blue-800 transition-all scale-98" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="workspaces">workspaces</span>
+<span class="text-sm font-sans tracking-tight">Espacios de Trabajo</span>
+</a>
+<a class="flex items-center px-3 py-2 text-slate-600 hover:bg-slate-100 hover:text-blue-800 transition-all scale-98" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="group">group</span>
+<span class="text-sm font-sans tracking-tight">Usuarios</span>
+</a>
+</nav>
+</aside>
+<!-- Main Content Area -->
+<main class="ml-64 flex-1 flex flex-col min-h-screen">
+<!-- TopNavBar -->
+<header class="w-full h-16 sticky top-0 z-40 bg-white/80 backdrop-blur-md flex justify-end items-center px-8 shadow-sm">
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-4">
+<button class="p-2 text-slate-500 hover:bg-slate-50 rounded-full relative transition-colors">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full"></span>
+</button>
+</div>
+<div class="h-8 w-[1px] bg-slate-200"></div>
+<div class="flex items-center gap-3 cursor-pointer hover:bg-slate-50 p-1.5 rounded-xl transition-all">
+<div class="text-right hidden sm:block">
+<p class="text-xs font-bold text-blue-900">Usuario Administrador</p>
+<p class="text-[10px] text-slate-500 font-medium">Administrador del Sistema</p>
+</div>
+<img alt="Admin User Profile" class="h-9 w-9 rounded-full object-cover ring-2 ring-blue-900/10" src="https://lh3.googleusercontent.com/aida-public/AB6AXuATRxEjxdpfcS6AHHFbhfOY3FNGR2zp4tksN1eelcewpzRmGiLG_TmxF9lRaCqR7QH7NqFdan69tDA3Wf2V0MPBd3_uYDyhAn8frmeTnDn47SmrPixYuDkDKzPS6Gz9PFOpOfEH3eaNZfNsxO9CZum-EtDrLcRks8PT3ifxGkYlz2klLJyH5Mvg2GD2RhXT1UM2uSJqptkXRRtSPD2yo_CAlHy6oXkoblOzZ53ut2-MibSkQTJnlETQ54dSZinYe8NGlp2yOgsxuzsB"/>
+<span class="material-symbols-outlined text-slate-400" data-icon="expand_more">expand_more</span>
+</div>
+</div>
+</header>
+<!-- Dashboard Content -->
+<div class="p-8 space-y-8">
+<!-- Page Header -->
+<section class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+<div>
+<h2 class="text-3xl font-extrabold tracking-tight text-on-surface">Dashboard General</h2>
+<p class="text-on-secondary-container mt-1 font-medium">Consolidado de auditorías y cumplimiento ISO 9001:2015</p>
+</div>
+<div class="flex items-center gap-3">
+<div class="bg-surface-container-high px-4 py-2.5 rounded-xl flex items-center gap-3 text-sm font-medium text-on-surface-variant cursor-pointer hover:bg-surface-container-highest transition-all">
+<span class="material-symbols-outlined text-lg" data-icon="calendar_today">calendar_today</span>
+<span>Octubre 2023 - Diciembre 2023</span>
+<span class="material-symbols-outlined text-lg" data-icon="arrow_drop_down">arrow_drop_down</span>
+</div>
+<button class="bg-surface-container-lowest p-2.5 rounded-xl text-primary hover:bg-primary hover:text-white border border-outline-variant/20 transition-all shadow-sm">
+<span class="material-symbols-outlined" data-icon="file_download">file_download</span>
+</button>
+</div>
+</section>
+<!-- Metrics Bento Grid -->
+<section class="grid grid-cols-1 md:grid-cols-4 gap-6">
+<!-- Large Metric Card -->
+<div class="md:col-span-2 bg-surface-container-lowest p-8 rounded-xl relative overflow-hidden flex flex-col justify-between group">
+<div class="absolute top-0 left-0 w-1.5 h-full bg-primary"></div>
+<div class="flex justify-between items-start">
+<div>
+<p class="text-xs font-bold uppercase tracking-widest text-on-secondary-container mb-1">TOTAL NO CONFORMIDADES IDENTIFICADAS</p>
+<h3 class="text-6xl font-black text-primary tracking-tighter">142</h3>
+</div>
+</div>
+<div class="mt-8 flex gap-2">
+<div class="h-1 flex-1 bg-primary rounded-full"></div>
+<div class="h-1 flex-1 bg-primary rounded-full"></div>
+<div class="h-1 flex-1 bg-primary/20 rounded-full"></div>
+<div class="h-1 flex-1 bg-primary/20 rounded-full"></div>
+</div>
+</div>
+<!-- Secondary Metric -->
+<div class="bg-surface-container-lowest p-6 rounded-xl flex flex-col justify-between border-l-4 border-secondary-container">
+<div>
+<p class="text-xs font-bold uppercase tracking-widest text-on-secondary-container mb-2">Empresas Activas</p>
+<h3 class="text-4xl font-bold text-on-surface">28</h3>
+</div>
+<div class="flex items-center gap-2 text-primary font-semibold text-sm cursor-pointer hover:underline">
+                        Ver listado completo
+                        <span class="material-symbols-outlined text-sm" data-icon="arrow_forward">arrow_forward</span>
+</div>
+</div>
+<!-- Tertiary Metric -->
+<div class="bg-surface-container-lowest p-6 rounded-xl flex flex-col justify-between border-l-4 border-primary-fixed">
+<div>
+<p class="text-xs font-bold uppercase tracking-widest text-on-secondary-container mb-2">% Avance Global</p>
+<h3 class="text-4xl font-bold text-on-surface">64.2%</h3>
+</div>
+<div class="w-full bg-surface-container-high h-2 rounded-full mt-4">
+<div class="bg-primary h-full rounded-full w-[64.2%] shadow-sm"></div>
+</div>
+</div>
+</section>
+<!-- Search Bar in Content Area -->
+<div class="relative group max-w-2xl">
+<span class="absolute inset-y-0 left-4 flex items-center text-slate-400 group-focus-within:text-blue-900 transition-colors">
+<span class="material-symbols-outlined text-xl" data-icon="search">search</span>
+</span>
+<input class="pl-12 pr-6 py-4 bg-white border border-slate-200 rounded-2xl text-sm w-full focus:ring-4 focus:ring-blue-900/5 focus:border-blue-900/30 transition-all shadow-sm" placeholder="Buscar clientes, auditorías o espacios de trabajo..." type="text"/>
+</div>
+<!-- Clients Table Section -->
+<section class="bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden border border-slate-200/60">
+<div class="px-8 py-6 flex items-center justify-between border-b border-surface-container">
+<h3 class="text-lg font-bold text-on-surface">Empresas en Proceso de Implementación</h3>
+<div class="flex items-center gap-2">
+<button class="text-sm font-semibold text-primary px-4 py-2 hover:bg-slate-50 rounded-lg transition-all">Ver Histórico</button>
+<button class="text-sm font-semibold text-primary border border-primary/10 px-4 py-2 hover:bg-primary hover:text-white rounded-lg transition-all">Filtrar Tabla</button>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low">
+<th class="px-8 py-4 text-[10px] font-black uppercase tracking-widest text-on-secondary-container">Empresa</th>
+<th class="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-on-secondary-container">Responsable SGC</th>
+<th class="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-on-secondary-container">Estado de Implementación</th>
+<th class="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-on-secondary-container">% de Avance</th>
+<th class="px-8 py-4 text-[10px] font-black uppercase tracking-widest text-on-secondary-container text-right">Acciones</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-surface-container">
+<!-- Table Row 1 -->
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="px-8 py-5">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-blue-900 font-bold text-xs">NL</div>
+<div>
+<p class="text-sm font-bold text-on-surface">Nova Logistics S.A.</p>
+<p class="text-[11px] text-on-surface-variant">ID: GAP-2023-001</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-5">
+<div class="flex items-center gap-2">
+<img alt="SGC Manager" class="w-6 h-6 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBt6iu5Qcq3A8kgYVMdgy1fKr4Xap5GIDVFuczAMX6OBSKcVZwgqDLy8wLw8ZqAR4uRH4_oyfVaskoyCNBnLBM1hTBjFVf7jyzUPzNPTdJJw5BuiS9-o3TR26KxiQl9zHTRAzr2EBjjlkr6zMxQgf0AnH57PGJ_FT1uYRyV05jESmA-8jZX4id_WHXznMEGPNDb-lTAWplnRTrpsHsNZoIzg4KPS5BMasURu3irKAW2BHEyHZmB4ksRJE1oUQMt-NiOrGOSQCETFzYX"/>
+<span class="text-sm font-medium text-on-surface-variant">Claudia Méndez</span>
+</div>
+</td>
+<td class="px-6 py-5">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-primary/10 text-primary">
+                                        Fase de Auditoría
+                                    </span>
+</td>
+<td class="px-6 py-5">
+<div class="flex items-center gap-3">
+<div class="flex-1 bg-surface-container-high h-1.5 rounded-full max-w-[120px]">
+<div class="bg-primary h-full rounded-full w-[85%]"></div>
+</div>
+<span class="text-sm font-bold text-primary">85%</span>
+</div>
+</td>
+<td class="px-8 py-5 text-right">
+<button class="p-2 text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined" data-icon="visibility">visibility</span>
+</button>
+<button class="p-2 text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined" data-icon="more_vert">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Table Row 2 -->
+<tr class="bg-surface-container-low/30 hover:bg-surface-container-low transition-colors group">
+<td class="px-8 py-5">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center text-orange-900 font-bold text-xs">TC</div>
+<div>
+<p class="text-sm font-bold text-on-surface">TechCorp Solutions</p>
+<p class="text-[11px] text-on-surface-variant">ID: GAP-2023-042</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-5">
+<div class="flex items-center gap-2">
+<img alt="SGC Manager" class="w-6 h-6 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCT3q3172IqC5ch7tUFriW6aZPlbrM1VQEnC-ow4nNDVC_i3LmY9MkDcDIxiObw-Posomniie43jsEVn7Di8Hhx_TlL-kSJDFhbEwBYZqdTgaVIAclMjK9gOuuxlrHh3f_fHTnceZZZD5b2uKhVkEVkBi4zvtS1UeZYGg_q3OSaStjs303rJW12tg1EOE5dIhRvVSk2D2XOZB_Zrc29PbXiYS_TI4JUqpJ5fCH_YOY0hpS3nofP100TrSourhF8PLbJLyTb36JjHsK5"/>
+<span class="text-sm font-medium text-on-surface-variant">Ricardo Alva</span>
+</div>
+</td>
+<td class="px-6 py-5">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-tertiary-container/10 text-tertiary">
+                                        Plan de Acción
+                                    </span>
+</td>
+<td class="px-6 py-5">
+<div class="flex items-center gap-3">
+<div class="flex-1 bg-surface-container-high h-1.5 rounded-full max-w-[120px]">
+<div class="bg-primary h-full rounded-full w-[42%]"></div>
+</div>
+<span class="text-sm font-bold text-primary">42%</span>
+</div>
+</td>
+<td class="px-8 py-5 text-right">
+<button class="p-2 text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined" data-icon="visibility">visibility</span>
+</button>
+<button class="p-2 text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined" data-icon="more_vert">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Table Row 3 -->
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="px-8 py-5">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-900 font-bold text-xs">GI</div>
+<div>
+<p class="text-sm font-bold text-on-surface">Global Industrias</p>
+<p class="text-[11px] text-on-surface-variant">ID: GAP-2023-015</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-5">
+<div class="flex items-center gap-2">
+<img alt="SGC Manager" class="w-6 h-6 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuArU403_C2_6PSL6rlc2ywN0QvVWDyWdj5e33JJR3rQs5Eb6XMQoLWB_tVRJwIYQHd6B5LL2UzGh4O4747619jfw4g0esCz8mohl7vV00XiCueKM-D3n6ucctPT0zAHB2hyRovadWKORCGahKzkHDn8KCbGFJYOThXcZsbb4-xyTGclxa702yehNacx6M094R7DHme78jw0PvuBxYkO66ocE26zNLk7dHWpM95IOyW_nl_BdrHzpGLbL9MP_y0zJleaNYap-2xa8893"/>
+<span class="text-sm font-medium text-on-surface-variant">Elena Ruiz</span>
+</div>
+</td>
+<td class="px-6 py-5">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-secondary-container text-on-secondary-container">
+                                        Fase Documental
+                                    </span>
+</td>
+<td class="px-6 py-5">
+<div class="flex items-center gap-3">
+<div class="flex-1 bg-surface-container-high h-1.5 rounded-full max-w-[120px]">
+<div class="bg-primary h-full rounded-full w-[15%]"></div>
+</div>
+<span class="text-sm font-bold text-primary">15%</span>
+</div>
+</td>
+<td class="px-8 py-5 text-right">
+<button class="p-2 text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined" data-icon="visibility">visibility</span>
+</button>
+<button class="p-2 text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined" data-icon="more_vert">more_vert</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="px-8 py-4 bg-surface-container-low flex items-center justify-between">
+<p class="text-xs text-on-surface-variant">Mostrando 3 de 28 empresas registradas</p>
+<div class="flex gap-1">
+<button class="w-8 h-8 flex items-center justify-center rounded-lg bg-surface-container-lowest border border-outline-variant/20 text-on-surface-variant hover:bg-primary hover:text-white transition-all">
+<span class="material-symbols-outlined text-sm" data-icon="chevron_left">chevron_left</span>
+</button>
+<button class="w-8 h-8 flex items-center justify-center rounded-lg bg-primary text-white font-bold text-xs">1</button>
+<button class="w-8 h-8 flex items-center justify-center rounded-lg bg-surface-container-lowest border border-outline-variant/20 text-on-surface-variant hover:bg-primary hover:text-white transition-all text-xs font-bold">2</button>
+<button class="w-8 h-8 flex items-center justify-center rounded-lg bg-surface-container-lowest border border-outline-variant/20 text-on-surface-variant hover:bg-primary hover:text-white transition-all text-xs font-bold">3</button>
+<button class="w-8 h-8 flex items-center justify-center rounded-lg bg-surface-container-lowest border border-outline-variant/20 text-on-surface-variant hover:bg-primary hover:text-white transition-all">
+<span class="material-symbols-outlined text-sm" data-icon="chevron_right">chevron_right</span>
+</button>
+</div>
+</div>
+</section>
+</div>
+<!-- Sticky FAB -->
+<button class="fixed bottom-8 right-8 w-14 h-14 rounded-full tonal-gradient text-white shadow-2xl flex items-center justify-center group hover:scale-110 active:scale-95 transition-all z-50">
+<span class="material-symbols-outlined text-2xl" data-icon="add">add</span>
+<span class="absolute right-16 bg-primary text-white text-xs font-bold py-2 px-4 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">Nueva Auditoría</span>
+</button>
+</main>
+</body></html>

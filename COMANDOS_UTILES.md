@@ -3,6 +3,7 @@
 Breve colección de comandos para levantar, depurar y probar la plataforma en desarrollo.
 
 - Levantar todos los servicios (MySQL, backend, frontend) con Docker Compose:
+- Vuelve a armar los contenedores al usar --build.
 
 ```bash
 docker-compose up --build -d
