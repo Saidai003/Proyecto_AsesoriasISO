@@ -14,8 +14,8 @@ async function login(req, res){
     // Resolve role name if ROLES table exists
     let roleName = 'User';
     if(user.role_id){
-      const [r] = await pool.execute('SELECT name FROM ROLES WHERE id = ?', [user.role_id]);
-      if(r[0] && r[0].name) roleName = r[0].name;
+      const [r] = await pool.execute('SELECT nombre FROM ROLES WHERE id = ?', [user.role_id]);
+      if(r[0] && r[0].nombre) roleName = r[0].nombre;
     }
     const accessToken = signAccessToken({ id: user.id, email: user.email, role: roleName, workspace_id: user.workspace_id });
     const refreshToken = await createRefreshSession(user.id);
@@ -38,8 +38,8 @@ async function refresh(req, res){
     if(!user) return res.status(401).json({ error: 'invalid_refresh' });
     let roleName = 'User';
     if(user.role_id){
-      const [r] = await pool.execute('SELECT name FROM ROLES WHERE id = ?', [user.role_id]);
-      if(r[0] && r[0].name) roleName = r[0].name;
+      const [r] = await pool.execute('SELECT nombre FROM ROLES WHERE id = ?', [user.role_id]);
+      if(r[0] && r[0].nombre) roleName = r[0].nombre;
     }
     const accessToken = signAccessToken({ id: user.id, email: user.email, role: roleName, workspace_id: user.workspace_id });
     return res.json({ accessToken });

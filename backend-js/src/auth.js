@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
 const { pool } = require('./db');
-const { v4: uuidv4 } = require('uuid');
+const crypto = require('crypto');
 
 // dev_jwt_secret is a placeholder secret for development.
 // In other words, it's not secure. In production, use a strong, unique secret
@@ -17,7 +17,7 @@ function verifyAccessToken(token){
 }
 
 async function createRefreshSession(userId){
-    const token = uuidv4();
+    const token = crypto.randomUUID();
     const expires_at = new Date(Date.now() + REFRESH_TOKEN_EXP_DAYS * 24 * 60 * 60 * 1000);
 
     // Safe method to store refresh tokens in DB (using parameterized queries to prevent SQL injection).

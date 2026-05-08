@@ -1,6 +1,23 @@
 import React from 'react'
+import { useAuth } from '../AuthContext'
 
-export default function Login() {
+export default function Login({ onLogin }) {
+  const [email, setEmail] = React.useState('')
+  const [password, setPassword] = React.useState('')
+  const [error, setError] = React.useState(null)
+  const { login } = useAuth() || {}
+
+  const submit = async (e) => {
+    e.preventDefault()
+    setError(null)
+    try{
+      await login({ email, password })
+      if(onLogin) onLogin()
+    }catch(err){
+      setError(err.error || 'Login failed')
+    }
+  }
+
   return (
     <main className="h-full bg-surface text-on-surface antialiased flex items-center justify-center p-6">
       <div className="w-full max-w-[440px]">
@@ -14,12 +31,12 @@ export default function Login() {
               <p className="text-sm font-medium text-on-secondary-container tracking-wide uppercase">Sovereign Archive Access</p>
             </div>
           </div>
-          <form className="px-10 pb-10 space-y-6">
+          <form onSubmit={submit} className="px-10 pb-10 space-y-6">
             <div className="space-y-4">
               <div className="group">
                 <label htmlFor="email" className="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5 ml-1">Correo Electrónico</label>
                 <div className="relative">
-                  <input id="email" name="email" type="email" placeholder="nombre@archivo.com" className="w-full px-4 py-3 bg-surface-container-high text-on-surface border-0 rounded-lg placeholder:text-outline/50 text-sm" />
+                  <input id="email" name="email" type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="nombre@archivo.com" className="w-full px-4 py-3 bg-surface-container-high text-on-surface border-0 rounded-lg placeholder:text-outline/50 text-sm" />
                 </div>
               </div>
               <div className="group">
@@ -27,7 +44,7 @@ export default function Login() {
                   <label htmlFor="password" className="block text-[10px] font-bold uppercase tracking-widest text-outline ml-1">Contraseña</label>
                 </div>
                 <div className="relative">
-                  <input id="password" name="password" type="password" placeholder="••••••••" className="w-full px-4 py-3 bg-surface-container-high text-on-surface border-0 rounded-lg placeholder:text-outline/50 text-sm" />
+                  <input id="password" name="password" type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="••••••••" className="w-full px-4 py-3 bg-surface-container-high text-on-surface border-0 rounded-lg placeholder:text-outline/50 text-sm" />
                 </div>
               </div>
             </div>
@@ -35,6 +52,7 @@ export default function Login() {
               <a className="text-xs font-semibold text-on-primary-fixed-variant hover:text-primary" href="#">¿Olvidé mi contraseña?</a>
             </div>
             <button type="submit" className="w-full primary-gradient text-on-primary font-bold py-3.5 rounded-xl shadow-md text-sm tracking-tight">Ingresar</button>
+            {error && <div className="text-sm text-red-600 mt-2">{error}</div>}
             <div className="relative py-2 flex items-center">
               <div className="flex-grow border-t border-outline-variant/30"></div>
               <span className="flex-shrink mx-4 text-[10px] font-bold uppercase tracking-widest text-outline">O continuar con</span>

@@ -33,10 +33,10 @@ async function seed(req, res){
       await pool.execute('ALTER TABLE USUARIOS ADD UNIQUE INDEX ux_usuarios_email (email)');
     }catch(e){ /* ignore if exists */ }
 
-    // Insert roles
-    await pool.execute('INSERT IGNORE INTO ROLES (name) VALUES (?), (?), (?)', ['Admin','Evaluador','Responsable SGC']);
-    // Insert workspace
-    await pool.execute('INSERT IGNORE INTO WORKSPACES (id, name) VALUES (1, ?)', ['Workspace Demo']);
+    // Insert roles (column 'nombre' per db/init.sql)
+    await pool.execute('INSERT IGNORE INTO ROLES (nombre) VALUES (?), (?), (?)', ['Admin','Evaluador','Responsable SGC']);
+    // Insert workspace into ESPACIO_TRABAJO (column 'nombre_cliente')
+    await pool.execute('INSERT IGNORE INTO ESPACIO_TRABAJO (id, nombre_cliente) VALUES (1, ?)', ['Workspace Demo']);
 
     // Insert users with password 'Password123!'
     const pwd = 'Password123!';
@@ -44,10 +44,10 @@ async function seed(req, res){
     const h2 = await bcrypt.hash(pwd, 10);
     const h3 = await bcrypt.hash(pwd, 10);
 
-    // Resolve role ids
-    const [rRows] = await pool.execute('SELECT id, name FROM ROLES');
+    // Resolve role ids (ROLES.nombre)
+    const [rRows] = await pool.execute('SELECT id, nombre FROM ROLES');
     const roleMap = {};
-    rRows.forEach(r => roleMap[r.name] = r.id);
+    rRows.forEach(r => roleMap[r.nombre] = r.id);
 
     await pool.execute(
       `INSERT IGNORE INTO USUARIOS (id, workspace_id, role_id, nombre, email, password_hash, estado_invitacion, fecha_registro)

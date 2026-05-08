@@ -1,25 +1,24 @@
-import React, {useState} from 'react'
+import React from 'react'
+import { AuthProvider } from './AuthContext'
 import Login from './pages/Login'
 import ActivateAccount from './pages/ActivateAccount'
 import UsersManager from './pages/UsersManager'
 import WorkspacesManager from './pages/WorkspacesManager'
+import Lobby from './pages/Lobby'
+import Protected from './components/Protected'
+import { Routes, Route, Navigate } from 'react-router-dom'
 
-export default function App() {
-  const [page, setPage] = useState('login')
+export default function App(){
   return (
-    <div>
-      <nav className="p-4 bg-white/60 border-b flex gap-4">
-        <button onClick={() => setPage('login')} className="px-3 py-1 rounded">Login</button>
-        <button onClick={() => setPage('activate')} className="px-3 py-1 rounded">Activate</button>
-        <button onClick={() => setPage('users')} className="px-3 py-1 rounded">Users</button>
-        <button onClick={() => setPage('workspaces')} className="px-3 py-1 rounded">Workspaces</button>
-      </nav>
-      <div>
-        {page === 'login' && <Login />}
-        {page === 'activate' && <ActivateAccount />}
-        {page === 'users' && <UsersManager />}
-        {page === 'workspaces' && <WorkspacesManager />}
-      </div>
-    </div>
+    <AuthProvider>
+      <Routes>
+        <Route path="/login" element={<Login onLogin={()=>{window.location.href='/lobby'}}/>} />
+        <Route path="/activate" element={<ActivateAccount/>} />
+        <Route path="/api/users" element={<UsersManager/>} />
+        <Route path="/workspaces" element={<WorkspacesManager/>} />
+        <Route path="/lobby" element={<Protected><Lobby/></Protected>} />
+        <Route path="/" element={<Navigate to="/lobby" replace/>} />
+      </Routes>
+    </AuthProvider>
   )
 }
