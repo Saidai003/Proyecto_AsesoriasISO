@@ -14,10 +14,10 @@ export default function App(){
       <Routes>
         <Route path="/login" element={<Login onLogin={()=>{window.location.href='/lobby'}}/>} />
         <Route path="/activate" element={<ActivateAccount/>} />
-        <Route path="/api/users" element={<UsersManager/>} />
-        <Route path="/workspaces" element={<WorkspacesManager/>} />
         <Route path="/lobby" element={<Protected><Lobby/></Protected>} />
         <Route path="/" element={<Navigate to="/lobby" replace/>} />
+        <Route path="/users" element={<Protected role="Admin"><UsersManager/></Protected>} />
+        <Route path="/workspaces" element={<Protected role="Admin"><WorkspacesManager/></Protected>} />
       </Routes>
     </AuthProvider>
   )

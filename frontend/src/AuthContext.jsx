@@ -17,6 +17,12 @@ export function AuthProvider({ children }){
     else localStorage.removeItem('user')
   },[user])
 
+  //This fragment of code is responsible for handling the login process. 
+  // It sends a POST request to the /auth/login endpoint with the user's email and password. 
+  // If the response is successful, it stores the access token and user information in the state, 
+  // which can be accessed throughout the application via the AuthContext. 
+  // The logout function clears this information and also makes a request to the 
+  // /auth/logout endpoint to invalidate the session on the server side.
   const login = async ({ email, password }) => {
     const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
     const res = await fetch(`${API_BASE}/auth/login`, {

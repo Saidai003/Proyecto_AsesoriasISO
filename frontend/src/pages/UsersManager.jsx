@@ -1,8 +1,12 @@
 import React from 'react'
+import Protected from '../components/Protected'
+import Layout from '../components/Layout'
+import StatCard from '../components/StatCard'
+import SearchInput from '../components/SearchInput'
 
 function SideNav() {
   return (
-    <aside className="h-screen w-64 fixed left-0 top-0 bg-slate-50 flex flex-col py-4 border-r">
+      <aside className="h-screen w-64 fixed left-0 top-0 bg-slate-50 flex flex-col py-4 border-r">
       <div className="mb-10 px-6">
         <h1 className="text-lg font-black text-blue-900">GAP Análisis</h1>
         <p className="text-[10px] font-medium text-slate-500 uppercase tracking-widest mt-1">ISO 9001:2015 Portal</p>
@@ -47,18 +51,8 @@ export default function UsersManager() {
   }
 
   return (
-    <div className="bg-surface text-on-surface">
-      <SideNav />
-      <header className="fixed top-0 right-0 left-64 h-16 bg-white/80 border-b flex justify-between items-center px-6">
-        <div />
-        <div className="flex items-center gap-6">
-          <div className="text-right">
-            <p className="text-xs font-bold text-blue-900">Usuario Administrador</p>
-            <p className="text-[10px] text-slate-500">Gerente ISO</p>
-          </div>
-        </div>
-      </header>
-      <main className="ml-64 pt-16 min-h-screen p-8">
+    <Protected role="Admin">
+      <Layout title="Gestor de Usuarios" subtitle="Administración de accesos y perfiles del sistema ISO 9001." sidebar={<SideNav/>}>
         <div className="max-w-7xl mx-auto">
           <div className="flex justify-between items-end mb-8">
             <div>
@@ -84,16 +78,10 @@ export default function UsersManager() {
             </form>
           )}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <div className="bg-surface-container-lowest p-6 rounded-xl relative">
-              <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary" />
-              <p className="text-xs font-bold text-on-secondary-container uppercase mb-2">Total Usuarios</p>
-              <h3 className="text-4xl font-black text-primary">148</h3>
-            </div>
+            <StatCard title="Total Usuarios" value="148" note="+12 este mes" />
           </div>
           <div className="mb-6 max-w-md">
-            <div className="relative">
-              <input className="w-full bg-surface-container-lowest border rounded-full py-3 pl-12 pr-4 text-sm" placeholder="Buscar usuarios o roles..." type="text" />
-            </div>
+            <SearchInput placeholder="Buscar usuarios por nombre o email..." />
           </div>
           <div className="bg-surface-container-lowest rounded-xl overflow-hidden">
             <div className="px-6 py-4 bg-surface-container-low flex justify-between items-center">
@@ -136,7 +124,7 @@ export default function UsersManager() {
             </div>
           </div>
         </div>
-      </main>
-    </div>
+      </Layout>
+    </Protected>
   )
 }

@@ -9,7 +9,8 @@ export default function Lobby(){
   if(!user) return <div className="p-6">Acceso no autorizado</div>
   const role = (user.role || '').toLowerCase()
   if(role.includes('admin')) return <LobbyAdmin />
-  if(role.includes('evaluador') || role.includes('evaluador')) return <LobbyEvaluator />
-  // fallback responsable / operativo
+  if(role.includes('evaluador')) return <LobbyEvaluator />
+  if(role.includes('operativo')) return <LobbyOperative />
+
   return <LobbyOperative />
 }

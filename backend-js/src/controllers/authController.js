@@ -11,6 +11,7 @@ async function login(req, res){
     if(!user) return res.status(401).json({ error: 'invalid_credentials' });
     const ok = await bcrypt.compare(password, user.password_hash);
     if(!ok) return res.status(401).json({ error: 'invalid_credentials' });
+    
     // Resolve role name if ROLES table exists
     let roleName = 'User';
     if(user.role_id){
