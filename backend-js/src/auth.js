@@ -6,10 +6,12 @@ const crypto = require('crypto');
 // In other words, it's not secure. In production, use a strong, unique secret
 // and keep it safe (e.g. in environment variables or a secrets manager).
 const JWT_SECRET = process.env.JWT_SECRET || 'dev_jwt_secret';
-const REFRESH_TOKEN_EXP_DAYS = 30;
+// Refresh token lifetime in minutes (default 30 minutes)
+const REFRESH_TOKEN_MINUTES = Number(process.env.REFRESH_TOKEN_MINUTES || 30);
+const REFRESH_TOKEN_EXP_DAYS = REFRESH_TOKEN_MINUTES / 1440;
 
 function signAccessToken(payload){
-    return jwt.sign(payload, JWT_SECRET, { expiresIn: '15m' });
+    return jwt.sign(payload, JWT_SECRET, { expiresIn: '30m' });
 }
 
 function verifyAccessToken(token){
@@ -18,7 +20,7 @@ function verifyAccessToken(token){
 
 async function createRefreshSession(userId){
     const token = crypto.randomUUID();
-    const expires_at = new Date(Date.now() + REFRESH_TOKEN_EXP_DAYS * 24 * 60 * 60 * 1000);
+    const expires_at = new Date(Date.now() + REFRESH_TOKEN_MINUTES * 60 * 1000);
 
     // Safe method to store refresh tokens in DB (using parameterized queries to prevent SQL injection).
     // See SOURCES.md -> backend-js/src/index.js for references on security and implementation choices.
@@ -37,4 +39,4 @@ async function getSession(token){
     const [rows] = await pool.execute('SELECT * FROM SESSIONS WHERE token = ? AND expires_at > NOW()', [token]);
     return rows[0];
 }
-module.exports = { signAccessToken, verifyAccessToken, createRefreshSession, revokeRefreshSession, getSession };
+module.exports = { signAccessToken, verifyAccessToken, createRefreshSession, revokeRefreshSession, getSession, REFRESH_TOKEN_MINUTES };

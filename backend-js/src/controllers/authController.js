@@ -1,6 +1,6 @@
 const { pool } = require('../db');
 const bcrypt = require('bcryptjs');
-const { signAccessToken, createRefreshSession, getSession, revokeRefreshSession } = require('../auth');
+const { signAccessToken, createRefreshSession, getSession, revokeRefreshSession, REFRESH_TOKEN_MINUTES } = require('../auth');
 
 async function login(req, res){
   try{
@@ -20,7 +20,8 @@ async function login(req, res){
     }
     const accessToken = signAccessToken({ id: user.id, email: user.email, role: roleName, workspace_id: user.workspace_id });
     const refreshToken = await createRefreshSession(user.id);
-    res.cookie('refreshToken', refreshToken, { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', maxAge: 30*24*60*60*1000 });
+    // Cookie maxAge should match the refresh session lifetime (in ms)
+    res.cookie('refreshToken', refreshToken, { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', maxAge: REFRESH_TOKEN_MINUTES * 60 * 1000 });
     return res.json({ accessToken, user: { id: user.id, nombre: user.nombre, role: roleName, workspace_id: user.workspace_id } });
   }catch(err){
     console.error('login error', err);
