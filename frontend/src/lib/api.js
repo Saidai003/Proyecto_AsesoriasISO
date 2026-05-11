@@ -1,6 +1,9 @@
 // Simple fetch wrapper that retries once after refresh if server returns 401
 export async function fetchWithAuth(input, init = {}){
-  const API_BASE = import.meta.env.VITE_API_BASE || ''
+  // Prefer explicit VITE_API_BASE; in local dev fall back to localhost:3000
+  const envBase = import.meta.env.VITE_API_BASE
+  const devFallback = (typeof window !== 'undefined' && window.location && window.location.hostname === 'localhost') ? 'http://localhost:3000' : ''
+  const API_BASE = envBase || devFallback || ''
   const url = input.startsWith('http') ? input : `${API_BASE}${input}`
   const token = localStorage.getItem('accessToken')
   const headers = new Headers(init.headers || {})

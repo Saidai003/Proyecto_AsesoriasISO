@@ -1,12 +1,13 @@
 import React from 'react'
+import { Link } from 'react-router-dom'
 import Layout from '../../components/Layout'
 
 function Sidebar(){
   return (
     <>
-      <a className="flex items-center px-3 py-2 text-blue-900 font-bold border-l-4 border-blue-900 bg-slate-100" href="#">Panel Principal</a>
-      <a className="flex items-center px-3 py-2 text-slate-600" href="#">Espacios de Trabajo</a>
-      <a className="flex items-center px-3 py-2 text-slate-600" href="#">Usuarios</a>
+      <Link className="flex items-center px-3 py-2 text-blue-900 font-bold border-l-4 border-blue-900 bg-slate-100" to="/lobby">Panel Principal</Link>
+      <Link className="flex items-center px-3 py-2 text-slate-600" to="/workspaces">Espacios de Trabajo</Link>
+      <Link className="flex items-center px-3 py-2 text-slate-600" to="/users">Usuarios</Link>
     </>
   )
 }

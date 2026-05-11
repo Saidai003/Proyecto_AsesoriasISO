@@ -25,11 +25,13 @@ const authRouter = require('./routes/auth');
 const usersRouter = require('./routes/users');
 const operationalRouter = require('./routes/operational');
 const seedRouter = require('./routes/seed');
+const workspacesRouter = require('./routes/workspaces');
 
 app.use('/auth', authRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/operational', operationalRouter);
 app.use('/seed', seedRouter); // development-only seed endpoint
+app.use('/api/workspaces', workspacesRouter);
 
 app.get('/', (req, res) => {
     res.send('Hello, World!');

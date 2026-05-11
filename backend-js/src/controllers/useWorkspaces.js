@@ -8,9 +8,13 @@ async function createWorkspace(req, res){
             'INSERT INTO ESPACIO_TRABAJO (nombre_cliente, fecha_creacion) VALUES (?, NOW())',
             [nombre_cliente]
         );
+        // 201 is the standard status code for "created"
+        // and it's a good practice to return the id of the 
+        // newly created resource in the response body
         return res.status(201).json({ id: result.insertId });
     }catch(err){
         console.error('createWorkspace error', err);
+        // 500 is the standard status code for "internal server error"
         return res.status(500).json({ error: 'internal_error' });
     }
 }

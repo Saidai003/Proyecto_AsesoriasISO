@@ -3,6 +3,7 @@ import Protected from '../components/Protected'
 import Layout from '../components/Layout'
 import StatCard from '../components/StatCard'
 import SearchInput from '../components/SearchInput'
+import useWorkspaces from '../hooks/useWorkspaces'
 
 function SideNav() {
   return (
@@ -26,6 +27,25 @@ function SideNav() {
 }
 
 export default function WorkspacesManager() {
+  const [creating, setCreating] = React.useState(false)
+  const [form, setForm] = React.useState({ nombre_cliente: ''})
+  const [message, setMessage] = React.useState(null)
+  const { workspaces, loadWorkspaces, createWorkspace } = useWorkspaces()
+
+  React.useEffect(()=>{ loadWorkspaces() }, [loadWorkspaces])
+
+  async function handleCreate(e){
+    e.preventDefault()
+    try{
+      await createWorkspace(form)
+      setMessage({ type: 'success', text: 'Espacio de trabajo creado'})
+      setForm({ nombre_cliente: ''})
+      setCreating(false)
+    }
+    catch(err){
+      setMessage({ type: 'error', text: err.error || 'Error al crear espacio de trabajo' })
+    }
+  }
   return (
     <Protected role="Admin">
         <Layout title="Gestor de Espacios de Trabajo" subtitle="Administración centralizada de clientes y cumplimiento ISO 9001:2015." sidebar={<SideNav/>}>
@@ -36,7 +56,23 @@ export default function WorkspacesManager() {
                 <h2 className="text-3xl font-black text-primary">Gestor de Espacios de Trabajo</h2>
                 <p className="text-slate-500 mt-1 max-w-2xl">Administración centralizada de clientes y cumplimiento ISO 9001:2015.</p>
               </div>
-              <button className="flex items-center gap-2 bg-gradient-to-br from-primary to-primary-container text-white px-6 py-3 rounded-xl font-bold">Nuevo Espacio</button>
+              <div>
+                <button onClick={()=>setCreating(c=>!c)} className="flex items-center gap-2 bg-gradient-to-br from-primary to-primary-container text-white px-6 py-3 rounded-xl font-bold">{creating ? 'Cancelar' : 'Nuevo Espacio'}</button>
+              </div>
+            {creating && (
+              <form onSubmit={handleCreate} className="flex items-center gap-3 mt-4 w-full">
+                <input
+                  type="text"
+                  placeholder="Nombre del cliente"
+                  value={form.nombre_cliente}
+                  onChange={(e) => setForm({ ...form, nombre_cliente: e.target.value })}
+                  className="border border-slate-300 rounded-lg py-2 px-4 focus:outline-none focus:ring-2 focus:ring-blue-500 flex-1"
+                />
+                <button type="submit" className="bg-primary text-white py-2 px-4 rounded-lg hover:bg-blue-600">
+                  Crear
+                </button>
+              </form>
+            )}
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-8">
               <StatCard title="Total Espacios" value="42" note="+3 este mes" />
