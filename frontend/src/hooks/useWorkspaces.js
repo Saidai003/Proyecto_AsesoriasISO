@@ -17,12 +17,26 @@ export default function useWorkspaces(){
     }finally{ setLoading(false) }
   },[])
 
-  createWorkspace = useCallback(async (payload)=>{
-    const res = await fetchWithAuth('/api/workspaces', { method: 'POST', headers: { 'Contend-Type': 'application/json'}, body: JSON.stringify(payload)})
+  const createWorkspace = useCallback(async (payload)=>{
+    const res = await fetchWithAuth('/api/workspaces', { method: 'POST', headers: { 'Content-Type': 'application/json'}, body: JSON.stringify(payload)})
     if(!res.ok) throw await res.json()
     await loadWorkspaces()
     return await res.json()
-  })
+  }, [loadWorkspaces])
 
-  return { workspaces, loading, loadWorkspaces }
+  const updateWorkspace = useCallback(async (id, payload) => {
+    const res = await fetchWithAuth(`/api/workspaces/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json'}, body: JSON.stringify(payload)})
+    if(!res.ok) throw await res.json()
+    await loadWorkspaces()
+    return await res.json()
+  }, [loadWorkspaces])
+
+  const deleteWorkspace = useCallback(async (id) => {
+    const res = await fetchWithAuth(`/api/workspaces/${id}`, { method: 'DELETE' })
+    if(!res.ok) throw await res.json()
+    await loadWorkspaces()
+    return await res.json()
+  }, [loadWorkspaces])
+
+  return { workspaces, loading, loadWorkspaces, createWorkspace, updateWorkspace, deleteWorkspace }
 }

@@ -27,25 +27,45 @@ function SideNav() {
 }
 
 export default function WorkspacesManager() {
-  const [creating, setCreating] = React.useState(false)
-  const [form, setForm] = React.useState({ nombre_cliente: ''})
   const [message, setMessage] = React.useState(null)
-  const { workspaces, loadWorkspaces, createWorkspace } = useWorkspaces()
+  const { workspaces, loading, loadWorkspaces, createWorkspace } = useWorkspaces()
+  const { updateWorkspace, deleteWorkspace } = useWorkspaces()
 
   React.useEffect(()=>{ loadWorkspaces() }, [loadWorkspaces])
 
-  async function handleCreate(e){
-    e.preventDefault()
-    try{
-      await createWorkspace(form)
-      setMessage({ type: 'success', text: 'Espacio de trabajo creado'})
-      setForm({ nombre_cliente: ''})
-      setCreating(false)
-    }
-    catch(err){
-      setMessage({ type: 'error', text: err.error || 'Error al crear espacio de trabajo' })
-    }
+  const [newWorkspaceRow, setNewWorkspaceRow] = React.useState(false)
+  const [newWorkspaceForm, setNewWorkspaceForm] = React.useState({ nombre_cliente: '' })
+  const [editingId, setEditingId] = React.useState(null)
+  const [editForm, setEditForm] = React.useState({ nombre_cliente: '' })
+
+  function startEdit(w){
+    setEditingId(w.id)
+    setEditForm({ nombre_cliente: w.nombre_cliente || '' })
+    setMessage(null)
   }
+
+  function cancelEdit(){
+    setEditingId(null)
+    setEditForm({ nombre_cliente: '' })
+  }
+
+  async function saveEdit(id){
+    try{
+      await updateWorkspace(id, { nombre_cliente: editForm.nombre_cliente })
+      setMessage({ type: 'success', text: 'Espacio actualizado' })
+      cancelEdit()
+    }catch(err){ setMessage({ type: 'error', text: err.error || err.message || 'Error actualizando' }) }
+  }
+
+  async function handleDelete(id){
+    if(!confirm('Eliminar espacio de trabajo?')) return
+    try{
+      await deleteWorkspace(id)
+      setMessage({ type: 'success', text: 'Espacio eliminado' })
+    }catch(err){ setMessage({ type: 'error', text: err.error || err.message || 'Error eliminando' }) }
+  }
+
+  
   return (
     <Protected role="Admin">
         <Layout title="Gestor de Espacios de Trabajo" subtitle="Administración centralizada de clientes y cumplimiento ISO 9001:2015." sidebar={<SideNav/>}>
@@ -56,23 +76,8 @@ export default function WorkspacesManager() {
                 <h2 className="text-3xl font-black text-primary">Gestor de Espacios de Trabajo</h2>
                 <p className="text-slate-500 mt-1 max-w-2xl">Administración centralizada de clientes y cumplimiento ISO 9001:2015.</p>
               </div>
-              <div>
-                <button onClick={()=>setCreating(c=>!c)} className="flex items-center gap-2 bg-gradient-to-br from-primary to-primary-container text-white px-6 py-3 rounded-xl font-bold">{creating ? 'Cancelar' : 'Nuevo Espacio'}</button>
-              </div>
-            {creating && (
-              <form onSubmit={handleCreate} className="flex items-center gap-3 mt-4 w-full">
-                <input
-                  type="text"
-                  placeholder="Nombre del cliente"
-                  value={form.nombre_cliente}
-                  onChange={(e) => setForm({ ...form, nombre_cliente: e.target.value })}
-                  className="border border-slate-300 rounded-lg py-2 px-4 focus:outline-none focus:ring-2 focus:ring-blue-500 flex-1"
-                />
-                <button type="submit" className="bg-primary text-white py-2 px-4 rounded-lg hover:bg-blue-600">
-                  Crear
-                </button>
-              </form>
-            )}
+              <div />
+            
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-8">
               <StatCard title="Total Espacios" value="42" note="+3 este mes" />
@@ -90,28 +95,92 @@ export default function WorkspacesManager() {
                   <thead>
                     <tr className="bg-surface-container-low">
                       <th className="px-6 py-4 text-[10px] font-bold uppercase">Cliente / Logo</th>
-                      <th className="px-6 py-4 text-[10px] font-bold uppercase">Responsable SGC</th>
                       <th className="px-6 py-4 text-[10px] font-bold uppercase">Fecha Creación</th>
                       <th className="px-6 py-4 text-[10px] font-bold uppercase text-right">Acciones</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
-                    <tr className="hover:bg-surface-container-high">
-                      <td className="px-6 py-4"><div className="flex items-center gap-3"><div className="w-10 h-10 rounded-lg bg-surface-container-high flex items-center justify-center font-black text-primary text-xs">NL</div><div><p className="font-bold text-sm">Nexus Logistics</p><p className="text-[10px] text-slate-400">ID: ESP-2024-001</p></div></div></td>
-                      <td className="px-6 py-4"><div className="flex items-center gap-2"><span className="text-sm font-medium text-slate-600">Maximiliano Abascal</span></div></td>
-                      <td className="px-6 py-4"><span className="text-sm text-slate-500">12/01/2024</span></td>
-                      <td className="px-6 py-4 text-right"><div className="flex items-center justify-end gap-1"><button className="p-2">Ver</button><button className="p-2">Editar</button><button className="p-2">Eliminar</button></div></td>
-                    </tr>
+                    {loading && (
+                      <tr>
+                        <td colSpan={3} className="px-6 py-6">Cargando...</td>
+                      </tr>
+                    )}
+
+                    {!loading && workspaces.length === 0 && (
+                      <tr>
+                        <td colSpan={3} className="px-6 py-6">No hay espacios de trabajo.</td>
+                      </tr>
+                    )}
+
+                    {!loading && workspaces.map(w => (
+                      <tr key={w.id} className="hover:bg-surface-container-low">
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center text-white">{(w.nombre_cliente || w.nombre || ' ')[0]}</div>
+                            <div>
+                              {editingId === w.id ? (
+                                <input value={editForm.nombre_cliente} onChange={e=>setEditForm(f=>({...f,nombre_cliente:e.target.value}))} className="px-3 py-2 border rounded w-72" />
+                              ) : (
+                                <>
+                                  <p className="font-bold">{w.nombre_cliente || w.nombre}</p>
+                                  <p className="text-sm text-slate-500">ID: {w.id}</p>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">{w.fecha_creacion ? new Date(w.fecha_creacion).toLocaleDateString() : '-'}</td>
+                        <td className="px-6 py-4 text-right">
+                          <div className="flex justify-end gap-2">
+                            {editingId === w.id ? (
+                              <>
+                                <button onClick={()=>saveEdit(w.id)} className="px-3 py-1.5 bg-blue-600 text-white rounded-lg">Guardar</button>
+                                <button onClick={cancelEdit} className="px-3 py-1.5 border rounded-lg">Cancelar</button>
+                              </>
+                            ) : (
+                              <>
+                                <button onClick={()=>startEdit(w)} className="px-3 py-1.5 border rounded-lg">Editar</button>
+                                <button onClick={()=>handleDelete(w.id)} className="px-3 py-1.5 bg-red-600 text-white rounded-lg">Eliminar</button>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+
+                    {newWorkspaceRow && (
+                      <tr className="bg-surface-container-low">
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center text-white">+</div>
+                            <div>
+                              <input value={newWorkspaceForm.nombre_cliente} onChange={e=>setNewWorkspaceForm(f=>({...f,nombre_cliente:e.target.value}))} placeholder="Nombre del cliente" className="px-3 py-2 border rounded w-72" />
+                              <p className="text-sm text-slate-500">ID: --</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">--</td>
+                        <td className="px-6 py-4 text-right">
+                          <div className="flex justify-end gap-2">
+                            <button onClick={async ()=>{ try{ await createWorkspace(newWorkspaceForm); setMessage({type:'success', text:'Espacio creado'}); setNewWorkspaceRow(false); setNewWorkspaceForm({ nombre_cliente: ''}); }catch(err){ setMessage({type:'error', text: err.error || err.message || 'Error'}) } }} className="px-4 py-2 bg-blue-600 text-white rounded-lg whitespace-nowrap">Enviar</button>
+                            <button onClick={()=>{ setNewWorkspaceRow(false); setNewWorkspaceForm({ nombre_cliente: ''}); }} className="px-4 py-2 border rounded-lg whitespace-nowrap">Descartar</button>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
             </div>
 
-          <button className="fixed bottom-8 right-8 w-14 h-14 bg-primary text-white rounded-full"> <span className="material-symbols-outlined">add</span></button>
+            {/* Bottom CTA: add a new workspace row under the table */}
+            <div className="mt-4 flex justify-end">
+              <button onClick={() => setNewWorkspaceRow(true)} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-xl font-bold shadow">Agregar Espacio</button>
+            </div>
 
           </div>
           </Layout>
-  
+
     </Protected>
   )
 }

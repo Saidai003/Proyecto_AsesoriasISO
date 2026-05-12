@@ -22,11 +22,24 @@ async function createUser(req, res){
 async function updateUser(req, res){
   try{
     const id = req.params.id;
-    const { nombre, email, password, workspace_id, role_id } = req.body;
-    await pool.execute(
-      'UPDATE USUARIOS SET nombre = ?, email = ?, workspace_id = ?, role_id = ?' + (password ? ', password_hash = ?' : '') + ' WHERE id = ?',
-      password ? [nombre, email, workspace_id, role_id, await bcrypt.hash(password, 10), id] : [nombre, email, workspace_id, role_id, id]
-    );
+    const { nombre, email, password, workspace_id = null, role_id = null } = req.body;
+    console.log('updateUser called with body', req.body);
+    console.log('updateUser called with', { id, nombre, email, workspace_id, role_id, hasPassword: !!password });
+    // Ensure no undefined values are passed to SQL driver
+    const pNombre = typeof nombre === 'undefined' ? null : nombre;
+    const pEmail = typeof email === 'undefined' ? null : email;
+    const pWorkspace = typeof workspace_id === 'undefined' ? null : workspace_id;
+    const pRole = typeof role_id === 'undefined' ? null : role_id;
+    const pId = typeof id === 'undefined' ? null : id;
+    let query = 'UPDATE USUARIOS SET nombre = ?, email = ?, workspace_id = ?, role_id = ? WHERE id = ?';
+    let params = [pNombre, pEmail, pWorkspace, pRole, pId];
+    if(password){
+      const hash = await bcrypt.hash(password, 10);
+      query = 'UPDATE USUARIOS SET nombre = ?, email = ?, workspace_id = ?, role_id = ?, password_hash = ? WHERE id = ?';
+      params = [pNombre, pEmail, pWorkspace, pRole, hash, pId];
+    }
+    console.log('updateUser executing', { query, params });
+    await pool.execute(query, params);
     return res.json({ ok: true });
   }catch(err){
     console.error('updateUser error', err);

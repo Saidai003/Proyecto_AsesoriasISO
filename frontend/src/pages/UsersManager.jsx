@@ -23,41 +23,20 @@ function SideNav() {
 }
 
 export default function UsersManager() {
-  const [creating, setCreating] = React.useState(false)
-  const [form, setForm] = React.useState({ nombre: '', email: '', password: '', workspace_id: null })
   const [message, setMessage] = React.useState(null)
   const { users, loading, loadUsers, createUser, updateUser, deleteUser, assignWorkspace } = useUsers()
   const { workspaces, loadWorkspaces } = useWorkspaces()
 
+  const ROLE_OPTIONS = [
+    { id: 1, label: 'Administrador' },
+    { id: 2, label: 'Evaluador' },
+    { id: 3, label: 'Responsable SGC' }
+  ]
+
   React.useEffect(()=>{ loadUsers() }, [loadUsers])
   React.useEffect(()=>{ loadWorkspaces() }, [loadWorkspaces])
 
-  const [hoveredWorkspaceRow, setHoveredWorkspaceRow] = React.useState(null)
-
-  async function handleCreate(e){
-    // e could be called any name really
-    // but it's common to call it 'e' as a convention for 'event'
-    e.preventDefault()
-    // we set message to null to clear
-    // any previous message before we attempt to create a new user
-    setMessage(null)
-    try{
-      await createUser(form) 
-      // Why don't we simply put the whole form in the message text? 
-      // Because the form contains the password, and we don't want to 
-      // display that in the success message. 
-      // Instead, we just show a generic success message.
-      // Besides, the form data is already reflected in the users list,
-      // so there's no need to repeat it in the message.
-      setMessage({ type: 'success', text: 'Usuario creado' })
-      // we clean the form after successful creation to reset the
-      // input fields
-      setForm({ nombre: '', email: '', password: '', workspace_id: null })
-      setCreating(false)
-    }catch(err){
-      setMessage({ type: 'error', text: (err && err.error) ? err.error : (err.message || 'Error') })
-    }
-  }
+  
 
   async function handleDelete(id){
     if(!confirm('Eliminar usuario?')) return
@@ -68,11 +47,14 @@ export default function UsersManager() {
   }
 
   const [editingId, setEditingId] = React.useState(null)
-  const [editForm, setEditForm] = React.useState({ nombre: '', email: '', password: '' })
+  const [editForm, setEditForm] = React.useState({ nombre: '', email: '', password: '', workspace_id: null, role_id: null })
+
+  const [newRow, setNewRow] = React.useState(false)
+  const [newForm, setNewForm] = React.useState({ nombre: '', email: '', password: '', workspace_id: null, role_id: null })
 
   function startEdit(user){
     setEditingId(user.id)
-    setEditForm({ nombre: user.nombre || '', email: user.email || '', password: '', workspace_id: user.workspace_id || null })
+    setEditForm({ nombre: user.nombre || '', email: user.email || '', password: '', workspace_id: user.workspace_id || null, role_id: user.role_id || null })
     setMessage(null)
   }
 
@@ -82,14 +64,19 @@ export default function UsersManager() {
   }
 
   async function saveEdit(id){
-    setMessage(null)
+    setMessage({ type: 'info', text: 'Guardando...' })
     try{
-      const payload = { nombre: editForm.nombre, email: editForm.email, workspace_id: (typeof editForm.workspace_id !== 'undefined' ? editForm.workspace_id : null) }
+      const payload = { nombre: editForm.nombre, email: editForm.email, workspace_id: (typeof editForm.workspace_id !== 'undefined' ? editForm.workspace_id : null), role_id: (typeof editForm.role_id !== 'undefined' ? editForm.role_id : null) }
       if(editForm.password && editForm.password.trim() !== '') payload.password = editForm.password
+      console.log('saveEdit payload', id, payload)
       await updateUser(id, payload)
       setMessage({ type: 'success', text: 'Usuario actualizado' })
       cancelEdit()
-    }catch(err){ setMessage({ type: 'error', text: err.error || 'Error actualizando' }) }
+    }catch(err){
+      console.error('saveEdit error', err)
+      const text = (err && (err.error || err.message)) ? (err.error || err.message) : (typeof err === 'string' ? err : JSON.stringify(err))
+      setMessage({ type: 'error', text: text || 'Error actualizando' })
+    }
   }
 
   async function handleAssign(user){
@@ -106,41 +93,35 @@ export default function UsersManager() {
     <Protected role="Admin">
       <Layout title="Gestor de Usuarios" subtitle="Administración de accesos y perfiles del sistema ISO 9001." sidebar={<SideNav/>}>
         <div className="max-w-7xl mx-auto">
+          {message && (
+            <div className={`mb-4 px-6 py-3 rounded ${message.type === 'success' ? 'bg-green-100 text-green-800' : message.type === 'error' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'}`}>
+              {message.text}
+            </div>
+          )}
           <div className="flex justify-between items-end mb-8">
             <div>
               <h2 className="text-3xl font-black text-blue-900">Gestor de Usuarios</h2>
               <p className="text-on-secondary-fixed-variant">Administración de accesos y perfiles del sistema ISO 9001.</p>
             </div>
             <div className="flex items-center gap-2">
-              <button onClick={()=>setCreating(c=>!c)} aria-label="Agregar usuario" className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-bold shadow">{creating ? 'Cancelar' : 'Agregar Usuario'}</button>
+              {/* Primary actions placeholder */}
             </div>
           </div>
-          {creating && (
-            <form onSubmit={handleCreate} className="mb-6 bg-white p-4 rounded shadow-sm">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <input required value={form.nombre} onChange={e=>setForm(f=>({...f,nombre:e.target.value}))} placeholder="Nombre" className="px-3 py-2 border rounded" />
-                <input required value={form.email} onChange={e=>setForm(f=>({...f,email:e.target.value}))} placeholder="Email" className="px-3 py-2 border rounded" />
-                <input required value={form.password} onChange={e=>setForm(f=>({...f,password:e.target.value}))} placeholder="Password" type="password" className="px-3 py-2 border rounded" />
-                <select value={form.workspace_id || ''} onChange={e=>setForm(f=>({...f,workspace_id: e.target.value === '' ? null : Number(e.target.value)}))} className="px-3 py-2 border rounded">
-                  <option value="">Sin workspace</option>
-                  {workspaces && workspaces.map(w=> (<option key={w.id} value={w.id}>{w.nombre_cliente || w.nombre || w.id}</option>))}
-                </select>
-              </div>
-              <div className="mt-3 flex gap-2">
-                <button type="submit" className="px-4 py-2 bg-primary text-white rounded">Crear</button>
-                <button type="button" onClick={()=>{setCreating(false); setForm({nombre:'',email:'',password:'', workspace_id: null})}} className="px-4 py-2 border rounded">Cancelar</button>
-              </div>
-              {message && <p className={`mt-2 ${message.type==='error'?'text-red-600':'text-green-600'}`}>{message.text}</p>}
-            </form>
-          )}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          
+                
+
+            <div className="px-8 py-6 bg-surface-container-low/30 flex justify-between items-center">
             <StatCard title="Total Usuarios" value="148" note="+12 este mes" />
           </div>
           <div className="mb-6 max-w-md">
-            <SearchInput placeholder="Buscar usuarios por nombre o email..." />
-          </div>
-          <div className="bg-surface-container-lowest rounded-xl overflow-hidden">
+                <div className="flex items-center gap-2">
+                  <button className="px-3 py-2 bg-primary text-white rounded-lg">Exportar</button>
+                </div>
             <div className="px-6 py-4 bg-surface-container-low flex justify-between items-center">
+              {/* Add new user button below table, right-aligned */}
+              <div className="flex justify-end mt-4">
+                <button onClick={()=>setNewRow(true)} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-xl font-bold shadow">{newRow ? 'Nueva fila' : 'Agregar Usuario'}</button>
+              </div>
               <div>
                 <button className="px-3 py-1.5 text-xs font-bold">Filtrar</button>
               </div>
@@ -148,8 +129,9 @@ export default function UsersManager() {
             </div>
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-surface-container-low/50">
-                  <th className="px-6 py-4 text-[10px] font-bold uppercase">Nombre y Email</th>
+                  <tr className="bg-surface-container-low/50">
+                  <th className="px-6 py-4 text-[10px] font-bold uppercase">Nombre</th>
+                  <th className="px-6 py-4 text-[10px] font-bold uppercase">Email</th>
                   <th className="px-6 py-4 text-[10px] font-bold uppercase">Rol</th>
                   <th className="px-6 py-4 text-[10px] font-bold uppercase">Workspace / Cliente</th>
                   <th className="px-6 py-4 text-[10px] font-bold uppercase">Estado</th>
@@ -157,50 +139,89 @@ export default function UsersManager() {
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {loading && <tr><td colSpan={5} className="px-6 py-6">Cargando...</td></tr>}
+                {loading && <tr><td colSpan={6} className="px-6 py-6">Cargando...</td></tr>}
+                {newRow && (
+                  <tr className="bg-surface-container-low">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-primary-fixed flex items-center justify-center text-primary font-bold">+</div>
+                        <div>
+                          <input value={newForm.nombre} onChange={e=>setNewForm(f=>({...f,nombre:e.target.value}))} placeholder="Nombre" className="px-3 py-2 border rounded w-48" />
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <input value={newForm.email} onChange={e=>setNewForm(f=>({...f,email:e.target.value}))} placeholder="Email" className="px-3 py-2 border rounded w-64" />
+                    </td>
+                    <td className="px-6 py-4">
+                      <select value={newForm.role_id ?? ''} onChange={e=>setNewForm(f=>({...f,role_id: e.target.value === '' ? null : Number(e.target.value)}))} className="px-3 py-1 rounded-full text-[10px] font-black bg-primary-container">
+                        <option value="">Sin rol</option>
+                        {ROLE_OPTIONS.map(r=> (<option key={r.id} value={r.id}>{r.label}</option>))}
+                      </select>
+                    </td>
+                    <td className="px-6 py-4">
+                      <select value={newForm.workspace_id ?? ''} onChange={e=>setNewForm(f=>({...f,workspace_id: e.target.value === '' ? null : Number(e.target.value)}))} className="px-3 py-2 border rounded">
+                        <option value="">Sin workspace</option>
+                        {workspaces && workspaces.map(w=> (<option key={w.id} value={w.id}>{w.nombre_cliente || w.nombre || w.id}</option>))}
+                      </select>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex justify-end items-center gap-2">
+                        <input placeholder="Password (opcional)" type="password" value={newForm.password} onChange={e=>setNewForm(f=>({...f,password:e.target.value}))} className="px-3 py-2 border rounded" />
+                        <button onClick={async ()=>{ try{ await createUser(newForm); setMessage({type:'success', text:'Usuario creado'}); setNewRow(false); setNewForm({ nombre: '', email: '', password: '', workspace_id: null }) }catch(err){ setMessage({type:'error', text: err.error || err.message || 'Error'}) } }} className="px-4 py-2 bg-blue-600 text-white rounded-lg whitespace-nowrap">Enviar</button>
+                        <button onClick={()=>{ setNewRow(false); setNewForm({ nombre: '', email: '', password: '', workspace_id: null }) }} className="px-4 py-2 border rounded-lg whitespace-nowrap">Descartar</button>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4" />
+                  </tr>
+                )}
                 {!loading && users.map(u=> (
                   <tr key={u.id} className="hover:bg-surface-container-low">
                     <td className="px-6 py-5">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-primary-fixed flex items-center justify-center text-primary font-bold">{(u.nombre||'').split(' ').map(s=>s[0]).slice(0,2).join('')}</div>
-                        <div className="w-full">
+                        <div>
                           {editingId === u.id ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                              <input value={editForm.nombre} onChange={e=>setEditForm(f=>({...f,nombre:e.target.value}))} placeholder="Nombre" className="px-3 py-2 border rounded w-full" />
-                              <input value={editForm.email} onChange={e=>setEditForm(f=>({...f,email:e.target.value}))} placeholder="Email" className="px-3 py-2 border rounded w-full" />
-                            </div>
+                            <input value={editForm.nombre} onChange={e=>setEditForm(f=>({...f,nombre:e.target.value}))} placeholder="Nombre" className="px-3 py-2 border rounded w-full max-w-[260px]" />
                           ) : (
-                            <>
-                              <p className="text-sm font-bold text-blue-900">{u.nombre}</p>
-                              <p className="text-xs text-slate-500">{u.email}</p>
-                            </>
+                            <p className="text-sm font-bold text-blue-900">{u.nombre}</p>
                           )}
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-5"><span className="px-3 py-1 rounded-full text-[10px] font-black bg-primary-container">{u.role_id || 'User'}</span></td>
-                    <td onMouseEnter={()=>setHoveredWorkspaceRow(u.id)} onMouseLeave={()=>setHoveredWorkspaceRow(null)} className="px-6 py-5">
+                    <td className="px-6 py-5">
                       {editingId === u.id ? (
-                        <div>
-                          {(hoveredWorkspaceRow === u.id) ? (
-                            <select value={editForm.workspace_id ?? ''} onChange={e=>setEditForm(f=>({...f,workspace_id: e.target.value === '' ? null : Number(e.target.value)}))} className="px-3 py-2 border rounded">
-                              <option value="">Sin workspace</option>
-                              {workspaces && workspaces.map(w=> (<option key={w.id} value={w.id}>{w.nombre_cliente || w.nombre || w.id}</option>))}
-                            </select>
-                          ) : (
-                            <p className="text-sm font-medium">{u.workspace_id || '-'}</p>
-                          )}
-                        </div>
+                        <input value={editForm.email} onChange={e=>setEditForm(f=>({...f,email:e.target.value}))} placeholder="Email" className="px-3 py-2 border rounded w-full max-w-[320px]" />
                       ) : (
-                        <p className="text-sm font-medium">{u.workspace_id || '-'}</p>
+                        <p className="text-xs text-slate-500">{u.email}</p>
+                      )}
+                    </td>
+                    <td className="px-6 py-5">
+                      {editingId === u.id ? (
+                        <select value={editForm.role_id ?? ''} onChange={e=>setEditForm(f=>({...f,role_id: e.target.value === '' ? null : Number(e.target.value)}))} className="px-3 py-2 border rounded">
+                          <option value="">Sin rol</option>
+                          {ROLE_OPTIONS.map(r=> (<option key={r.id} value={r.id}>{r.label}</option>))}
+                        </select>
+                      ) : (
+                        <span className="px-3 py-1 rounded-full text-[10px] font-black bg-primary-container">{(ROLE_OPTIONS.find(ro=>ro.id === u.role_id) || { label: (typeof u.role_id === 'string' ? u.role_id : 'User') }).label}</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-5">
+                      {editingId === u.id ? (
+                        <select value={editForm.workspace_id ?? ''} onChange={e=>setEditForm(f=>({...f,workspace_id: e.target.value === '' ? null : Number(e.target.value)}))} className="px-3 py-2 border rounded">
+                          <option value="">Sin workspace</option>
+                          {workspaces && workspaces.map(w=> (<option key={w.id} value={w.id}>{w.nombre_cliente || w.nombre || w.id}</option>))}
+                        </select>
+                      ) : (
+                        <p className="text-sm font-medium">{(workspaces && workspaces.find(w=>w.id === u.workspace_id) ? (workspaces.find(w=>w.id === u.workspace_id).nombre_cliente || workspaces.find(w=>w.id === u.workspace_id).nombre) : (u.workspace_id || '-'))}</p>
                       )}
                     </td>
                     <td className="px-6 py-5"><span className="text-xs font-bold text-blue-900">Activo</span></td>
                     <td className="px-6 py-5 text-right">
                       {editingId === u.id ? (
-                        <div className="flex justify-end items-center gap-2">
-                          <input placeholder="Nueva contraseña (opcional)" type="password" value={editForm.password} onChange={e=>setEditForm(f=>({...f,password:e.target.value}))} className="px-3 py-2 border rounded" />
-                          <button onClick={()=>saveEdit(u.id)} className="px-3 py-1.5 bg-primary text-white rounded-lg">Guardar</button>
+                        <div className="flex flex-wrap justify-end items-center gap-2">
+                          <input placeholder="Nueva contraseña (opcional)" type="password" value={editForm.password} onChange={e=>setEditForm(f=>({...f,password:e.target.value}))} className="px-3 py-2 border rounded max-w-[180px]" />
+                          <button onClick={()=>saveEdit(u.id)} className="px-4 py-2 bg-blue-600 text-white rounded-lg">Guardar</button>
                           <button onClick={cancelEdit} className="px-3 py-1.5 border rounded-lg">Cancelar</button>
                         </div>
                       ) : (
@@ -219,6 +240,8 @@ export default function UsersManager() {
               <p className="text-xs font-medium text-slate-500">Página 1 de 15</p>
               <div className="flex gap-2"><button className="px-4 py-2 bg-white text-slate-400 rounded-lg">Anterior</button><button className="px-4 py-2 bg-white text-primary rounded-lg">Siguiente</button></div>
             </div>
+
+            {/* bottom CTA removed to keep single create button at top */}
           </div>
         </div>
       </Layout>
