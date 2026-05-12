@@ -6,6 +6,7 @@ import SearchInput from '../components/SearchInput'
 import useUsers from '../hooks/useUsers'
 import useWorkspaces from '../hooks/useWorkspaces'
 import { useForm } from 'react-hook-form'
+import { Link, useNavigate } from 'react-router-dom'
 
 function SideNav() {
   return (
@@ -15,15 +16,16 @@ function SideNav() {
         <p className="text-[10px] font-medium text-slate-500 uppercase tracking-widest mt-1">ISO 9001:2015 Portal</p>
       </div>
       <nav className="flex-1 space-y-1 px-2">
-        <a className="flex items-center gap-3 py-3 text-slate-600 font-medium pl-4" href="#">Panel Principal</a>
-        <a className="flex items-center gap-3 py-3 text-slate-600 font-medium pl-4" onClick={() => <Link to='/workspaces'></Link>}>Espacios de Trabajo</a>
-        <a className="flex items-center gap-3 py-3 text-blue-900 font-bold pl-4 bg-slate-100 border-l-4 border-blue-900" href="">Usuarios</a>
+        <Link className="flex items-center gap-3 py-3 text-slate-600 font-medium pl-4" to="/lobby">Panel Principal</Link>
+        <Link className="flex items-center gap-3 py-3 text-slate-600 font-medium pl-4" to="/workspaces">Espacios de Trabajo</Link>
+        <Link className="flex items-center gap-3 py-3 text-blue-900 font-bold pl-4 bg-slate-100 border-l-4 border-blue-900" to="/users">Usuarios</Link>
       </nav>
     </aside>
   )
 }
 
 export default function UsersManager() {
+  const navigate = useNavigate()
   const [message, setMessage] = React.useState(null)
   const { users, loading, loadUsers, createUser, updateUser, deleteUser, assignWorkspace } = useUsers()
   const { workspaces, loadWorkspaces } = useWorkspaces()
@@ -119,15 +121,7 @@ export default function UsersManager() {
               {message.text}
             </div>
           )}
-          <div className="flex justify-between items-end mb-8">
-            <div>
-              <h2 className="text-3xl font-black text-blue-900">Gestor de Usuarios</h2>
-              <p className="text-on-secondary-fixed-variant">Administración de accesos y perfiles del sistema ISO 9001.</p>
-            </div>
-            <div className="flex items-center gap-2">
-              {/* Primary actions placeholder */}
-            </div>
-          </div>
+          {/* Header rendered by Layout; avoid duplicate title here */}
           
                 
 

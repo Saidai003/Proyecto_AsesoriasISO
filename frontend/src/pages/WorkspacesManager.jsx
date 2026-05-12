@@ -5,6 +5,7 @@ import StatCard from '../components/StatCard'
 import SearchInput from '../components/SearchInput'
 import useWorkspaces from '../hooks/useWorkspaces'
 import { useForm } from 'react-hook-form'
+import { Link, useNavigate } from 'react-router-dom'
 
 function SideNav() {
   return (
@@ -19,15 +20,16 @@ function SideNav() {
         </div>
       </div>
       <nav className="flex-1 flex flex-col gap-y-1">
-        <a className="px-4 py-3 rounded-lg text-slate-600 hover:text-[#00236f]">Panel Principal</a>
-        <a className="px-4 py-3 rounded-lg text-[#00236f] font-bold border-l-4 border-[#00236f] bg-white/50">Espacios de Trabajo</a>
-        <a className="px-4 py-3 rounded-lg text-slate-600">Usuarios</a>
+        <Link className="px-4 py-3 rounded-lg text-slate-600 hover:text-[#00236f]" to="/lobby">Panel Principal</Link>
+        <Link className="px-4 py-3 rounded-lg text-[#00236f] font-bold border-l-4 border-[#00236f] bg-white/50" to="/workspaces">Espacios de Trabajo</Link>
+        <Link className="px-4 py-3 rounded-lg text-slate-600" to="/users">Usuarios</Link>
       </nav>
     </aside>
   )
 }
 
 export default function WorkspacesManager() {
+  const navigate = useNavigate()
   const [message, setMessage] = React.useState(null)
   const { workspaces, loading, loadWorkspaces, createWorkspace, updateWorkspace, deleteWorkspace } = useWorkspaces()
 
@@ -71,15 +73,7 @@ export default function WorkspacesManager() {
     <Protected role="Admin">
         <Layout title="Gestor de Espacios de Trabajo" subtitle="Administración centralizada de clientes y cumplimiento ISO 9001:2015." sidebar={<SideNav/>}>
        <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col md:flex-row md:items-end justify-between mb-10">
-              <div>
-                <nav className="flex items-center gap-2 text-xs text-slate-500 mb-2 uppercase tracking-widest font-bold"><span>Admin</span><span className="material-symbols-outlined text-[10px]">chevron_right</span><span className="text-primary">ESPACIOS DE TRABAJO</span></nav>
-                <h2 className="text-3xl font-black text-primary">Gestor de Espacios de Trabajo</h2>
-                <p className="text-slate-500 mt-1 max-w-2xl">Administración centralizada de clientes y cumplimiento ISO 9001:2015.</p>
-              </div>
-              <div />
-            
-            </div>
+          {/* Header rendered by Layout; avoid duplicate title here */}
             <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-8">
               <StatCard title="Total Espacios" value="42" note="+3 este mes" />
             </div>
