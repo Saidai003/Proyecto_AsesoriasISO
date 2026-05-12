@@ -4,6 +4,7 @@ import Layout from '../components/Layout'
 import StatCard from '../components/StatCard'
 import SearchInput from '../components/SearchInput'
 import useWorkspaces from '../hooks/useWorkspaces'
+import { useForm } from 'react-hook-form'
 
 function SideNav() {
   return (
@@ -28,30 +29,30 @@ function SideNav() {
 
 export default function WorkspacesManager() {
   const [message, setMessage] = React.useState(null)
-  const { workspaces, loading, loadWorkspaces, createWorkspace } = useWorkspaces()
-  const { updateWorkspace, deleteWorkspace } = useWorkspaces()
+  const { workspaces, loading, loadWorkspaces, createWorkspace, updateWorkspace, deleteWorkspace } = useWorkspaces()
 
   React.useEffect(()=>{ loadWorkspaces() }, [loadWorkspaces])
 
   const [newWorkspaceRow, setNewWorkspaceRow] = React.useState(false)
-  const [newWorkspaceForm, setNewWorkspaceForm] = React.useState({ nombre_cliente: '' })
   const [editingId, setEditingId] = React.useState(null)
-  const [editForm, setEditForm] = React.useState({ nombre_cliente: '' })
+
+  const { register: registerNew, handleSubmit: handleNewSubmit, reset: resetNew } = useForm({ defaultValues: { nombre_cliente: '' } })
+  const { register: registerEdit, handleSubmit: handleEditSubmit, reset: resetEdit } = useForm({ defaultValues: { nombre_cliente: '' } })
 
   function startEdit(w){
     setEditingId(w.id)
-    setEditForm({ nombre_cliente: w.nombre_cliente || '' })
+    resetEdit({ nombre_cliente: w.nombre_cliente || '' })
     setMessage(null)
   }
 
   function cancelEdit(){
     setEditingId(null)
-    setEditForm({ nombre_cliente: '' })
+    resetEdit({ nombre_cliente: '' })
   }
 
-  async function saveEdit(id){
+  async function saveEdit(id, data){
     try{
-      await updateWorkspace(id, { nombre_cliente: editForm.nombre_cliente })
+      await updateWorkspace(id, { nombre_cliente: data.nombre_cliente })
       setMessage({ type: 'success', text: 'Espacio actualizado' })
       cancelEdit()
     }catch(err){ setMessage({ type: 'error', text: err.error || err.message || 'Error actualizando' }) }
@@ -119,7 +120,7 @@ export default function WorkspacesManager() {
                             <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center text-white">{(w.nombre_cliente || w.nombre || ' ')[0]}</div>
                             <div>
                               {editingId === w.id ? (
-                                <input value={editForm.nombre_cliente} onChange={e=>setEditForm(f=>({...f,nombre_cliente:e.target.value}))} className="px-3 py-2 border rounded w-72" />
+                                <input {...registerEdit('nombre_cliente')} className="px-3 py-2 border rounded w-72" />
                               ) : (
                                 <>
                                   <p className="font-bold">{w.nombre_cliente || w.nombre}</p>
@@ -133,8 +134,8 @@ export default function WorkspacesManager() {
                         <td className="px-6 py-4 text-right">
                           <div className="flex justify-end gap-2">
                             {editingId === w.id ? (
-                              <>
-                                <button onClick={()=>saveEdit(w.id)} className="px-3 py-1.5 bg-blue-600 text-white rounded-lg">Guardar</button>
+                                <>
+                                <button onClick={handleEditSubmit(data=>saveEdit(w.id,data))} className="px-3 py-1.5 bg-blue-600 text-white rounded-lg">Guardar</button>
                                 <button onClick={cancelEdit} className="px-3 py-1.5 border rounded-lg">Cancelar</button>
                               </>
                             ) : (
@@ -154,7 +155,7 @@ export default function WorkspacesManager() {
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center text-white">+</div>
                             <div>
-                              <input value={newWorkspaceForm.nombre_cliente} onChange={e=>setNewWorkspaceForm(f=>({...f,nombre_cliente:e.target.value}))} placeholder="Nombre del cliente" className="px-3 py-2 border rounded w-72" />
+                              <input {...registerNew('nombre_cliente')} placeholder="Nombre del cliente" className="px-3 py-2 border rounded w-72" />
                               <p className="text-sm text-slate-500">ID: --</p>
                             </div>
                           </div>
@@ -162,8 +163,8 @@ export default function WorkspacesManager() {
                         <td className="px-6 py-4">--</td>
                         <td className="px-6 py-4 text-right">
                           <div className="flex justify-end gap-2">
-                            <button onClick={async ()=>{ try{ await createWorkspace(newWorkspaceForm); setMessage({type:'success', text:'Espacio creado'}); setNewWorkspaceRow(false); setNewWorkspaceForm({ nombre_cliente: ''}); }catch(err){ setMessage({type:'error', text: err.error || err.message || 'Error'}) } }} className="px-4 py-2 bg-blue-600 text-white rounded-lg whitespace-nowrap">Enviar</button>
-                            <button onClick={()=>{ setNewWorkspaceRow(false); setNewWorkspaceForm({ nombre_cliente: ''}); }} className="px-4 py-2 border rounded-lg whitespace-nowrap">Descartar</button>
+                            <button onClick={handleNewSubmit(async (data)=>{ try{ await createWorkspace({ nombre_cliente: data.nombre_cliente }); setMessage({type:'success', text:'Espacio creado'}); setNewWorkspaceRow(false); resetNew(); }catch(err){ setMessage({type:'error', text: err.error || err.message || 'Error'}) } })} className="px-4 py-2 bg-blue-600 text-white rounded-lg whitespace-nowrap">Enviar</button>
+                            <button onClick={()=>{ setNewWorkspaceRow(false); resetNew(); }} className="px-4 py-2 border rounded-lg whitespace-nowrap">Descartar</button>
                           </div>
                         </td>
                       </tr>

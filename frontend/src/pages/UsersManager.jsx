@@ -5,6 +5,7 @@ import StatCard from '../components/StatCard'
 import SearchInput from '../components/SearchInput'
 import useUsers from '../hooks/useUsers'
 import useWorkspaces from '../hooks/useWorkspaces'
+import { useForm } from 'react-hook-form'
 
 function SideNav() {
   return (
@@ -15,8 +16,8 @@ function SideNav() {
       </div>
       <nav className="flex-1 space-y-1 px-2">
         <a className="flex items-center gap-3 py-3 text-slate-600 font-medium pl-4" href="#">Panel Principal</a>
-        <a className="flex items-center gap-3 py-3 text-slate-600 font-medium pl-4" href="#">Espacios de Trabajo</a>
-        <a className="flex items-center gap-3 py-3 text-blue-900 font-bold pl-4 bg-slate-100 border-l-4 border-blue-900" href="#">Usuarios</a>
+        <a className="flex items-center gap-3 py-3 text-slate-600 font-medium pl-4" onClick={() => <Link to='/workspaces'></Link>}>Espacios de Trabajo</a>
+        <a className="flex items-center gap-3 py-3 text-blue-900 font-bold pl-4 bg-slate-100 border-l-4 border-blue-900" href="">Usuarios</a>
       </nav>
     </aside>
   )
@@ -47,27 +48,37 @@ export default function UsersManager() {
   }
 
   const [editingId, setEditingId] = React.useState(null)
-  const [editForm, setEditForm] = React.useState({ nombre: '', email: '', password: '', workspace_id: null, role_id: null })
 
   const [newRow, setNewRow] = React.useState(false)
-  const [newForm, setNewForm] = React.useState({ nombre: '', email: '', password: '', workspace_id: null, role_id: null })
+
+  const {
+    register: registerNew,
+    handleSubmit: handleNewSubmit,
+    reset: resetNew,
+  } = useForm({ defaultValues: { nombre: '', email: '', password: '', workspace_id: '', role_id: '' } })
+
+  const {
+    register: registerEdit,
+    handleSubmit: handleEditSubmit,
+    reset: resetEdit,
+  } = useForm({ defaultValues: { nombre: '', email: '', password: '', workspace_id: '', role_id: '' } })
 
   function startEdit(user){
     setEditingId(user.id)
-    setEditForm({ nombre: user.nombre || '', email: user.email || '', password: '', workspace_id: user.workspace_id || null, role_id: user.role_id || null })
+    resetEdit({ nombre: user.nombre || '', email: user.email || '', password: '', workspace_id: user.workspace_id ?? '', role_id: user.role_id ?? '' })
     setMessage(null)
   }
 
   function cancelEdit(){
     setEditingId(null)
-    setEditForm({ nombre: '', email: '', password: '', workspace_id: null })
+    resetEdit({ nombre: '', email: '', password: '', workspace_id: '', role_id: '' })
   }
 
-  async function saveEdit(id){
+  async function saveEdit(id, data){
     setMessage({ type: 'info', text: 'Guardando...' })
     try{
-      const payload = { nombre: editForm.nombre, email: editForm.email, workspace_id: (typeof editForm.workspace_id !== 'undefined' ? editForm.workspace_id : null), role_id: (typeof editForm.role_id !== 'undefined' ? editForm.role_id : null) }
-      if(editForm.password && editForm.password.trim() !== '') payload.password = editForm.password
+      const payload = { nombre: data.nombre, email: data.email, workspace_id: (data.workspace_id === '' ? null : Number(data.workspace_id)), role_id: (data.role_id === '' ? null : Number(data.role_id)) }
+      if(data.password && data.password.trim() !== '') payload.password = data.password
       console.log('saveEdit payload', id, payload)
       await updateUser(id, payload)
       setMessage({ type: 'success', text: 'Usuario actualizado' })
@@ -77,6 +88,16 @@ export default function UsersManager() {
       const text = (err && (err.error || err.message)) ? (err.error || err.message) : (typeof err === 'string' ? err : JSON.stringify(err))
       setMessage({ type: 'error', text: text || 'Error actualizando' })
     }
+  }
+
+  async function createNew(data){
+    try{
+      const payload = { nombre: data.nombre, email: data.email, password: data.password && data.password.trim() !== '' ? data.password : undefined, workspace_id: (data.workspace_id === '' ? null : Number(data.workspace_id)), role_id: (data.role_id === '' ? null : Number(data.role_id)) }
+      await createUser(payload)
+      setMessage({ type: 'success', text: 'Usuario creado' })
+      setNewRow(false)
+      resetNew()
+    }catch(err){ setMessage({ type: 'error', text: err.error || err.message || 'Error' }) }
   }
 
   async function handleAssign(user){
@@ -146,30 +167,30 @@ export default function UsersManager() {
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-primary-fixed flex items-center justify-center text-primary font-bold">+</div>
                         <div>
-                          <input value={newForm.nombre} onChange={e=>setNewForm(f=>({...f,nombre:e.target.value}))} placeholder="Nombre" className="px-3 py-2 border rounded w-48" />
+                          <input {...registerNew('nombre')} placeholder="Nombre" className="px-3 py-2 border rounded w-48" />
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <input value={newForm.email} onChange={e=>setNewForm(f=>({...f,email:e.target.value}))} placeholder="Email" className="px-3 py-2 border rounded w-64" />
+                      <input {...registerNew('email')} placeholder="Email" className="px-3 py-2 border rounded w-64" />
                     </td>
                     <td className="px-6 py-4">
-                      <select value={newForm.role_id ?? ''} onChange={e=>setNewForm(f=>({...f,role_id: e.target.value === '' ? null : Number(e.target.value)}))} className="px-3 py-1 rounded-full text-[10px] font-black bg-primary-container">
+                      <select {...registerNew('role_id')} className="px-3 py-1 rounded-full text-[10px] font-black bg-primary-container">
                         <option value="">Sin rol</option>
                         {ROLE_OPTIONS.map(r=> (<option key={r.id} value={r.id}>{r.label}</option>))}
                       </select>
                     </td>
                     <td className="px-6 py-4">
-                      <select value={newForm.workspace_id ?? ''} onChange={e=>setNewForm(f=>({...f,workspace_id: e.target.value === '' ? null : Number(e.target.value)}))} className="px-3 py-2 border rounded">
+                      <select {...registerNew('workspace_id')} className="px-3 py-2 border rounded">
                         <option value="">Sin workspace</option>
                         {workspaces && workspaces.map(w=> (<option key={w.id} value={w.id}>{w.nombre_cliente || w.nombre || w.id}</option>))}
                       </select>
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex justify-end items-center gap-2">
-                        <input placeholder="Password (opcional)" type="password" value={newForm.password} onChange={e=>setNewForm(f=>({...f,password:e.target.value}))} className="px-3 py-2 border rounded" />
-                        <button onClick={async ()=>{ try{ await createUser(newForm); setMessage({type:'success', text:'Usuario creado'}); setNewRow(false); setNewForm({ nombre: '', email: '', password: '', workspace_id: null }) }catch(err){ setMessage({type:'error', text: err.error || err.message || 'Error'}) } }} className="px-4 py-2 bg-blue-600 text-white rounded-lg whitespace-nowrap">Enviar</button>
-                        <button onClick={()=>{ setNewRow(false); setNewForm({ nombre: '', email: '', password: '', workspace_id: null }) }} className="px-4 py-2 border rounded-lg whitespace-nowrap">Descartar</button>
+                        <input placeholder="Password (opcional)" type="password" {...registerNew('password')} className="px-3 py-2 border rounded" />
+                        <button onClick={handleNewSubmit(createNew)} className="px-4 py-2 bg-blue-600 text-white rounded-lg whitespace-nowrap">Enviar</button>
+                        <button onClick={()=>{ setNewRow(false); resetNew() }} className="px-4 py-2 border rounded-lg whitespace-nowrap">Descartar</button>
                       </div>
                     </td>
                     <td className="px-6 py-4" />
@@ -182,7 +203,7 @@ export default function UsersManager() {
                         <div className="w-10 h-10 rounded-full bg-primary-fixed flex items-center justify-center text-primary font-bold">{(u.nombre||'').split(' ').map(s=>s[0]).slice(0,2).join('')}</div>
                         <div>
                           {editingId === u.id ? (
-                            <input value={editForm.nombre} onChange={e=>setEditForm(f=>({...f,nombre:e.target.value}))} placeholder="Nombre" className="px-3 py-2 border rounded w-full max-w-[260px]" />
+                            <input {...registerEdit('nombre')} placeholder="Nombre" className="px-3 py-2 border rounded w-full max-w-[260px]" />
                           ) : (
                             <p className="text-sm font-bold text-blue-900">{u.nombre}</p>
                           )}
@@ -191,14 +212,14 @@ export default function UsersManager() {
                     </td>
                     <td className="px-6 py-5">
                       {editingId === u.id ? (
-                        <input value={editForm.email} onChange={e=>setEditForm(f=>({...f,email:e.target.value}))} placeholder="Email" className="px-3 py-2 border rounded w-full max-w-[320px]" />
+                        <input {...registerEdit('email')} placeholder="Email" className="px-3 py-2 border rounded w-full max-w-[320px]" />
                       ) : (
                         <p className="text-xs text-slate-500">{u.email}</p>
                       )}
                     </td>
                     <td className="px-6 py-5">
                       {editingId === u.id ? (
-                        <select value={editForm.role_id ?? ''} onChange={e=>setEditForm(f=>({...f,role_id: e.target.value === '' ? null : Number(e.target.value)}))} className="px-3 py-2 border rounded">
+                        <select {...registerEdit('role_id')} className="px-3 py-2 border rounded">
                           <option value="">Sin rol</option>
                           {ROLE_OPTIONS.map(r=> (<option key={r.id} value={r.id}>{r.label}</option>))}
                         </select>
@@ -208,7 +229,7 @@ export default function UsersManager() {
                     </td>
                     <td className="px-6 py-5">
                       {editingId === u.id ? (
-                        <select value={editForm.workspace_id ?? ''} onChange={e=>setEditForm(f=>({...f,workspace_id: e.target.value === '' ? null : Number(e.target.value)}))} className="px-3 py-2 border rounded">
+                        <select {...registerEdit('workspace_id')} className="px-3 py-2 border rounded">
                           <option value="">Sin workspace</option>
                           {workspaces && workspaces.map(w=> (<option key={w.id} value={w.id}>{w.nombre_cliente || w.nombre || w.id}</option>))}
                         </select>
@@ -220,8 +241,8 @@ export default function UsersManager() {
                     <td className="px-6 py-5 text-right">
                       {editingId === u.id ? (
                         <div className="flex flex-wrap justify-end items-center gap-2">
-                          <input placeholder="Nueva contraseña (opcional)" type="password" value={editForm.password} onChange={e=>setEditForm(f=>({...f,password:e.target.value}))} className="px-3 py-2 border rounded max-w-[180px]" />
-                          <button onClick={()=>saveEdit(u.id)} className="px-4 py-2 bg-blue-600 text-white rounded-lg">Guardar</button>
+                          <input placeholder="Nueva contraseña (opcional)" type="password" {...registerEdit('password')} className="px-3 py-2 border rounded max-w-[180px]" />
+                          <button onClick={handleEditSubmit(data=>saveEdit(u.id, data))} className="px-4 py-2 bg-blue-600 text-white rounded-lg">Guardar</button>
                           <button onClick={cancelEdit} className="px-3 py-1.5 border rounded-lg">Cancelar</button>
                         </div>
                       ) : (

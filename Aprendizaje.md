@@ -88,3 +88,23 @@ Un callback es una función que se pasa como argumento a otra función y se ejec
 * **useCallback**: Se utiliza para memorizar estas funciones de modo que no se vuelvan a crear en cada renderizado, lo que puede ayudar con el rendimiento y evitar renderizados innecesarios en los componentes que usan este hook.
 * **Retorno del hook**: El hook useUsers devuelve un objeto con el estado de users y loading y las funciones para crear, actualizar, eliminar y asignar espacios de trabajo.
 * **Dependencias**: Se utilizan para decirle a React cuándo volver a crear las funciones, lo cual es importante para asegurar que tengan acceso al estado más reciente y a otras funciones de las que dependen.
+
+## PROPS!
+
+Muy faciles de entender, solo debes mirar este codigo:
+
+// El Hijo (Recibe las props)
+function TarjetaUsuario(props) {
+  return <h1>Hola, {props.nombre}</h1>;
+}
+
+// El Padre (Envía las props)
+function App() {
+  return (
+    <div>
+      <TarjetaUsuario nombre="Juan" />
+      <TarjetaUsuario nombre="María" />
+    </div>
+  );
+}
+el prop es nombre, que se le asigna un valor o funcion, sea anonima o no.

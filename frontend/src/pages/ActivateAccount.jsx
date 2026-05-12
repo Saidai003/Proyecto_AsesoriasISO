@@ -1,6 +1,13 @@
 import React from 'react'
+import { useForm } from 'react-hook-form'
 
 export default function ActivateAccount() {
+  const { register, handleSubmit } = useForm()
+
+  const onSubmit = (data) => {
+    console.log('activate account', data)
+  }
+
   return (
     <main className="min-h-screen flex items-center justify-center p-6 bg-surface text-on-surface">
       <div className="w-full max-w-xl">
@@ -16,20 +23,20 @@ export default function ActivateAccount() {
         </div>
         <div className="bg-surface-container-lowest rounded-xl p-8 shadow relative overflow-hidden">
           <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary" />
-          <form className="space-y-8">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
             <div className="space-y-2">
               <div className="flex justify-between items-center">
                 <label htmlFor="password" className="text-label-md font-semibold uppercase tracking-widest text-on-secondary-container">Nueva Contraseña</label>
                 <span className="material-symbols-outlined text-outline text-lg">lock</span>
               </div>
-              <input id="password" name="password" type="password" placeholder="••••••••••••" className="w-full px-4 py-4 bg-surface-container-high rounded-lg" />
+              <input id="password" name="password" type="password" placeholder="••••••••••••" {...register('password')} className="w-full px-4 py-4 bg-surface-container-high rounded-lg" />
             </div>
             <div className="space-y-2">
               <div className="flex justify-between items-center">
                 <label htmlFor="confirm_password" className="text-label-md font-semibold uppercase tracking-widest text-on-secondary-container">Confirmar Contraseña</label>
                 <span className="material-symbols-outlined text-outline text-lg">verified_user</span>
               </div>
-              <input id="confirm_password" name="confirm_password" type="password" placeholder="••••••••••••" className="w-full px-4 py-4 bg-surface-container-high rounded-lg" />
+              <input id="confirm_password" name="confirm_password" type="password" placeholder="••••••••••••" {...register('confirm_password')} className="w-full px-4 py-4 bg-surface-container-high rounded-lg" />
             </div>
             <div className="bg-surface-container-low p-6 rounded-lg space-y-4">
               <h3 className="text-label-md font-bold text-on-surface-variant uppercase tracking-widest">Protocolos de seguridad</h3>

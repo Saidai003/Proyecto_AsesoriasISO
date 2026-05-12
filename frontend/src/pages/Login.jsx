@@ -1,17 +1,16 @@
 import React from 'react'
 import { useAuth } from '../AuthContext'
+import { useForm } from 'react-hook-form'
 
 export default function Login({ onLogin }) {
-  const [email, setEmail] = React.useState('')
-  const [password, setPassword] = React.useState('')
   const [error, setError] = React.useState(null)
   const { login } = useAuth() || {}
+  const { register, handleSubmit } = useForm({ defaultValues: { email: '', password: '' } })
 
-  const submit = async (e) => {
-    e.preventDefault()
+  const submit = async (data) => {
     setError(null)
     try{
-      await login({ email, password })
+      await login({ email: data.email, password: data.password })
       if(onLogin) onLogin()
     }catch(err){
       setError(err.error || 'Login failed')
@@ -31,12 +30,12 @@ export default function Login({ onLogin }) {
               <p className="text-sm font-medium text-on-secondary-container tracking-wide uppercase">Sovereign Archive Access</p>
             </div>
           </div>
-          <form onSubmit={submit} className="px-10 pb-10 space-y-6">
+          <form onSubmit={handleSubmit(submit)} className="px-10 pb-10 space-y-6">
             <div className="space-y-4">
               <div className="group">
                 <label htmlFor="email" className="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5 ml-1">Correo Electrónico</label>
                 <div className="relative">
-                  <input id="email" name="email" type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="nombre@archivo.com" className="w-full px-4 py-3 bg-surface-container-high text-on-surface border-0 rounded-lg placeholder:text-outline/50 text-sm" />
+                  <input id="email" name="email" type="email" {...register('email')} placeholder="nombre@archivo.com" className="w-full px-4 py-3 bg-surface-container-high text-on-surface border-0 rounded-lg placeholder:text-outline/50 text-sm" />
                 </div>
               </div>
               <div className="group">
@@ -44,7 +43,7 @@ export default function Login({ onLogin }) {
                   <label htmlFor="password" className="block text-[10px] font-bold uppercase tracking-widest text-outline ml-1">Contraseña</label>
                 </div>
                 <div className="relative">
-                  <input id="password" name="password" type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="••••••••" className="w-full px-4 py-3 bg-surface-container-high text-on-surface border-0 rounded-lg placeholder:text-outline/50 text-sm" />
+                  <input id="password" name="password" type="password" {...register('password')} placeholder="••••••••" className="w-full px-4 py-3 bg-surface-container-high text-on-surface border-0 rounded-lg placeholder:text-outline/50 text-sm" />
                 </div>
               </div>
             </div>

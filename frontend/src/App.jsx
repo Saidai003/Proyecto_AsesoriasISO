@@ -6,13 +6,15 @@ import UsersManager from './pages/UsersManager'
 import WorkspacesManager from './pages/WorkspacesManager'
 import Lobby from './pages/Lobby'
 import Protected from './components/Protected'
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 
 export default function App(){
+  const navigate = useNavigate()
+
   return (
     <AuthProvider>
       <Routes>
-        <Route path="/login" element={<Login onLogin={()=>{window.location.href='/lobby'}}/>} />
+        <Route path="/login" element={<Login onLogin={()=>navigate('/lobby')} />} />
         <Route path="/activate" element={<ActivateAccount/>} />
         <Route path="/lobby" element={<Protected><Lobby/></Protected>} />
         <Route path="/" element={<Navigate to="/lobby" replace/>} />

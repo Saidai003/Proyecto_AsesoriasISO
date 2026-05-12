@@ -19,3 +19,11 @@ docker compose up --build
 Frontend: entrar en `frontend/` y ejecutar `npm install` y `npm run dev`.
 Backend JS: entrar en `backend-js/` y ejecutar `npm install` y `npm run dev`.
 Backend PY: eliminado; ya no es necesario.
+
+Notas de frontend (actualizaciones importantes):
+
+- **Forms:** El frontend ahora usa la librería `react-hook-form` (hook `useForm`) para manejar la mayoría de los formularios. Las páginas ya convertidas incluyen `src/pages/Login.jsx`, `src/pages/UsersManager.jsx`, `src/pages/WorkspacesManager.jsx` y `src/pages/ActivateAccount.jsx`.
+- **Navegación / Redirecciones:** Hay algunos lugares donde se usa `window.location.href` (por ejemplo en [frontend/src/App.jsx](frontend/src/pages/Login.jsx) y [frontend/src/AuthContext.jsx](frontend/src/AuthContext.jsx)). Esa forma fuerza una recarga completa del DOM/JS y pierde el estado del cliente. Se recomienda usar `useNavigate` de `react-router-dom` o `<Link to="/...">` para navegación cliente-side (`const navigate = useNavigate(); navigate('/lobby')`), evitando recargas completas y manteniendo la app SPA.
+- **Archivo de login:** No existe `login.js` en el proyecto; el componente de login está en [frontend/src/pages/Login.jsx](frontend/src/pages/Login.jsx).
+
+Si quieres, puedo reemplazar automáticamente los `window.location.href` por `useNavigate()` en los archivos relevantes.

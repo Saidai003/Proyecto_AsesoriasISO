@@ -1,9 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useIdleTimer } from 'react-idle-timer'
 
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }){
+  const navigate = useNavigate()
   const [accessToken, setAccessToken] = useState(() => localStorage.getItem('accessToken'))
   const [user, setUser] = useState(() => {
     try{ return JSON.parse(localStorage.getItem('user')) }catch(e){return null}
@@ -141,7 +143,7 @@ export function AuthProvider({ children }){
     if(refreshTimeoutRef.current){ clearTimeout(refreshTimeoutRef.current); refreshTimeoutRef.current = null }
     // perform logout when idle
     logout()
-    try{ window.location.href = '/login' }catch(e){}
+    try{ navigate('/login') }catch(e){}
   }
   const handleOnActive = (event) => {
     setIsIdle(false)
