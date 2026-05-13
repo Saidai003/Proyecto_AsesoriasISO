@@ -35,6 +35,15 @@ export default function WorkspacesManager() {
 
   React.useEffect(()=>{ loadWorkspaces() }, [loadWorkspaces])
 
+  const [q, setQ] = React.useState('')
+  const filteredWorkspaces = React.useMemo(() => {
+    if (!q) return workspaces || []
+    const s = q.toLowerCase()
+    return (workspaces || []).filter(w => {
+      return (w.nombre_cliente || '').toLowerCase().includes(s) || String(w.id).includes(s)
+    })
+  }, [workspaces, q])
+
   const [newWorkspaceRow, setNewWorkspaceRow] = React.useState(false)
   const [editingId, setEditingId] = React.useState(null)
 
@@ -75,10 +84,10 @@ export default function WorkspacesManager() {
        <div className="max-w-7xl mx-auto">
           {/* Header rendered by Layout; avoid duplicate title here */}
             <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-8">
-              <StatCard title="Total Espacios" value="42" note="+3 este mes" />
+              <StatCard title="Total Espacios" value={String(workspaces ? workspaces.length : 0)} note="+3 este mes" />
             </div>
             <div className="mb-6">
-              <SearchInput placeholder="Buscar clientes por nombre o ID (RF-ESP-3)..." />
+              <SearchInput value={q} onChange={e => setQ(e.target.value)} placeholder="Buscar clientes por nombre o ID (RF-ESP-3)..." />
             </div>
             <div className="bg-surface-container-lowest rounded-xl overflow-hidden">
               <div className="px-6 py-4 border-b flex items-center justify-between bg-surface-container-low/50">
@@ -101,23 +110,23 @@ export default function WorkspacesManager() {
                       </tr>
                     )}
 
-                    {!loading && workspaces.length === 0 && (
+                    {!loading && (workspaces || []).length === 0 && (
                       <tr>
                         <td colSpan={3} className="px-6 py-6">No hay espacios de trabajo.</td>
                       </tr>
                     )}
 
-                    {!loading && workspaces.map(w => (
+                    {!loading && filteredWorkspaces.map(w => (
                       <tr key={w.id} className="hover:bg-surface-container-low">
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center text-white">{(w.nombre_cliente || w.nombre || ' ')[0]}</div>
+                            <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center text-white">{(w.nombre_cliente || ' ')[0]}</div>
                             <div>
                               {editingId === w.id ? (
                                 <input {...registerEdit('nombre_cliente')} className="px-3 py-2 border rounded w-72" />
                               ) : (
                                 <>
-                                  <p className="font-bold">{w.nombre_cliente || w.nombre}</p>
+                                  <p className="font-bold">{w.nombre_cliente}</p>
                                   <p className="text-sm text-slate-500">ID: {w.id}</p>
                                 </>
                               )}

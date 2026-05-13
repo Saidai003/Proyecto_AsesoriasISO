@@ -39,6 +39,20 @@ export default function UsersManager() {
   React.useEffect(()=>{ loadUsers() }, [loadUsers])
   React.useEffect(()=>{ loadWorkspaces() }, [loadWorkspaces])
 
+  const [q, setQ] = React.useState('')
+  const filteredUsers = React.useMemo(() => {
+    if (!q) return users || []
+    const s = q.toLowerCase()
+    return (users || []).filter(u => {
+      const name = (u.nombre || '').toLowerCase()
+      const email = (u.email || '').toLowerCase()
+      const ws = workspaces && workspaces.find(w => w.id === u.workspace_id)
+      const wsName = (ws?.nombre_cliente ?? '').toLowerCase()
+      const role = (ROLE_OPTIONS.find(r => r.id === u.role_id)?.label ?? '').toLowerCase()
+      return name.includes(s) || email.includes(s) || wsName.includes(s) || role.includes(s)
+    })
+  }, [users, q, workspaces])
+
   
 
   async function handleDelete(id){
@@ -126,7 +140,10 @@ export default function UsersManager() {
                 
 
             <div className="px-8 py-6 bg-surface-container-low/30 flex justify-between items-center">
-            <StatCard title="Total Usuarios" value="148" note="+12 este mes" />
+            <StatCard title="Total Usuarios" value={String(users ? users.length : 0)} note="+12 este mes" />
+          </div>
+          <div className="mb-4 max-w-md">
+            <SearchInput value={q} onChange={e => setQ(e.target.value)} placeholder="Buscar por nombre, email, rol o workspace..." />
           </div>
           <div className="mb-6 max-w-md">
                 <div className="flex items-center gap-2">
@@ -140,7 +157,7 @@ export default function UsersManager() {
               <div>
                 <button className="px-3 py-1.5 text-xs font-bold">Filtrar</button>
               </div>
-              <div className="text-[11px] font-bold text-slate-400 uppercase">Mostrando 10 de 148 usuarios</div>
+              <div className="text-[11px] font-bold text-slate-400 uppercase">Mostrando {filteredUsers.length} de {users ? users.length : 0} usuarios</div>
             </div>
             <table className="w-full text-left border-collapse">
               <thead>
@@ -177,7 +194,7 @@ export default function UsersManager() {
                     <td className="px-6 py-4">
                       <select {...registerNew('workspace_id')} className="px-3 py-2 border rounded">
                         <option value="">Sin workspace</option>
-                        {workspaces && workspaces.map(w=> (<option key={w.id} value={w.id}>{w.nombre_cliente || w.nombre || w.id}</option>))}
+                        {workspaces && workspaces.map(w=> (<option key={w.id} value={w.id}>{w.nombre_cliente || w.id}</option>))}
                       </select>
                     </td>
                     <td className="px-6 py-4 text-right">
@@ -190,7 +207,7 @@ export default function UsersManager() {
                     <td className="px-6 py-4" />
                   </tr>
                 )}
-                {!loading && users.map(u=> (
+                {!loading && filteredUsers.map(u=> (
                   <tr key={u.id} className="hover:bg-surface-container-low">
                     <td className="px-6 py-5">
                       <div className="flex items-center gap-3">
@@ -225,10 +242,10 @@ export default function UsersManager() {
                       {editingId === u.id ? (
                         <select {...registerEdit('workspace_id')} className="px-3 py-2 border rounded">
                           <option value="">Sin workspace</option>
-                          {workspaces && workspaces.map(w=> (<option key={w.id} value={w.id}>{w.nombre_cliente || w.nombre || w.id}</option>))}
+                          {workspaces && workspaces.map(w=> (<option key={w.id} value={w.id}>{w.nombre_cliente || w.id}</option>))}
                         </select>
                       ) : (
-                        <p className="text-sm font-medium">{(workspaces && workspaces.find(w=>w.id === u.workspace_id) ? (workspaces.find(w=>w.id === u.workspace_id).nombre_cliente || workspaces.find(w=>w.id === u.workspace_id).nombre) : (u.workspace_id || '-'))}</p>
+                        <p className="text-sm font-medium">{(workspaces && workspaces.find(w=>w.id === u.workspace_id) ? workspaces.find(w=>w.id === u.workspace_id).nombre_cliente : (u.workspace_id || '-'))}</p>
                       )}
                     </td>
                     <td className="px-6 py-5"><span className="text-xs font-bold text-blue-900">Activo</span></td>
