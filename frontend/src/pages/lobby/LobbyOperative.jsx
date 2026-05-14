@@ -1,19 +1,10 @@
 import React from 'react'
 import Layout from '../../components/Layout'
-
-function Sidebar(){
-  return (
-    <>
-      <a className="flex items-center gap-3 py-3 px-6 text-[#00236f] font-bold bg-white border-l-4 border-[#00236f]" href="#">Volver al Dashboard</a>
-      <a className="flex items-center gap-3 py-3 px-6 text-slate-600" href="#">4. Contexto</a>
-      <a className="flex items-center gap-3 py-3 px-6 text-slate-600" href="#">5. Liderazgo</a>
-    </>
-  )
-}
+import NavBarISO from '../../components/NavBarISO'
 
 export default function LobbyOperative(){
   return (
-    <Layout title="Dashboard Operativo" subtitle="Nova Logistics S.A. • Período Q3 2024" sidebar={<Sidebar/>}>
+    <Layout title="Dashboard Operativo" subtitle="Nova Logistics S.A. • Período Q3 2024" sidebar={<NavBarISO/>}>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-white p-6 rounded-xl">NC IDENTIFICADAS<br/><strong className="text-3xl">12</strong></div>
         <div className="bg-white p-6 rounded-xl">En Progreso<br/><strong className="text-3xl">08</strong></div>

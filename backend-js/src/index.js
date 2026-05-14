@@ -24,14 +24,18 @@ testConnection().then(() => console.log('DB connection OK')).catch(err => consol
 const authRouter = require('./routes/auth');
 const usersRouter = require('./routes/users');
 const operationalRouter = require('./routes/operational');
+const evaluatorRouter = require('./routes/evaluator');
 const seedRouter = require('./routes/seed');
 const workspacesRouter = require('./routes/workspaces');
+const isoRouter = require('./routes/iso');
 
 app.use('/auth', authRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/operational', operationalRouter);
+app.use('/api/evaluator', evaluatorRouter);
 app.use('/seed', seedRouter); // development-only seed endpoint
 app.use('/api/workspaces', workspacesRouter);
+app.use('/api/isos', isoRouter);
 
 app.get('/', (req, res) => {
     res.send('Hello, World!');

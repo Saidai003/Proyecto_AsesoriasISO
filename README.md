@@ -30,3 +30,28 @@ Notas de frontend (actualizaciones importantes):
 Si quieres, puedo reemplazar automáticamente los `window.location.href` por `useNavigate()` en los archivos relevantes.
 
 - **Actualización aplicada:** Además de `App.jsx` y `AuthContext.jsx`, las vistas principales (`Lobby`, `UsersManager`, `WorkspacesManager`) ahora usan navegación cliente-side consistente: los `SideNav` en `UsersManager` y `WorkspacesManager` usan `Link` de `react-router-dom` y las vistas exponen `useNavigate()` para navegación programática cuando haga falta.
+
+## Notas técnicas: actualizaciones de estado en React
+
+En el frontend usamos patrones de actualización de estado basados en el `useState` de React. Un ejemplo frecuente es:
+
+```js
+setClausesByIso(prev => ({ [isoId]: data }));
+```
+
+Qué significa y por qué usarlo:
+- `setClausesByIso` es la función `set` devuelta por `useState`.
+- Pasar una función (`prev => ...`) es la forma recomendada para calcular el nuevo estado a partir del anterior (llamada "functional updates") — esto evita condiciones de carrera cuando se encolan múltiples actualizaciones.
+- `[isoId]: data` utiliza "computed property names" de JavaScript para crear dinámicamente la clave del objeto según el valor de `isoId`.
+
+Referencias oficiales:
+- React — Functional updates / `useState`: https://react.dev/reference/react/useState#%3A~%3Atext%3Dset%2520functions%2C%20like%20setSomething(nextState)
+- MDN — Computed property names (object initializer): https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Object_initializer#computed_property_names
+
+Uso seguro: si `clausesByIso` contiene otras claves que quieres preservar, usa la forma de fusión:
+
+```js
+setClausesByIso(prev => ({ ...prev, [isoId]: data }));
+```
+
+Esto mantiene las entradas previas y actualiza/añade solo la entrada para `isoId`.

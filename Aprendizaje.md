@@ -145,3 +145,65 @@ El prop es **nombre**, que se le asigna un valor o funcion, sea anonima o no.
 ### 7. Comprobación de Contenido (`.includes`)
 *   **Duda:** ¿Qué hace el método `.includes(s)` al final del filtro?
 *   **Explicación:** Es un método nativo de JavaScript que inspecciona un string para verificar si contiene de forma exacta la subcadena de texto contenida en la variable `s` (el término buscado). Devuelve un valor booleano (`true` o `false`). Al encadenar varias evaluaciones con el operador `||`, el buscador se transforma en un omnibuscador capaz de validar si el término coincide concurrentemente con el nombre, correo, espacio de trabajo o rol del usuario.
+
+# Conclusiones: Estructura y Flexibilidad de un Router en Express.js
+
+## 📌 Conclusiones Clave
+
+*   **Flexibilidad Absoluta:** Un router no está limitado a recibir tres argumentos. Puede aceptar una cantidad indefinida de funciones intermedias (middlewares) separadas por comas o agrupadas en arrays.
+*   **Middlewares (Los Guardianes):**
+    *   Reciben tres argumentos: `req`, `res` y `next`.
+    *   Su obligación principal es ejecutar código de soporte y llamar a `next()` para dar paso a la siguiente función.
+    *   Pueden interrumpir el flujo y responder directamente al cliente si una validación falla.
+*   **Handlers (El Destino Final):**
+    *   Reciben principalmente `req` y `res`.
+    *   Son los responsables de dar la respuesta definitiva al cliente utilizando métodos como `res.send()` o `res.json()`.
+    *   Si un handler no envía una respuesta, la petición del cliente se queda colgada.
+
+---
+
+## 💻 Fragmentos de Código Breves de Router, Handlers y Middlewares
+
+### 1. Flujo Básico (Mínimos Argumentos)
+El caso más simple con solo dos argumentos: la ruta y el handler final.
+
+```javascript
+router.get('/ping', (req, res) => {
+    res.send('pong'); 
+});
+```
+
+### 2. Flujo Flexible (Múltiples Middlewares)
+Demostración de la capacidad de encadenar múltiples funciones intermedias antes de resolver la petición.
+
+```javascript
+router.post('/dashboard', 
+    verificarToken,    // Middleware 1 (llama a next)
+    comprobarPremium,  // Middleware 2 (llama a next)
+    (req, res) => {    // Handler Final
+        res.json({ status: "Acceso concedido" }); 
+    }
+);
+```
+
+### 3. Anatomía de un Middleware vs un Handler
+Diferencia visual exacta en la estructura y responsabilidades de ambos elementos.
+
+```javascript
+// MEDIADOR: Valida y cede el paso con next()
+const esAdulto = (req, res, next) => {
+    if (req.body.edad >= 18) {
+        next(); 
+    } else {
+        res.status(403).send('Acceso denegado');
+    }
+};
+
+// HANDLER: Ejecuta la acción y cierra el ciclo
+const verContenido = (req, res) => {
+    res.json({ video: "Película Premium" });
+};
+
+// Implementación en la ruta
+router.get('/cine', esAdulto, verContenido);
+```

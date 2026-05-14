@@ -1,19 +1,10 @@
 import React from 'react'
 import Layout from '../../components/Layout'
-
-function Sidebar(){
-  return (
-    <>
-      <a className="flex items-center gap-3 px-4 py-3 rounded-xl text-[#00236f] font-bold border-l-4 border-[#00236f] bg-white" href="#">Tablero</a>
-      <a className="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500" href="#">Cláusula 4: Contexto</a>
-      <a className="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500" href="#">Cláusula 5: Liderazgo</a>
-    </>
-  )
-}
+import NavBarISO from '../../components/NavBarISO'
 
 export default function LobbyEvaluator(){
   return (
-    <Layout title="Dashboard Evaluador" subtitle="Análisis predictivo y seguimiento de cumplimiento normativo." sidebar={<Sidebar/>}>
+    <Layout title="Dashboard Evaluador" subtitle="Análisis predictivo y seguimiento de cumplimiento normativo." sidebar={<NavBarISO/>}>
       <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-white p-6 rounded-xl">Promedio de Resolución<br/><strong className="text-3xl">4.2 días</strong></div>
         <div className="bg-white p-6 rounded-xl">Eficiencia de Proceso<br/><strong className="text-3xl">98.4%</strong></div>

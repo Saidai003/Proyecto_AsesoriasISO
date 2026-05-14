@@ -1,0 +1,101 @@
+Aquí tienes el flujo completo de una arquitectura limpia en capas (Backend) y cómo consumirla desde el Frontend (React).
+Este ejemplo simula la obtención de datos de un perfil de usuario protegido.
+------------------------------
+## 🟢 BACKEND (Node.js + Express)## 1. Rutas (routes/userRoutes.js)
+Solo define los caminos, métodos HTTP y asocia los middlewares con el controlador.
+
+const express = require('express');const router = express.Router();const userController = require('../controllers/userController');const authMiddleware = require('../middleware/authMiddleware');
+// Define la ruta, aplica el middleware de protección y asigna el controlador
+router.get('/profile', authMiddleware, userController.getProfile);
+module.exports = router;
+
+## 2. Middleware (middleware/authMiddleware.js)
+Intercepta la petición, valida reglas de negocio (ej. autenticación) y decide si continúa con next().
+
+module.exports = (req, res, next) => {
+    const token = req.headers['authorization'];
+
+    if (!token) {
+        return res.status(401).json({ error: 'Acceso denegado. Falta token.' });
+    }
+
+    // Simulación de validación (en producción usarías jwt.verify)
+    if (token === 'Bearer token-valido-123') {
+        req.user = { id: 42, role: 'admin' }; // Inyecta datos en el req para el controlador
+        return next(); // Cede el paso
+    }
+
+    res.status(403).json({ error: 'Token inválido o expirado.' });
+};
+
+## 3. Controlador (controllers/userController.js)
+Maneja req y res. Extrae parámetros, llama al servicio y envía la respuesta final.
+
+const userService = require('../services/userService');
+const getProfile = async (req, res) => {
+    try {
+        // req.user viene del middleware que se ejecutó antes
+        const userData = await userService.getUserById(req.user.id); 
+        res.json(userData); // Envía la respuesta final
+    } catch (error) {
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+};
+module.exports = { getProfile };
+
+## 4. Servicio (services/userService.js)
+Contiene la lógica pura de datos. Habla con la Base de Datos o APIs externas. No sabe nada de req o res.
+
+// Simulación de Base de Datosconst mockDatabase = {
+    42: { id: 42, name: 'Alex Doe', email: 'alex@example.com', plan: 'Premium' }
+};
+const getUserById = async (id) => {
+    // Aquí iría tu query de base de datos (ej. pool.query o prisma.user.findUnique)
+    const user = mockDatabase[id];
+    if (!user) throw new Error('Usuario no encontrado');
+    return user; 
+};
+module.exports = { getUserById };
+
+------------------------------
+## 🔵 FRONTEND (React)## 5. Componente JSX (UserProfile.jsx)
+Llama al endpoint del Backend enviando las credenciales necesarias e imprime el resultado en la interfaz.
+
+import { useState, useEffect } from 'react';
+
+export default function UserProfile() {
+  const [user, setUser] = useState(null);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    // Llamada a la API construida con la arquitectura anterior
+    fetch('http://localhost:3000/api/users/profile', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer token-valido-123' // El middleware del backend validará esto
+      }
+    })
+      .then(response => {
+        if (!response.ok) throw new Error('Error en la autenticación');
+        return response.json();
+      })
+      .then(data => setUser(data)) // El controlador envió este JSON
+      .catch(err => setError(err.message));
+  }, []);
+
+  if (error) return <p style={{ color: 'red' }}>Error: {error}</p>;
+  if (!user) return <p>Cargando perfil...</p>;
+
+  return (
+    <div style={{ border: '1px solid #ccc', padding: '20px', borderRadius: '8px' }}>
+      <h2>Perfil de Usuario</h2>
+      <p><strong>Nombre:</strong> {user.name}</p>
+      <p><strong>Email:</strong> {user.email}</p>
+      <p><strong>Plan:</strong> {user.plan}</p>
+    </div>
+  );
+}
+
+¿Te gustaría ver cómo estructurar el archivo index.js principal para conectar este nuevo userRoutes.js de manera limpia?
+

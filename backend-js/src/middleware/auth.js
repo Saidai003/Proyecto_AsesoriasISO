@@ -20,4 +20,13 @@ function requireRole(roleName){
   };
 }
 
-module.exports = { requireAuth, requireRole };
+function requireRoles(...roles){
+  const allowed = Array.isArray(roles[0]) ? roles[0] : roles;
+  return (req, res, next) => {
+    if(!req.user) return res.status(401).json({ error: 'unauthenticated' });
+    if(allowed.includes(req.user.role) || req.user.role === 'Admin') return next();
+    return res.status(403).json({ error: 'forbidden' });
+  };
+}
+
+module.exports = { requireAuth, requireRole, requireRoles };
