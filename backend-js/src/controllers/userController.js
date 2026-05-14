@@ -3,13 +3,22 @@ const bcrypt = require('bcryptjs');
 
 async function createUser(req, res){
   try{
-    const { nombre, email, password, workspace_id = null, role_id = null } = req.body;
-    if (!nombre || !email || !password) return res.status(400).json({ error: 'nombre, email and password are required' });
+    const { nombre, email, password, workspace_id, role_id } = req.body;
+    if (!nombre || !email || !password || typeof workspace_id === 'undefined' || typeof role_id === 'undefined') return res.status(400).json({ error: 'nombre, email, password, workspace_id and role_id are required' });
+    const emailNorm = String(email).trim().toLowerCase();
+    // explicit pre-check to provide a friendly 409 when email already exists
+    const [existing] = await pool.execute('SELECT id FROM USUARIOS WHERE email = ?', [emailNorm]);
+    if(existing && existing.length) return res.status(409).json({ error: 'email_exists' });
+    // validate referenced workspace and role exist
+    const [wrows] = await pool.execute('SELECT id FROM ESPACIO_TRABAJO WHERE id = ?', [workspace_id]);
+    if(!wrows || !wrows.length) return res.status(404).json({ error: 'workspace_not_found' });
+    const [rrows] = await pool.execute('SELECT id FROM ROLES WHERE id = ?', [role_id]);
+    if(!rrows || !rrows.length) return res.status(404).json({ error: 'role_not_found' });
     const password_hash = await bcrypt.hash(password, 10);
     const [result] = await pool.execute(
       `INSERT INTO USUARIOS (workspace_id, role_id, nombre, email, password_hash, estado_invitacion, fecha_registro)
        VALUES (?, ?, ?, ?, ?, ?, NOW())`,
-      [workspace_id, role_id, nombre, email, password_hash, 'Pendiente']
+      [workspace_id, role_id, nombre, emailNorm, password_hash, 'Pendiente']
     );
     return res.status(201).json({ id: result.insertId });
   }catch(err){
@@ -27,7 +36,8 @@ async function updateUser(req, res){
     console.log('updateUser called with', { id, nombre, email, workspace_id, role_id, hasPassword: !!password });
     // Ensure no undefined values are passed to SQL driver
     const pNombre = typeof nombre === 'undefined' ? null : nombre;
-    const pEmail = typeof email === 'undefined' ? null : email;
+    // normalize email when provided to keep canonical form in DB
+    const pEmail = typeof email === 'undefined' ? null : (String(email).trim().toLowerCase());
     const pWorkspace = typeof workspace_id === 'undefined' ? null : workspace_id;
     const pRole = typeof role_id === 'undefined' ? null : role_id;
     const pId = typeof id === 'undefined' ? null : id;

@@ -48,7 +48,7 @@ CREATE TABLE IF NOT EXISTS USUARIOS (
 	workspace_id INT,
 	role_id INT,
 	nombre VARCHAR(255),
-	email VARCHAR(320),
+	email VARCHAR(320) UNIQUE,
 	password_hash VARCHAR(255),
 	reset_token VARCHAR(255),
 	expiration_date DATETIME,
