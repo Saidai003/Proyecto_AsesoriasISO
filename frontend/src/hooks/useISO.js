@@ -32,14 +32,24 @@ export default function useISO(){
       // store clauses per ISO
       setClausesByIso(prev=>({ ...prev, [isoId]: clauses }))
       // also populate requisitosByClausula for fast lookup by clause id
+      // flatten nested requisitos trees into a flat array so NavBar can filter by requisito_padre_id
       setRequisitosByClausula(prev => {
-        //prev is an object keyed by clauseId with requisitos array 
-        // as value; we want to add requisitos for each clause in this ISO
         const next = { ...prev }
+        // for each clause, flatten its requisitos tree into a flat array
+        //  and store by clause id
         for(const c of clauses){
-          // when we call next[c.id] we are setting 
-          // requisitosByClausula[clauseId] = requisitosArray of that clause
-          next[c.id] = c.requisitos || []
+          const roots = c.requisitos || []
+          const flat = []
+          // stack for DFS or BFS traversal of requisitos tree; here we use BFS
+          // BFS meaning: we push all children of a node into the stack before 
+          // processing them, which results in a level-by-level traversal
+          const stack = [...roots]
+          while(stack.length){
+            const node = stack.shift()
+            flat.push(node)
+            if(node.children && node.children.length) stack.push(...node.children)
+          }
+          next[c.id] = flat
         }
         return next
       })

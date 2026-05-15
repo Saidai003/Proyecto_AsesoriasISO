@@ -7,6 +7,7 @@ import WorkspacesManager from './pages/WorkspacesManager'
 import Lobby from './pages/Lobby'
 import Protected from './components/Protected'
 import RequirementView from './pages/RequirementView'
+import NCView from './pages/NCView'
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 
 export default function App(){
@@ -19,6 +20,7 @@ export default function App(){
         <Route path="/activate" element={<ActivateAccount/>} />
         <Route path="/lobby" element={<Protected><Lobby/></Protected>} />
         <Route path="/requisitos/:id" element={<Protected><RequirementView/></Protected>} />
+        <Route path="/nc/:id" element={<Protected><NCView/></Protected>} />
         <Route path="/" element={<Navigate to="/lobby" replace/>} />
         <Route path="/users" element={<Protected role="Admin"><UsersManager/></Protected>} />
         <Route path="/workspaces" element={<Protected role="Admin"><WorkspacesManager/></Protected>} />
