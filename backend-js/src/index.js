@@ -28,6 +28,7 @@ const evaluatorRouter = require('./routes/evaluator');
 const seedRouter = require('./routes/seed');
 const workspacesRouter = require('./routes/workspaces');
 const isoRouter = require('./routes/iso');
+const evidencesRouter = require('./routes/evidences');
 
 app.use('/auth', authRouter);
 app.use('/api/users', usersRouter);
@@ -36,6 +37,7 @@ app.use('/api/evaluator', evaluatorRouter);
 app.use('/seed', seedRouter); // development-only seed endpoint
 app.use('/api/workspaces', workspacesRouter);
 app.use('/api/isos', isoRouter);
+app.use('/api/evidencias', evidencesRouter);
 
 app.get('/', (req, res) => {
     res.send('Hello, World!');

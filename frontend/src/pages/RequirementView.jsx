@@ -9,6 +9,21 @@ function RequirementContent({ node }){
   const navigate = useNavigate()
   if(!node) return <div className="p-4">No encontrado</div>
   const children = node.children || []
+  const [evidences, setEvidences] = useState([])
+  useEffect(()=>{
+    let mounted = true
+    async function loadEvidences(){
+      try{
+        const res = await fetchWithAuth(`/api/evidencias/requisito/${node.id}`)
+        if(!mounted) return
+        if(!res.ok) return
+        const json = await res.json()
+        setEvidences(json.evidencias || [])
+      }catch(e){ console.error('load evidences', e) }
+    }
+    if(node && node.id) loadEvidences()
+    return ()=> mounted = false
+  },[node])
   return (
     <div className="p-4">
       <div className="mt-2">
@@ -30,37 +45,39 @@ function RequirementContent({ node }){
         <div className="mt-3 p-3 border rounded bg-white">
           <h5 className="text-sm font-medium mb-2">Archivos</h5>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-            {[
-              { name: 'evidencia_01.pdf', id: 'f101' },
-              { name: 'foto_entrada.jpg', id: 'f102' },
-              { name: 'informe_v1.docx', id: 'f103' }
-            ].map(file => {
-              const isImage = /\.(jpe?g|png|gif|webp)$/i.test(file.name)
-              // simple SVG thumbnail for placeholder images
-              const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><rect width='100%' height='100%' fill='%23e2e8f0'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-size='18' fill='%234a5568'>${file.name}</text></svg>`
+            {evidences && evidences.length>0 ? evidences.map(ev => {
+              const isImage = /\.(jpe?g|png|gif|webp)$/i.test(ev.nombre_archivo)
+              const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><rect width='100%' height='100%' fill='%23e2e8f0'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-size='18' fill='%234a5568'>${ev.nombre_archivo}</text></svg>`
               const dataUrl = `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`
+              const status = ev.estado_validacion_archivo || 'Pendiente'
+              const statusColor = status === 'Aceptado' ? 'bg-green-600 text-white' : (status === 'Rechazado' ? 'bg-red-600 text-white' : 'bg-yellow-500 text-white')
               return (
-                <div key={file.id} className="aspect-square p-2 border rounded flex flex-col items-center justify-between">
+                <div key={ev.id} className="relative aspect-square p-2 border rounded flex flex-col items-center justify-between" >
+                  <div className="absolute top-2 right-2 text-xs px-2 py-1 rounded shadow-sm " style={{zIndex:20}}>
+                    <span className={`${statusColor} px-2 py-1 rounded text-xs`}>{status}</span>
+                  </div>
                   <div className="w-full h-full flex flex-col items-center justify-between">
                     <div className="w-full h-0 flex-1 flex items-center justify-center overflow-hidden rounded bg-slate-50">
                       <div className="w-full h-full flex items-center justify-center">
                         {isImage ? (
-                          <img src={dataUrl} alt={file.name} className="w-full h-full object-cover" />
+                          <img src={ev.url_archivo || dataUrl} alt={ev.nombre_archivo} className="w-full h-full object-cover" />
                         ) : (
-                          <div className="text-center text-sm text-slate-600">{file.name.split('.').pop().toUpperCase()}</div>
+                          <div className="text-center text-sm text-slate-600">{ev.nombre_archivo.split('.').pop().toUpperCase()}</div>
                         )}
                       </div>
                     </div>
-                    <div className="mt-2 text-xs text-center truncate w-full px-1">{file.name}</div>
+                    <div className="mt-2 text-xs text-center truncate w-full px-1">{ev.nombre_archivo}</div>
                     <div className="mt-2 flex gap-2 justify-center">
-                      <button onClick={()=>console.log('abrir', file)} className="text-xs px-2 py-1 border rounded bg-white">Abrir</button>
-                      <button onClick={()=>console.log('historial', file)} className="text-xs px-2 py-1 border rounded bg-white">Historial</button>
-                      <button onClick={()=>console.log('actualizar', file)} className="text-xs px-2 py-1 border rounded bg-[#00236f] text-white">Actualizar</button>
+                      <button onClick={()=>console.log('abrir', ev)} className="text-xs px-2 py-1 border rounded bg-white">Abrir</button>
+                      <button onClick={()=>console.log('historial', ev)} className="text-xs px-2 py-1 border rounded bg-white">Historial</button>
+                      <button onClick={()=>console.log('actualizar', ev)} className="text-xs px-2 py-1 border rounded bg-[#00236f] text-white">Actualizar</button>
                     </div>
                   </div>
                 </div>
               )
-            })}
+            }) : (
+              <div className="text-sm text-slate-500">No hay evidencias cargadas.</div>
+            )}
           </div>
         </div>
 
