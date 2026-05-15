@@ -152,4 +152,5 @@ async function getRequisitoById(req, res){
   }
 }
 
-module.exports = { listISOs, getISOTree };
+module.exports = { listISOs, getISOTree, getRequisitoById };
+

@@ -35,6 +35,9 @@ export default function RequirementView(){
   const [node, setNode] = useState(null)
   const [loading, setLoading] = useState(true)
 
+  // local UI state for requirement evaluation status (declare hooks before any early returns)
+  const [reqState, setReqState] = useState('')
+
   useEffect(()=>{
     let mounted = true
     async function load(){
@@ -74,6 +77,28 @@ export default function RequirementView(){
     return ()=> mounted = false
   },[id, accessToken])
 
+  // keep local reqState in sync when the selected node changes
+  useEffect(()=>{
+    // For easier understanding, this could be rewritten as:
+    // if(node && node.requisito && node.requisito.estado_cumplimiento){
+    //   setReqState(node.requisito.estado_cumplimiento)
+    // }else{
+    //   setReqState('')
+    // }
+    const requisito = node ? node.requisito : null
+    if(requisito && requisito.estado_cumplimiento){
+      // initialize local reqState from requisito's estado_cumplimiento when node changes
+      // in other words, when we navigate to a different requisito, we want to update 
+      // reqState to reflect that requisito's current state
+      // this ocurs when node changes due to id param change, 
+      // which triggers a new load of the requisito data
+      setReqState(requisito.estado_cumplimiento)
+    }else{
+      // reset to empty state if no requisito or estado_cumplimiento is found
+      setReqState('')
+    }
+  },[node])
+
   if(loading) return <div className="p-4">Cargando...</div>
 
   // node is { requisito, clause }
@@ -82,8 +107,7 @@ export default function RequirementView(){
   // prefer requisito.number + name; fallback to clause
   const titleText = requisito && requisito.number && requisito.name ? `${requisito.number} ${requisito.name}` : (clause ? `${clause.numero_clausula} ${clause.titulo}` : (requisito ? `Requisito ${requisito.id}` : 'Requisito'))
 
-  // local UI state for requirement evaluation status
-  const [reqState, setReqState] = useState(requisito && requisito.estado_cumplimiento ? requisito.estado_cumplimiento : '')
+  
 
   const handleStateChange = async (e) => {
     const val = e.target.value

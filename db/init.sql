@@ -161,6 +161,50 @@ CREATE TABLE IF NOT EXISTS AUDITORIA_NC (
 	fecha_ultima_edicion DATETIME
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- TABLAS PARA ENFOQUE BASADO EN PROCESOS
+-- Cada requisito puede tener uno o varios procesos asociados. Las NC se vinculan a procesos mediante la tabla pivot.
+CREATE TABLE IF NOT EXISTS PROCESOS (
+	id INT AUTO_INCREMENT PRIMARY KEY,
+	requisito_base_id INT NOT NULL,
+	nombre VARCHAR(255) NOT NULL,
+	descripcion TEXT,
+	fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP,
+	creado_por INT,
+	INDEX idx_procesos_req (requisito_base_id),
+	CONSTRAINT fk_procesos_requisito FOREIGN KEY (requisito_base_id) REFERENCES REQUISITOS_BASE(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS METODOS_CONTROLES (
+	id INT AUTO_INCREMENT PRIMARY KEY,
+	proceso_id INT NOT NULL,
+	descripcion_metodo TEXT NOT NULL,
+	procedimiento_control TEXT,
+	fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP,
+	creado_por INT,
+	CONSTRAINT fk_metodos_proceso FOREIGN KEY (proceso_id) REFERENCES PROCESOS(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Pivot: una NC puede afectar a varios procesos; un proceso puede tener varias NCs
+CREATE TABLE IF NOT EXISTS AUDITORIA_NC_PROCESOS (
+	auditoria_nc_id INT NOT NULL,
+	proceso_id INT NOT NULL,
+	PRIMARY KEY (auditoria_nc_id, proceso_id),
+	CONSTRAINT fk_nc_procesos_nc FOREIGN KEY (auditoria_nc_id) REFERENCES AUDITORIA_NC(id) ON DELETE CASCADE,
+	CONSTRAINT fk_nc_procesos_proceso FOREIGN KEY (proceso_id) REFERENCES PROCESOS(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Tabla simple de notificaciones (polling). Se puede ampliar con campos para prioridad/meta datos.
+CREATE TABLE IF NOT EXISTS NOTIFICACIONES (
+	id INT AUTO_INCREMENT PRIMARY KEY,
+	usuario_id INT NOT NULL,
+	tipo VARCHAR(100),
+	mensaje TEXT,
+	link VARCHAR(500) DEFAULT NULL,
+	read_flag TINYINT(1) DEFAULT 0,
+	created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+	CONSTRAINT fk_notif_usuario FOREIGN KEY (usuario_id) REFERENCES USUARIOS(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- Agregar claves foráneas (ALTER TABLE después de crear todas las tablas)
 ALTER TABLE CLAUSULAS
 	ADD CONSTRAINT fk_clausulas_iso FOREIGN KEY (iso_id) REFERENCES ISOS(id) ON DELETE SET NULL;
@@ -223,5 +267,8 @@ ALTER TABLE AUDITORIA_NC
 CREATE INDEX IF NOT EXISTS idx_clausulas_iso ON CLAUSULAS(iso_id);
 CREATE INDEX IF NOT EXISTS idx_req_clausula ON REQUISITOS_BASE(clausula_id);
 CREATE INDEX IF NOT EXISTS idx_eval_req_workspace ON EVALUACION_REQUISITO(workspace_id);
+CREATE INDEX IF NOT EXISTS idx_nc_eval ON AUDITORIA_NC(evaluacion_requisito_id);
+CREATE INDEX IF NOT EXISTS idx_notif_user_read ON NOTIFICACIONES(usuario_id, read_flag);
+CREATE INDEX IF NOT EXISTS idx_procesos_requisito ON PROCESOS(requisito_base_id);
 
 -- Fin del script
