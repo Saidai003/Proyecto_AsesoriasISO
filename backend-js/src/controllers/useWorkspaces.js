@@ -8,10 +8,21 @@ async function createWorkspace(req, res){
             'INSERT INTO ESPACIO_TRABAJO (nombre_cliente, fecha_creacion) VALUES (?, NOW())',
             [nombre_cliente]
         );
+        const workspaceId = result.insertId;
+        // For each existing requisito, create an evaluation row for this workspace
+        try{
+            await pool.query(
+                'INSERT INTO EVALUACION_REQUISITO (requisito_base_id, workspace_id, estado_cumplimiento, ultima_edicion_por, fecha_ultima_edicion) SELECT id, ?, "NA", NULL, NOW() FROM REQUISITOS_BASE',
+                [workspaceId]
+            );
+        }catch(seedErr){
+            console.error('seeding EVALUACION_REQUISITO failed', seedErr);
+            // don't fail the whole request; return created workspace and note the error in logs
+        }
+
         // 201 is the standard status code for "created"
-        // and it's a good practice to return the id of the 
-        // newly created resource in the response body
-        return res.status(201).json({ id: result.insertId });
+        // return the id of the newly created resource
+        return res.status(201).json({ id: workspaceId });
     }catch(err){
         console.error('createWorkspace error', err);
         // 500 is the standard status code for "internal server error"
