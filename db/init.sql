@@ -157,8 +157,19 @@ CREATE TABLE IF NOT EXISTS AUDITORIA_NC (
 	estado_validacion ENUM('Acepto','Parcial','No Acepto'),
 	fecha_verificacion_eficacia DATE,
 	comentario_nc TEXT,
+	titulo VARCHAR(255),
+	descripcion TEXT,
 	ultima_edicion_por INT,
 	fecha_ultima_edicion DATETIME
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Pivot table: responsables asignados a una NC
+CREATE TABLE IF NOT EXISTS AUDITORIA_NC_RESPONSABLES (
+    auditoria_nc_id INT NOT NULL,
+    usuario_id INT NOT NULL,
+    PRIMARY KEY (auditoria_nc_id, usuario_id),
+    CONSTRAINT fk_nc_resp_nc FOREIGN KEY (auditoria_nc_id) REFERENCES AUDITORIA_NC(id) ON DELETE CASCADE,
+    CONSTRAINT fk_nc_resp_usuario FOREIGN KEY (usuario_id) REFERENCES USUARIOS(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- TABLAS PARA ENFOQUE BASADO EN PROCESOS

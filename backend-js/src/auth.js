@@ -7,7 +7,7 @@ const crypto = require('crypto');
 // and keep it safe (e.g. in environment variables or a secrets manager).
 const JWT_SECRET = process.env.JWT_SECRET || 'dev_jwt_secret';
 // Refresh token lifetime in minutes (default 30 minutes)
-const REFRESH_TOKEN_MINUTES = Number(process.env.REFRESH_TOKEN_MINUTES || 30);
+const REFRESH_TOKEN_MINUTES = Number(process.env.REFRESH_TOKEN_MINUTES || 1440);
 const REFRESH_TOKEN_EXP_DAYS = REFRESH_TOKEN_MINUTES / 1440;
 
 function signAccessToken(payload){

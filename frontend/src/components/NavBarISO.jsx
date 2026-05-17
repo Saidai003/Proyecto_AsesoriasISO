@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useAuth } from '../AuthContext'
 import useISO from '../hooks/useISO'
 import { useNavigate } from 'react-router-dom'
 
-function ClauseItem({ clause, requisitos, onToggle }){
+function ClauseItem({ clause, requisitos, onToggle, requisitosWithNC }){
   const [open, setOpen] = useState(false)
   const handleClick = async () => {
     // If requisitos already loaded, just toggle
@@ -32,7 +33,7 @@ function ClauseItem({ clause, requisitos, onToggle }){
       {open && requisitos && (
         <div className="pl-6 mt-2 space-y-1">
           {requisitos.filter(r=>!r.requisito_padre_id).map(r=> (
-            <RequisitoItem key={r.id} requisito={r} all={requisitos} />
+            <RequisitoItem key={r.id} requisito={r} all={requisitos} requisitosWithNC={requisitosWithNC} />
           ))}
         </div>
       )}
@@ -40,15 +41,19 @@ function ClauseItem({ clause, requisitos, onToggle }){
   )
 }
 
-function RequisitoItem({ requisito, all }){
+function RequisitoItem({ requisito, all, requisitosWithNC }){
   const children = all.filter(a => a.requisito_padre_id === requisito.id)
   const [open, setOpen] = useState(false)
   const navigate = useNavigate()
   return (
     <div>
       <div className="flex items-center justify-between gap-2">
-        <button onClick={()=> navigate(`/requisitos/${requisito.id}`)} className="text-sm text-slate-700 text-left w-full text-left" aria-expanded={open}>
-          {requisito.descripcion_normativa}
+        <button onClick={()=> navigate(`/requisitos/${requisito.id}`)} className="text-sm text-slate-700 text-left w-full text-left flex items-center gap-2" aria-expanded={open}>
+          <span>{requisito.descripcion_normativa}</span>
+          {/** red dot when NC assigned (in-memory event-based) */}
+          {requisitosWithNC && requisitosWithNC.has(Number(requisito.id)) && (
+            <span className="w-2 h-2 rounded-full bg-red-600 inline-block" title="No conformidad asignada" />
+          )}
         </button>
         {children.length > 0 && <button onClick={()=>setOpen(!open)} className="text-xs text-slate-400">{open ? '▾' : '▸'}</button>}
       </div>
@@ -63,7 +68,9 @@ function RequisitoItem({ requisito, all }){
 
 export default function NavBarISO(){
   const { isos, clausesByIso, requisitosByClausula, loadISOs, loadClauses, loadRequisitos } = useISO()
+  const { user } = useAuth()
   const [selectedIso, setSelectedIso] = useState(null)
+  const [requisitosWithNC, setRequisitosWithNC] = useState(new Set())
 
   useEffect(()=>{
     let mounted = true
@@ -74,6 +81,22 @@ export default function NavBarISO(){
   useEffect(()=>{
     if(selectedIso) loadClauses(selectedIso).catch(()=>{})
   },[selectedIso, loadClauses])
+
+  useEffect(()=>{
+    const handler = (e) => {
+      try{
+        const id = e.detail && e.detail.requisito_base_id
+        if(!id) return
+        setRequisitosWithNC(prev => {
+          const s = new Set(prev)
+          s.add(Number(id))
+          return s
+        })
+      }catch(_){ }
+    }
+    window.addEventListener('nc:created', handler)
+    return ()=> window.removeEventListener('nc:created', handler)
+  },[])
 
   const handleClauseToggle = (clauseId) => {
     if(!requisitosByClausula[clauseId]) loadRequisitos(clauseId).catch(()=>{})
@@ -89,12 +112,12 @@ export default function NavBarISO(){
       </div>
 
       <div className="px-2 mb-2">
-        <Link to="/dashboard" className="block w-full text-left px-4 py-2 rounded-lg bg-[#00236f] text-white font-semibold">Dashboard</Link>
+        <Link to={user && (user.role === 'Evaluador' || user.role === 'Responsable SGC') ? '/lobby' : '/dashboard'} className="block w-full text-left px-4 py-2 rounded-lg bg-[#00236f] text-white font-semibold">Dashboard</Link>
       </div>
 
       <div className="space-y-2 px-2 overflow-y-auto max-h-[70vh]">
         {clauses.map(c => (
-          <ClauseItem key={c.id} clause={c} requisitos={requisitosByClausula[c.id]} onToggle={handleClauseToggle} />
+          <ClauseItem key={c.id} clause={c} requisitos={requisitosByClausula[c.id]} onToggle={handleClauseToggle} requisitosWithNC={requisitosWithNC} />
         ))}
       </div>
     </div>

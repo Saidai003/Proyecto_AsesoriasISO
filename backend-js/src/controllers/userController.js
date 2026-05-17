@@ -89,6 +89,19 @@ async function listUsers(req, res){
   }
 }
 
+async function listResponsables(req, res){
+  try{
+    const [rows] = await pool.execute(
+      `SELECT u.id, u.nombre, u.email FROM USUARIOS u JOIN ROLES r ON u.role_id = r.id WHERE r.nombre = ?`,
+      ['Responsable SGC']
+    );
+    return res.json(rows);
+  }catch(err){
+    console.error('listResponsables error', err);
+    return res.status(500).json({ error: 'internal_error' });
+  }
+}
+
 async function assignUserToWorkspace(req, res){
   try{
     const id = req.params.id;
@@ -107,4 +120,4 @@ async function assignUserToWorkspace(req, res){
   }
 }
 
-module.exports = { createUser, updateUser, deleteUser, getUser, listUsers, assignUserToWorkspace };
+module.exports = { createUser, updateUser, deleteUser, getUser, listUsers, assignUserToWorkspace, listResponsables };

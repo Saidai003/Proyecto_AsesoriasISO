@@ -29,6 +29,8 @@ const seedRouter = require('./routes/seed');
 const workspacesRouter = require('./routes/workspaces');
 const isoRouter = require('./routes/iso');
 const evidencesRouter = require('./routes/evidences');
+const ncRouter = require('./routes/nc');
+const evaluacionesRouter = require('./routes/evaluaciones');
 
 app.use('/auth', authRouter);
 app.use('/api/users', usersRouter);
@@ -38,6 +40,21 @@ app.use('/seed', seedRouter); // development-only seed endpoint
 app.use('/api/workspaces', workspacesRouter);
 app.use('/api/isos', isoRouter);
 app.use('/api/evidencias', evidencesRouter);
+app.use('/api/nc', ncRouter);
+app.use('/api/evaluaciones', evaluacionesRouter);
+
+// why do we use /api if there is no folder called API?
+// The /api prefix is a common convention to indicate that these routes 
+// are part of the application's API.
+
+// We have to set a path so that the server can differentiate between
+// a request for the API and a request for a static file 
+// or a different route.
+
+// An example code fragment that could call by a path like /api/evaluaciones
+// could be fetch('/api/evaluaciones/requisito/123') from the frontend,
+// which would trigger the getOrCreateEvaluacion function in evaluationsController.js
+// for requisito id 123.
 
 app.get('/', (req, res) => {
     res.send('Hello, World!');

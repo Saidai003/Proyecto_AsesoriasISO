@@ -34,9 +34,12 @@ async function login(req, res){
 
 async function refresh(req, res){
   try{
+    console.log('refresh endpoint called, cookies:', req.cookies)
     const token = req.cookies && req.cookies.refreshToken;
+    console.log('refresh token header value:', token)
     if(!token) return res.status(401).json({ error: 'no_refresh' });
     const session = await getSession(token);
+    console.log('session lookup result for token:', token, session)
     if(!session) return res.status(401).json({ error: 'invalid_refresh' });
     const [rows] = await pool.execute('SELECT id, email, nombre, role_id, workspace_id FROM USUARIOS WHERE id = ?', [session.user_id]);
     const user = rows[0];

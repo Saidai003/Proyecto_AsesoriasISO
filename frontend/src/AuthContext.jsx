@@ -50,7 +50,9 @@ export function AuthProvider({ children }){
   }
 
   const doRefresh = async () => {
-    const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
+    const envBase = import.meta.env.VITE_API_BASE
+    const isDev = import.meta.env.DEV
+    const API_BASE = isDev ? '' : (envBase || 'http://localhost:3000')
     try{
       const res = await fetch(`${API_BASE}/auth/refresh`, { method: 'POST', credentials: 'include' })
       if(!res.ok){
@@ -81,7 +83,9 @@ export function AuthProvider({ children }){
   // The logout function clears this information and also makes a request to the 
   // /auth/logout endpoint to invalidate the session on the server side.
   const login = async ({ email, password }) => {
-    const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
+    const envBase = import.meta.env.VITE_API_BASE
+    const isDev = import.meta.env.DEV
+    const API_BASE = isDev ? '' : (envBase || 'http://localhost:3000')
     const res = await fetch(`${API_BASE}/auth/login`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
@@ -97,7 +101,9 @@ export function AuthProvider({ children }){
   }
 
   const logout = async () => {
-    const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
+    const envBase = import.meta.env.VITE_API_BASE
+    const isDev = import.meta.env.DEV
+    const API_BASE = isDev ? '' : (envBase || 'http://localhost:3000')
     try{ await fetch(`${API_BASE}/auth/logout`, { method: 'POST', credentials: 'include' }) }catch(e){}
     setAccessToken(null)
     setUser(null)

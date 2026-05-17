@@ -1,12 +1,14 @@
 const Router = require('express').Router;
 const router = Router();
 const { requireAuth, requireRole } = require('../middleware/auth');
-const { createUser, listUsers, getUser, updateUser, deleteUser, assignUserToWorkspace } = require('../controllers/userController');
+const { createUser, listUsers, getUser, updateUser, deleteUser, assignUserToWorkspace, listResponsables } = require('../controllers/userController');
 
 // create user (admin-only)
 router.post('/', requireAuth, requireRole('Admin'), createUser);
 // list users (admin-only)
 router.get('/', requireAuth, requireRole('Admin'), listUsers);
+// list responsables (any authenticated user can query responsables for assignment)
+router.get('/responsables', requireAuth, listResponsables);
 // get single user
 router.get('/:id', requireAuth, requireRole('Admin'), getUser);
 // update user

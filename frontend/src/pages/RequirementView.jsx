@@ -7,10 +7,18 @@ import NavBarISO from '../components/NavBarISO'
 
 function RequirementContent({ node }){
   const navigate = useNavigate()
-  if(!node) return <div className="p-4">No encontrado</div>
-  const children = node.children || []
+  const { user } = useAuth()
   const [evidences, setEvidences] = useState([])
+  const [ncList, setNcList] = useState([])
+  const [evaluacionId, setEvaluacionId] = useState(null)
   useEffect(()=>{
+    // mounted will be used for cancellation in case the 
+    // component unmounts before the fetch completes
+
+    // why would the componente unmount? what component?
+
+    // The RequirementView component that uses RequirementContent
+    // may unmount if the user navigates away before the fetch completes.
     let mounted = true
     async function loadEvidences(){
       try{
@@ -24,6 +32,41 @@ function RequirementContent({ node }){
     if(node && node.id) loadEvidences()
     return ()=> mounted = false
   },[node])
+
+  // load evaluacion id and NCs for this requisito
+  useEffect(()=>{
+    let mounted = true
+    async function loadNCs(){
+      if(!node || !node.id) return
+      try{
+        const r = await fetchWithAuth(`/api/evaluaciones/requisito/${node.id}`)
+        if(!r.ok) return
+        const json = await r.json()
+        const evId = json.id
+        if(!mounted) return
+        setEvaluacionId(evId)
+        const ncr = await fetchWithAuth(`/api/nc/evaluacion/${evId}`)
+        if(!ncr.ok) return
+        const list = await ncr.json()
+        if(!mounted) return
+        setNcList(list || [])
+      }catch(e){ console.error('load NCs', e) }
+    }
+    loadNCs()
+    // refresh on global event when NC created
+    const handler = (e) => {
+      const detail = e.detail || {}
+      if(detail.requisito_base_id == node.id){
+        // re-run loadNCs
+        loadNCs()
+      }
+    }
+    window.addEventListener('nc:created', handler)
+    return ()=>{ mounted = false; window.removeEventListener('nc:created', handler) }
+  },[node])
+  if(!node) return <div className="p-4">No encontrado</div>
+  const children = node.children || []
+
   return (
     <div className="p-4">
       <div className="mt-2">
@@ -81,13 +124,29 @@ function RequirementContent({ node }){
           </div>
         </div>
 
-        {/* Evaluation area placeholder — leave space for evaluation UI below */}
+        {/* Evaluation area / No Conformidades area */}
         <div className="mt-4 p-4 border rounded bg-gray-50">
-          <h4 className="text-sm font-semibold mb-2">Área de evaluación</h4>
-          <p className="text-sm text-slate-500">Espacio para marcar evidencias, ver lista de NCs y estado del requisito.</p>
+          <h4 className="text-sm font-semibold mb-2">{user && user.role === 'Responsable SGC' ? 'No Conformidades' : 'Área de evaluación'}</h4>
+          <p className="text-sm text-slate-500">{user && user.role === 'Responsable SGC' ? 'Espacio para gestionar NC y sus estados' : 'Espacio para marcar evidencias, ver lista de NCs y estado del requisito.'}</p>
+          <div className="mt-3">
+            {!(user && user.role === 'Responsable SGC') && (
+              <button onClick={async ()=>{
+                // lazy-load responsables and open modal via global event
+                try{
+                  const res = await fetchWithAuth('/api/users/responsables')
+                  if(res.ok){
+                    const list = await res.json()
+                    window.dispatchEvent(new CustomEvent('nc:open', { detail: { responsables: list, requisito_base_id: node.id } }))
+                  }else{
+                    window.dispatchEvent(new CustomEvent('nc:open', { detail: { responsables: [], requisito_base_id: node.id } }))
+                  }
+                }catch(e){ window.dispatchEvent(new CustomEvent('nc:open', { detail: { responsables: [], requisito_base_id: node.id } })) }
+              }} className="mt-2 px-3 py-2 bg-red-600 text-white rounded">Crear NC</button>
+            )}
+          </div>
         </div>
 
-        {/* NCs expanded list (placeholder data) */}
+        {/* NCs expanded list (loaded from backend) */}
         <div className="mt-4">
           <h4 className="text-sm font-semibold mb-2">No conformidades</h4>
           <div className="overflow-x-auto">
@@ -104,10 +163,7 @@ function RequirementContent({ node }){
                 </tr>
               </thead>
               <tbody>
-                {[
-                  { id: 101, estado_flujo: 'Abierta', estado_validacion: 'Parcial', evaluador_id: 5, evaluado_id: 8, fecha_verificacion_eficacia: '2026-05-20', comentario_nc: 'Falta evidencia de control.', fecha_ultima_edicion: '2026-05-10' },
-                  { id: 102, estado_flujo: 'Ejecución', estado_validacion: 'Acepto', evaluador_id: 7, evaluado_id: 9, fecha_verificacion_eficacia: '2026-06-01', comentario_nc: 'No conformidad en procedimiento X.', fecha_ultima_edicion: '2026-05-12' }
-                ].map(nc => (
+                {(ncList || []).map(nc => (
                   <tr key={nc.id} className="hover:bg-slate-50">
                     <td className="px-3 py-2 border-b"><a onClick={()=>navigate(`/nc/${nc.id}`)} className="text-blue-600 hover:underline cursor-pointer">{nc.id}</a></td>
                     <td className="px-3 py-2 border-b">{nc.estado_flujo}</td>
@@ -118,6 +174,9 @@ function RequirementContent({ node }){
                     <td className="px-3 py-2 border-b"><button onClick={()=>navigate(`/nc/${nc.id}`)} className="text-sm px-2 py-1 bg-[#00236f] text-white rounded">Abrir NC</button></td>
                   </tr>
                 ))}
+                {(!ncList || ncList.length===0) && (
+                  <tr><td className="px-3 py-4 border-b text-sm text-slate-500" colSpan={7}>No hay No Conformidades registradas.</td></tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -174,16 +233,46 @@ export default function RequirementView(){
   },[id, accessToken])
 
 
-  if(loading) return <div className="p-4">Cargando...</div>
-
   // node is { requisito, clause }
   const requisito = node ? node.requisito : null
   const clause = node ? node.clause : null
   // prefer requisito.number + name; fallback to clause
   const titleText = requisito && requisito.number && requisito.name ? `${requisito.number} ${requisito.name}` : (clause ? `${clause.numero_clausula} ${clause.titulo}` : (requisito ? `Requisito ${requisito.id}` : 'Requisito'))
 
-  
-  
+  // NC modal state and handlers (listens to global 'nc:open' event)
+  const [ncModalOpen, setNcModalOpen] = useState(false)
+  const [ncModalData, setNcModalData] = useState({ requisito_base_id: null, responsables: [], titulo: '', descripcion: '' })
+
+  useEffect(()=>{
+    const handler = (e) => {
+      const detail = e.detail || {}
+      const reps = (detail.responsables || []).map(r => ({ ...r, selected: false }))
+      setNcModalData({ requisito_base_id: detail.requisito_base_id || (requisito && requisito.id), responsables: reps, titulo: '', descripcion: '' })
+      setNcModalOpen(true)
+    }
+    window.addEventListener('nc:open', handler)
+    return ()=> window.removeEventListener('nc:open', handler)
+  },[requisito])
+
+  async function submitNC(){
+    try{
+      const payload = {
+        requisito_base_id: ncModalData.requisito_base_id,
+        titulo: ncModalData.titulo,
+        descripcion: ncModalData.descripcion,
+        responsables: ncModalData.responsables.filter(r=>r.selected).map(r=>r.id)
+      }
+      const res = await fetchWithAuth('/api/nc', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+      if(!res.ok){ const err = await res.json(); alert('Error creando NC: ' + (err.error || JSON.stringify(err))); return }
+      const json = await res.json()
+      // notify sidebar and show toast, then close modal
+      window.dispatchEvent(new CustomEvent('nc:created', { detail: { requisito_base_id: ncModalData.requisito_base_id, nc_id: json.id } }))
+      window.dispatchEvent(new CustomEvent('toast:show', { detail: { title: 'NC creada', message: `NC #${json.id} creada y asignada.`, type: 'info', ttl: 6000 } }))
+      setNcModalOpen(false)
+    }catch(e){ console.error('submitNC error', e); alert('Error interno') }
+  }
+
+  if(loading) return <div className="p-4">Cargando...</div>
 
   return (
     <Layout title={titleText} sidebar={<NavBarISO/>}>
@@ -192,6 +281,36 @@ export default function RequirementView(){
           <RequirementContent node={requisito} />
         </div>
       </div>
+      {ncModalOpen && (
+        <div className="fixed inset-0 bg-black/40 flex items-start justify-center z-[9999] pt-16">
+          <div className="bg-white p-6 rounded-lg w-full max-w-lg max-h-[calc(100vh-4rem)] overflow-auto">
+            <h3 className="text-lg font-semibold mb-2">Crear No Conformidad</h3>
+            <div className="mb-2">
+              <label className="text-sm">Título</label>
+              <input className="w-full border px-2 py-1" value={ncModalData.titulo} onChange={e=>setNcModalData(d=>({ ...d, titulo: e.target.value }))} />
+            </div>
+            <div className="mb-2">
+              <label className="text-sm">Descripción</label>
+              <textarea className="w-full border px-2 py-1" value={ncModalData.descripcion} onChange={e=>setNcModalData(d=>({ ...d, descripcion: e.target.value }))} />
+            </div>
+            <div className="mb-2">
+              <label className="text-sm">Asignar a responsables</label>
+              <div className="max-h-40 overflow-auto border p-2">
+                {(ncModalData.responsables || []).map(r => (
+                  <label key={r.id} className="flex items-center gap-2 mb-1"><input type="checkbox" checked={!!r.selected} onChange={e=>{
+                    setNcModalData(d=>({ ...d, responsables: d.responsables.map(rr=> rr.id===r.id ? { ...rr, selected: e.target.checked } : rr) }))
+                  }} /> {r.nombre} ({r.email})</label>
+                ))}
+                {(ncModalData.responsables||[]).length===0 && <div className="text-sm text-slate-500">No hay responsables disponibles.</div>}
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 mt-3">
+              <button onClick={()=>setNcModalOpen(false)} className="px-3 py-1 border rounded">Cancelar</button>
+              <button onClick={submitNC} className="px-3 py-1 bg-[#00236f] text-white rounded">Crear NC</button>
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   )
 }

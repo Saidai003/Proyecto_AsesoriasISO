@@ -9,12 +9,14 @@ import Protected from './components/Protected'
 import RequirementView from './pages/RequirementView'
 import NCView from './pages/NCView'
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom'
+import Toast from './components/Toast'
 
 export default function App(){
   const navigate = useNavigate()
 
   return (
     <AuthProvider>
+      <Toast />
       <Routes>
         <Route path="/login" element={<Login onLogin={()=>navigate('/lobby')} />} />
         <Route path="/activate" element={<ActivateAccount/>} />

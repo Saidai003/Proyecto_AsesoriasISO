@@ -38,6 +38,24 @@ async function seed(req, res){
     // Insert workspace into ESPACIO_TRABAJO (column 'nombre_cliente')
     await pool.execute('INSERT IGNORE INTO ESPACIO_TRABAJO (id, nombre_cliente) VALUES (1, ?)', ['Workspace Demo']);
 
+    // Ensure EVALUACION_REQUISITO exists for every REQUISITOS_BASE for workspace 1
+    try{
+      const [reqRows] = await pool.execute('SELECT id FROM REQUISITOS_BASE');
+      for(const r of reqRows){
+        try{
+          await pool.execute(
+            'INSERT IGNORE INTO EVALUACION_REQUISITO (requisito_base_id, workspace_id, estado_cumplimiento, ultima_edicion_por, fecha_ultima_edicion) VALUES (?, ?, ?, NULL, NOW())',
+            [r.id, 1, 'NA']
+          );
+        }catch(innerErr){
+          // log and continue
+          console.error('insert eval requisito failed for requisito_base_id=', r.id, innerErr);
+        }
+      }
+    }catch(seedErr){
+      console.error('seeding EVALUACION_REQUISITO failed', seedErr);
+    }
+
     // Insert users with password 'Password123!'
     const pwd = 'Password123!';
     const h1 = await bcrypt.hash(pwd, 10);

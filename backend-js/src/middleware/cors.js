@@ -1,7 +1,7 @@
 module.exports = function devCors(req, res, next){
   // Development CORS helper that supports credentialed requests from localhost dev servers.
   // Configure allowed origins via ENV if needed.
-  const allowed = (process.env.DEV_ALLOWED_ORIGINS || 'http://localhost:5173,http://localhost:5174').split(',').map(s=>s.trim());
+  const allowed = (process.env.DEV_ALLOWED_ORIGINS || 'http://localhost:5173').split(',').map(s=>s.trim());
   const origin = req.headers.origin;
   if(origin && allowed.includes(origin)){
     res.setHeader('Access-Control-Allow-Origin', origin);
