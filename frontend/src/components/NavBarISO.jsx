@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../AuthContext'
 import useISO from '../hooks/useISO'
 import { useNavigate } from 'react-router-dom'
+import { hasRole } from '../lib/userUtils'
 
 function ClauseItem({ clause, requisitos, onToggle, requisitosWithNC }){
   const [open, setOpen] = useState(false)
@@ -112,7 +113,7 @@ export default function NavBarISO(){
       </div>
 
       <div className="px-2 mb-2">
-        <Link to={user && (user.role === 'Evaluador' || user.role === 'Responsable SGC') ? '/lobby' : '/dashboard'} className="block w-full text-left px-4 py-2 rounded-lg bg-[#00236f] text-white font-semibold">Dashboard</Link>
+        <Link to={user && (hasRole(user, 'evaluador') || hasRole(user, 'responsable')) ? '/lobby' : '/dashboard'} className="block w-full text-left px-4 py-2 rounded-lg bg-[#00236f] text-white font-semibold">Dashboard</Link>
       </div>
 
       <div className="space-y-2 px-2 overflow-y-auto max-h-[70vh]">

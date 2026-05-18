@@ -4,11 +4,14 @@ import { useAuth } from '../AuthContext'
 import Layout from '../components/Layout'
 import fetchWithAuth from '../lib/api'
 import NavBarISO from '../components/NavBarISO'
+import { hasRole } from '../lib/userUtils'
 
 function RequirementContent({ node }){
   const navigate = useNavigate()
   const { user } = useAuth()
   const [evidences, setEvidences] = useState([])
+  const [selectedEvidence, setSelectedEvidence] = useState(null)
+  const [modalComment, setModalComment] = useState('')
   const [ncList, setNcList] = useState([])
   const [evaluacionId, setEvaluacionId] = useState(null)
   useEffect(()=>{
@@ -64,6 +67,19 @@ function RequirementContent({ node }){
     window.addEventListener('nc:created', handler)
     return ()=>{ mounted = false; window.removeEventListener('nc:created', handler) }
   },[node])
+
+  // modal comment sync when selected evidence changes
+  useEffect(()=>{
+    if(selectedEvidence){
+      setModalComment(selectedEvidence.comentario_evidencia || '')
+    }
+  },[selectedEvidence])
+
+  const closeEvidence = () => setSelectedEvidence(null)
+  const saveEvidenceComment = (id, comment) => {
+    setEvidences(prev => prev.map(e => e.id === id ? { ...e, comentario_evidencia: comment } : e))
+    closeEvidence()
+  }
   if(!node) return <div className="p-4">No encontrado</div>
   const children = node.children || []
 
@@ -96,8 +112,8 @@ function RequirementContent({ node }){
               const statusColor = status === 'Aceptado' ? 'bg-green-600 text-white' : (status === 'Rechazado' ? 'bg-red-600 text-white' : 'bg-yellow-500 text-white')
               return (
                 <div key={ev.id} className="relative aspect-square p-2 border rounded flex flex-col items-center justify-between" >
-                  {/* Delete X for responsables (simulated) */}
-                  {user && user.role && user.role.toLowerCase().includes('responsable') && (
+                      {/* Delete X for responsables (simulated) */}
+                      {hasRole(user,'responsable') && (
                     <button
                       onClick={()=>{
                         if(window.confirm('¿Eliminar esta evidencia? Esta acción es simulada y no afecta la base de datos.')){
@@ -126,14 +142,14 @@ function RequirementContent({ node }){
                     </div>
                     <div className="mt-2 text-xs text-center truncate w-full px-1">{ev.nombre_archivo}</div>
                     <div className="mt-2 flex gap-2 justify-center items-center">
-                      <button onClick={()=>console.log('abrir', ev)} className="text-xs px-2 py-1 border rounded bg-white">Abrir</button>
+                      <button onClick={()=>setSelectedEvidence(ev)} className="text-xs px-2 py-1 border rounded bg-white">Abrir</button>
                       <button onClick={()=>console.log('historial', ev)} className="text-xs px-2 py-1 border rounded bg-white">Historial</button>
                       {/* Actualizar visible solo para responsables (simulado) */}
-                      {user && user.role && user.role.toLowerCase().includes('responsable') && (
+                      {hasRole(user,'responsable') && (
                         <button onClick={()=>console.log('actualizar', ev)} className="text-xs px-2 py-1 border rounded bg-[#00236f] text-white">Actualizar</button>
                       )}
                       {/* Evaluador puede cambiar estado (simulado) */}
-                      {user && user.role && user.role.toLowerCase().includes('evaluador') && (
+                      {hasRole(user,'evaluador') && (
                         <select
                           value={ev.estado_validacion_archivo || 'Pendiente'}
                           onChange={(e)=>{
@@ -159,10 +175,10 @@ function RequirementContent({ node }){
 
         {/* Evaluation area / No Conformidades area */}
         <div className="mt-4 p-4 border rounded bg-gray-50">
-          <h4 className="text-sm font-semibold mb-2">{user && user.role === 'Responsable SGC' ? 'No Conformidades' : 'Área de evaluación'}</h4>
-          <p className="text-sm text-slate-500">{user && user.role === 'Responsable SGC' ? 'Espacio para gestionar NC y sus estados' : 'Espacio para marcar evidencias, ver lista de NCs y estado del requisito.'}</p>
+          <h4 className="text-sm font-semibold mb-2">{hasRole(user,'responsable') ? 'No Conformidades' : 'Área de evaluación'}</h4>
+          <p className="text-sm text-slate-500">{hasRole(user,'responsable') ? 'Espacio para gestionar NC y sus estados' : 'Espacio para marcar evidencias, ver lista de NCs y estado del requisito.'}</p>
           <div className="mt-3">
-            {!(user && user.role === 'Responsable SGC') && (
+            {!hasRole(user,'responsable') && (
               <button onClick={async ()=>{
                 // lazy-load responsables and open modal via global event
                 try{
@@ -214,6 +230,40 @@ function RequirementContent({ node }){
             </table>
           </div>
         </div>
+        {/* Evidence modal (simulated) */}
+        {selectedEvidence && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+            <div className="bg-white rounded p-4 max-w-3xl w-full">
+              <div className="flex justify-between items-start">
+                <h3 className="text-lg font-semibold">{selectedEvidence.nombre_archivo}</h3>
+                <button onClick={()=>setSelectedEvidence(null)} className="text-sm px-2 py-1">Cerrar</button>
+              </div>
+              <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-slate-50 rounded overflow-hidden flex items-center justify-center">
+                  {(/\.(jpe?g|png|gif|webp)$/i).test(selectedEvidence.nombre_archivo) ? (
+                    <img src={selectedEvidence.url_archivo} alt={selectedEvidence.nombre_archivo} className="max-h-96 object-contain" />
+                  ) : (
+                    <div className="p-6 text-sm text-slate-600">Archivo: {selectedEvidence.nombre_archivo}</div>
+                  )}
+                </div>
+                <div>
+                  <div className="text-sm text-slate-500">Comentario de la evidencia</div>
+                  {hasRole(user,'responsable') ? (
+                    <>
+                      <textarea value={modalComment} onChange={e=>setModalComment(e.target.value)} className="w-full h-40 p-2 border rounded mt-2" />
+                      <div className="mt-2 flex gap-2 justify-end">
+                        <button onClick={()=>{ saveEvidenceComment(selectedEvidence.id, modalComment) }} className="px-3 py-1 bg-[#00236f] text-white rounded">Guardar</button>
+                        <button onClick={()=>setSelectedEvidence(null)} className="px-3 py-1 border rounded">Cancelar</button>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="mt-2 p-2 border rounded bg-slate-50">{selectedEvidence.comentario_evidencia || '—'}</div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

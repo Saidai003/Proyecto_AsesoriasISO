@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom'
 import Layout from '../components/Layout'
 import NavBarISO from '../components/NavBarISO'
 import { useAuth } from '../AuthContext'
+import { getRoleLower, hasRole } from '../lib/userUtils'
 
 export default function NCView(){
   const { id } = useParams()
@@ -59,6 +60,9 @@ export default function NCView(){
   
 
   const { user } = useAuth()
+  const roleLower = getRoleLower(user)
+  const isResponsable = hasRole(user, 'responsable')
+  const isEvaluador = hasRole(user, 'evaluador')
 
   const createChildAction = (parentId, payload) => {
     // create a new id locally
@@ -192,14 +196,16 @@ export default function NCView(){
           </div>
         </div>
 
-        {/* Footer row: checkbox, vincular action select, delete */}
+        {/* Footer row: vincular action select, delete (restricted to Responsables) */}
         <div className="mt-3 flex items-center justify-between text-sm">
-          <div className="flex items-center gap-4">
-            <label className="flex items-center gap-2"><input type="checkbox" checked={!!action.requiere_nueva_nc} readOnly /> Requiere nueva NC</label>
-          </div>
+          <div />
           <div className="flex items-center gap-3">
-            <button onClick={()=>setOpenForm(o=>!o)} className="text-xs px-2 py-1 border rounded">Agregar acción hija</button>
-            <button onClick={()=>deleteAction(action.id)} className="text-xs text-red-600">Eliminar Acción</button>
+              {hasRole(user, 'responsable') && (
+              <>
+                <button onClick={()=>setOpenForm(o=>!o)} className="text-xs px-2 py-1 border rounded">Agregar acción hija</button>
+                <button onClick={()=>deleteAction(action.id)} className="text-xs text-red-600">Eliminar Acción</button>
+              </>
+            )}
           </div>
         </div>
 
@@ -216,7 +222,6 @@ export default function NCView(){
                 <option value="Eficaz">Eficaz</option>
                 <option value="No_Eficaz">No_Eficaz</option>
               </select>
-              <label className="text-sm flex items-center gap-1"><input type="checkbox" checked={form.requiere_nueva_nc} onChange={e=>setForm({...form, requiere_nueva_nc: e.target.checked})} /> Requiere nueva NC</label>
             </div>
             <div className="flex gap-2">
               <button onClick={()=>{ createChildAction(action.id, form); setOpenForm(false); setForm({ accion: '', contenido_comentario: '', estado_accion: 'Pendiente', acciones_futuras_propuestas: '', requiere_nueva_nc: false }) }} className="px-3 py-1 bg-[#00236f] text-white text-sm rounded">Crear</button>
@@ -258,8 +263,13 @@ export default function NCView(){
           </div>
           <div className="flex flex-col gap-3 items-end">
             <div className="relative flex flex-col items-end" ref={acceptRef}>
-              <button onClick={()=>{ setAcceptOpen(o=>!o); setFlowOpen(false) }} className={`px-4 py-2 rounded text-white text-sm font-semibold ${validationColor(acceptState)}`} style={{minWidth:120, textAlign:'center'}}>{acceptState || '—'}</button>
-              {acceptOpen && (
+              <button
+                onClick={()=>{ if(isResponsable){ setAcceptOpen(o=>!o); setFlowOpen(false) } }}
+                className={`px-4 py-2 rounded text-white text-sm font-semibold ${validationColor(acceptState)} ${!isResponsable ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer'}`}
+                style={{minWidth:120, textAlign:'center'}}
+                aria-disabled={!isResponsable}
+              >{acceptState || '—'}</button>
+              {acceptOpen && isResponsable && (
                 <div className="absolute right-0 mt-2 w-40 bg-white border rounded shadow z-50">
                   <button onClick={()=>{ setAcceptState('Acepto'); setAcceptOpen(false) }} className="block w-full text-left px-3 py-2 hover:bg-slate-100">Acepto</button>
                   <button onClick={()=>{ setAcceptState('Parcial'); setAcceptOpen(false) }} className="block w-full text-left px-3 py-2 hover:bg-slate-100">Parcial</button>
@@ -269,14 +279,27 @@ export default function NCView(){
             </div>
 
             <div className="relative flex flex-col items-end" ref={flowRef}>
-              <button onClick={()=>{ setFlowOpen(o=>!o); setAcceptOpen(false) }} className={`px-4 py-2 rounded text-white text-sm font-semibold ${flowColor(flowState)}`} style={{minWidth:120, textAlign:'center'}}>{flowState || '—'}</button>
-              {flowOpen && (
+              <button
+                onClick={()=>{ if(isResponsable || isEvaluador){ setFlowOpen(o=>!o); setAcceptOpen(false) } }}
+                className={`px-4 py-2 rounded text-white text-sm font-semibold ${flowColor(flowState)} ${ (isResponsable || isEvaluador) ? 'border-transparent hover:border-black hover:shadow-sm cursor-pointer' : 'opacity-70 cursor-not-allowed'}`}
+                style={{minWidth:120, textAlign:'center'}}
+                aria-disabled={!(isResponsable || isEvaluador)}
+              >{flowState || '—'}</button>
+              {flowOpen && (isResponsable || isEvaluador) && (
                 <div className="absolute right-0 mt-2 w-44 bg-white border rounded shadow z-50">
-                  <button onClick={()=>{ setFlowState('Abierta'); setFlowOpen(false) }} className="block w-full text-left px-3 py-2 hover:bg-slate-100">Abierta</button>
-                  <button onClick={()=>{ setFlowState('Análisis'); setFlowOpen(false) }} className="block w-full text-left px-3 py-2 hover:bg-slate-100">Análisis</button>
-                  <button onClick={()=>{ setFlowState('Ejecución'); setFlowOpen(false) }} className="block w-full text-left px-3 py-2 hover:bg-slate-100">Ejecución</button>
-                  <button onClick={()=>{ setFlowState('Verificación'); setFlowOpen(false) }} className="block w-full text-left px-3 py-2 hover:bg-slate-100">Verificación</button>
-                  <button onClick={()=>{ setFlowState('Cerrada'); setFlowOpen(false) }} className="block w-full text-left px-3 py-2 hover:bg-slate-100">Cerrada</button>
+                  {isEvaluador && (
+                    <>
+                      <button onClick={()=>{ setFlowState('Abierta'); setFlowOpen(false) }} className="block w-full text-left px-3 py-2 hover:bg-slate-100">Abierta</button>
+                      <button onClick={()=>{ setFlowState('Verificación'); setFlowOpen(false) }} className="block w-full text-left px-3 py-2 hover:bg-slate-100">Verificación</button>
+                      <button onClick={()=>{ setFlowState('Cerrada'); setFlowOpen(false) }} className="block w-full text-left px-3 py-2 hover:bg-slate-100">Cerrada</button>
+                    </>
+                  )}
+                  {isResponsable && (
+                    <>
+                      <button onClick={()=>{ setFlowState('Análisis'); setFlowOpen(false) }} className="block w-full text-left px-3 py-2 hover:bg-slate-100">Análisis</button>
+                      <button onClick={()=>{ setFlowState('Ejecución'); setFlowOpen(false) }} className="block w-full text-left px-3 py-2 hover:bg-slate-100">Ejecución</button>
+                    </>
+                  )}
                 </div>
               )}
             </div>
@@ -301,6 +324,8 @@ export default function NCView(){
 }
 
 function CreateRootAction(){
+  const { user } = useAuth()
+  const isResponsable = hasRole(user, 'responsable')
   const [open, setOpen] = React.useState(false)
   const [form, setForm] = React.useState({ accion: '', contenido_comentario: '', estado_accion: 'Pendiente', acciones_futuras_propuestas: '', requiere_nueva_nc: false })
   // Emit custom event handled by parent component to create the root action
@@ -310,6 +335,7 @@ function CreateRootAction(){
   setForm({ accion: '', contenido_comentario: '', estado_accion: 'Pendiente', acciones_futuras_propuestas: '', requiere_nueva_nc: false })
   setOpen(false)
   }
+  if(!isResponsable) return null
   return (
   <div>
     {!open ? (
