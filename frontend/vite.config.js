@@ -5,7 +5,7 @@ import react from '@vitejs/plugin-react'
 export default defineConfig(({ command, mode }) => ({
   plugins: [react()],
   server: {
-    host: true,
+    host: 'localhost',
     port: 5173,
     proxy: {
       // Proxy API and auth requests to backend to keep same-origin for cookies
@@ -14,6 +14,11 @@ export default defineConfig(({ command, mode }) => ({
         changeOrigin: true,
         secure: false,
         cookieDomainRewrite: '',
+        // here we rewrite the path to remove the 
+        // /api prefix before forwarding to backend
+        // allowing us to keep the same API paths in frontend code
+        // /^\/api/ matches any path that starts with
+        // /api and rewrites it to remove the /api prefix
         rewrite: (path) => path.replace(/^\/api/, '/api')
       },
       '/auth': {

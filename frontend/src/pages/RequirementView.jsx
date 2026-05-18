@@ -96,6 +96,21 @@ function RequirementContent({ node }){
               const statusColor = status === 'Aceptado' ? 'bg-green-600 text-white' : (status === 'Rechazado' ? 'bg-red-600 text-white' : 'bg-yellow-500 text-white')
               return (
                 <div key={ev.id} className="relative aspect-square p-2 border rounded flex flex-col items-center justify-between" >
+                  {/* Delete X for responsables (simulated) */}
+                  {user && user.role && user.role.toLowerCase().includes('responsable') && (
+                    <button
+                      onClick={()=>{
+                        if(window.confirm('¿Eliminar esta evidencia? Esta acción es simulada y no afecta la base de datos.')){
+                          setEvidences(prev => prev.filter(x => x.id !== ev.id))
+                        }
+                      }}
+                      className="absolute top-2 left-2 w-6 h-6 rounded-full bg-red-600 text-white flex items-center justify-center text-xs"
+                      style={{zIndex:30}}
+                      aria-label="Eliminar evidencia"
+                    >
+                      ×
+                    </button>
+                  )}
                   <div className="absolute top-2 right-2 text-xs px-2 py-1 rounded shadow-sm " style={{zIndex:20}}>
                     <span className={`${statusColor} px-2 py-1 rounded text-xs`}>{status}</span>
                   </div>
@@ -110,10 +125,28 @@ function RequirementContent({ node }){
                       </div>
                     </div>
                     <div className="mt-2 text-xs text-center truncate w-full px-1">{ev.nombre_archivo}</div>
-                    <div className="mt-2 flex gap-2 justify-center">
+                    <div className="mt-2 flex gap-2 justify-center items-center">
                       <button onClick={()=>console.log('abrir', ev)} className="text-xs px-2 py-1 border rounded bg-white">Abrir</button>
                       <button onClick={()=>console.log('historial', ev)} className="text-xs px-2 py-1 border rounded bg-white">Historial</button>
-                      <button onClick={()=>console.log('actualizar', ev)} className="text-xs px-2 py-1 border rounded bg-[#00236f] text-white">Actualizar</button>
+                      {/* Actualizar visible solo para responsables (simulado) */}
+                      {user && user.role && user.role.toLowerCase().includes('responsable') && (
+                        <button onClick={()=>console.log('actualizar', ev)} className="text-xs px-2 py-1 border rounded bg-[#00236f] text-white">Actualizar</button>
+                      )}
+                      {/* Evaluador puede cambiar estado (simulado) */}
+                      {user && user.role && user.role.toLowerCase().includes('evaluador') && (
+                        <select
+                          value={ev.estado_validacion_archivo || 'Pendiente'}
+                          onChange={(e)=>{
+                            const newVal = e.target.value
+                            setEvidences(prev => prev.map(x => x.id===ev.id ? { ...x, estado_validacion_archivo: newVal } : x))
+                          }}
+                          className="text-xs px-2 py-1 border rounded bg-white"
+                        >
+                          <option>Pendiente</option>
+                          <option>Aceptado</option>
+                          <option>Rechazado</option>
+                        </select>
+                      )}
                     </div>
                   </div>
                 </div>
