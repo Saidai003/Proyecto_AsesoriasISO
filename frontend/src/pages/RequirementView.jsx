@@ -6,14 +6,102 @@ import fetchWithAuth from '../lib/api'
 import NavBarISO from '../components/NavBarISO'
 import { hasRole } from '../lib/userUtils'
 
+function UploadArea({ evaluacionId, onUploaded }){
+  const [dragOver, setDragOver] = React.useState(false)
+  const fileRef = React.useRef(null)
+  const { user } = useAuth()
+
+  const handleFiles = async (files) => {
+    if(!files || files.length===0) return
+    const file = files[0]
+    const nombre = file.name
+    // ext: lowercase file extension without 
+    // dot, or empty string if no extension
+    const ext = (nombre.split('.').pop() || '').toLowerCase()
+    // read file as data URL to send to backend for storage
+    try{
+      const readAsDataURL = (f) => new Promise((resolve, reject) => {
+        const fr = new FileReader()
+        fr.onload = () => resolve(fr.result) // result will be a data URL like "data:image/png;base64,...."
+        fr.onerror = reject // reject with the error event if reading fails
+        fr.readAsDataURL(f) // start reading the file as data URL
+      })
+      const fileData = await readAsDataURL(file)
+      // payload contains evaluacionId (nullable), nombre, ext, and fileData as data URL
+      // does fileData contain the full pdf or image or whatever it is?
+      // Yes, fileData will contain the full content of the file encoded as a data URL. For example, 
+      // if you upload an image, fileData will be a string that starts with something like "data:image/png;base64," followed by \
+      // the base64-encoded content of the image. The backend can then decode this data URL to retrieve the original file content
+      // and store it for storage or processing.
+      const payload = { evaluacion_requisito_id: evaluacionId || null, nombre_archivo: nombre, tipo_formato: ext, fileData }
+      
+      const res = await fetchWithAuth('/api/evidencias', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+      if(!res.ok){ const j = await res.json().catch(()=>({})); alert('Error subiendo evidencia: ' + (j.error || res.statusText)); return }
+      const created = await res.json()
+      // ensure uploader id present for frontend; backend should set it but fallback
+      if((created.usuario_carga_id === null || created.usuario_carga_id === undefined) && user && user.id){
+        created.usuario_carga_id = user.id
+      }
+      // create object URL only if backend did not return a URL and file available
+      if(!created.url_archivo && file && typeof URL !== 'undefined' && URL.createObjectURL){
+        created.url_archivo = URL.createObjectURL(file)
+        created._localObjectUrl = true
+      }
+      if(onUploaded) onUploaded(created)
+      try{ window.dispatchEvent(new CustomEvent('toast:show', { detail: { title: 'Evidencia subida', message: nombre, type: 'success', ttl: 4000 } })) }catch(_){ }
+    }catch(e){ console.error('upload error', e); alert('Error subiendo archivo') }
+  }
+
+  return (
+    <div>
+      <div
+        onDragOver={e=>{ e.preventDefault(); setDragOver(true) }}
+        onDragLeave={e=>{ e.preventDefault(); setDragOver(false) }}
+        onDrop={e=>{ e.preventDefault(); setDragOver(false); handleFiles(e.dataTransfer.files) }}
+        className={`p-3 mb-3 border-dashed border-2 rounded ${dragOver ? 'border-[#00236f] bg-slate-50' : 'border-slate-200'}`}>
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="text-sm font-medium">Arrastra archivos aquí para subir</div>
+            <div className="text-xs text-slate-500">O usa el botón para seleccionar un archivo</div>
+          </div>
+          <div>
+            <input ref={fileRef} type="file" className="hidden" onChange={e=> handleFiles(e.target.files)} />
+            <button onClick={()=>fileRef.current && fileRef.current.click()} className="px-3 py-2 bg-[#00236f] text-white rounded">Seleccionar archivo</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function RequirementContent({ node }){
   const navigate = useNavigate()
   const { user } = useAuth()
   const [evidences, setEvidences] = useState([])
   const [selectedEvidence, setSelectedEvidence] = useState(null)
+  const [blobUrls, setBlobUrls] = useState({})
+  const blobUrlsRef = React.useRef({})
+
+  // keep ref in sync for cleanup on unmount
+  useEffect(()=>{ blobUrlsRef.current = blobUrls },[blobUrls])
+
+  // revoke any created object URLs on unmount
+  useEffect(()=>{
+    return ()=>{
+      try{ Object.values(blobUrlsRef.current || {}).forEach(u=>{ try{ URL.revokeObjectURL(u) }catch(_){} }) }catch(_){}
+    }
+  },[])
   const [modalComment, setModalComment] = useState('')
   const [ncList, setNcList] = useState([])
   const [evaluacionId, setEvaluacionId] = useState(null)
+  const [historyModalOpen, setHistoryModalOpen] = useState(false)
+  const [historyLogs, setHistoryLogs] = useState([])
+  const [historyPage, setHistoryPage] = useState(1)
+  const [historyPageSize] = useState(8)
+  const [historyFilterStatus, setHistoryFilterStatus] = useState('')
+  const [historyFilterEstado, setHistoryFilterEstado] = useState('')
+  const [historyFilterFrom, setHistoryFilterFrom] = useState('')
+  const [historyFilterTo, setHistoryFilterTo] = useState('')
   useEffect(()=>{
     // mounted will be used for cancellation in case the 
     // component unmounts before the fetch completes
@@ -35,6 +123,28 @@ function RequirementContent({ node }){
     if(node && node.id) loadEvidences()
     return ()=> mounted = false
   },[node])
+
+  // Fetch protected image previews for evidences that reference Drive
+  useEffect(()=>{
+    let mounted = true
+    const toFetch = (evidences || []).filter(ev => ev && ev.url_archivo && ev.url_archivo.startsWith('drive://') && (/\.(jpe?g|png|gif|webp)$/i).test(ev.nombre_archivo))
+    toFetch.forEach(ev => {
+      // skip if already cached
+      if(blobUrls[ev.id]) return
+      (async ()=>{
+        try{
+          const res = await fetchWithAuth(`/api/evidencias/${ev.id}/download?inline=1`)
+          if(!mounted) return
+          if(!res.ok) return
+          const blob = await res.blob()
+          const url = URL.createObjectURL(blob)
+          if(!mounted) return
+          setBlobUrls(prev => ({ ...prev, [ev.id]: url }))
+        }catch(e){ console.error('preview fetch error', e) }
+      })()
+    })
+    return ()=>{ mounted = false }
+  },[evidences])
 
   // load evaluacion id and NCs for this requisito
   useEffect(()=>{
@@ -76,12 +186,99 @@ function RequirementContent({ node }){
   },[selectedEvidence])
 
   const closeEvidence = () => setSelectedEvidence(null)
+  // Handle updating/replacing an evidence file: delete old Drive file first, then upload replacement
+  const handleUpdate = (ev) => {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.onchange = async (e) => {
+      const file = e.target.files && e.target.files[0]
+      if(!file) return
+      if(!window.confirm('Se eliminará el archivo actual en Drive y se subirá el nuevo. ¿Continuar?')) return
+      try{
+        const readAsDataURL = (f) => new Promise((resolve, reject) => {
+          const fr = new FileReader()
+          fr.onload = () => resolve(fr.result)
+          fr.onerror = reject
+          fr.readAsDataURL(f)
+        })
+        const fileData = await readAsDataURL(file)
+        // send PATCH with force_delete_before_upload flag
+        const payload = { fileData, nombre_archivo: file.name, tipo_formato: (file.name.split('.').pop()||'').toLowerCase(), force_delete_before_upload: true }
+        const res = await fetchWithAuth(`/api/evidencias/${ev.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+        if(!res.ok){ const j = await res.json().catch(()=>({})); window.dispatchEvent(new CustomEvent('toast:show', { detail: { title: 'Error', message: 'No se pudo actualizar evidencia: ' + (j.error || res.statusText), type: 'error', ttl: 6000 } })); return }
+        const json = await res.json()
+        // backend returns { evidence, forceDeleteResult } or raw evidence
+        const updated = json && json.evidence ? json.evidence : json
+        const fd = json && json.forceDeleteResult ? json.forceDeleteResult : null
+        if(fd){
+          if(fd.ok) window.dispatchEvent(new CustomEvent('toast:show', { detail: { title: 'Eliminado', message: `Archivo anterior eliminado.`, type: 'info', ttl: 2500 } }))
+          else window.dispatchEvent(new CustomEvent('toast:show', { detail: { title: 'Advertencia', message: `No se pudo eliminar archivo anterior: ${fd.error}`, type: 'warning', ttl: 5000 } }))
+        }
+        // Upload result assumed included in updated object
+        if(updated){
+          setEvidences(prev => prev.map(x => x.id===ev.id ? { ...x, ...updated } : x))
+          // refresh preview if this is an image stored on Drive
+          try{
+            const isImage = (/\.(jpe?g|png|gif|webp)$/i).test(updated.nombre_archivo || file.name)
+            // revoke any previous object URL for this evidence
+            if(blobUrls && blobUrls[ev.id]){ try{ URL.revokeObjectURL(blobUrls[ev.id]) }catch(_){ } setBlobUrls(prev => { const next = { ...prev }; delete next[ev.id]; return next }) }
+            if(isImage && updated.url_archivo && String(updated.url_archivo).startsWith('drive://')){
+              // fetch new preview from backend
+              (async ()=>{
+                try{
+                  const r = await fetchWithAuth(`/api/evidencias/${ev.id}/download?inline=1`)
+                  if(r.ok){
+                    const b = await r.blob()
+                    const newUrl = URL.createObjectURL(b)
+                    setBlobUrls(prev => ({ ...prev, [ev.id]: newUrl }))
+                  }
+                }catch(e){ console.error('refresh preview error', e) }
+              })()
+            }
+          }catch(e){ console.error('preview refresh', e) }
+          window.dispatchEvent(new CustomEvent('toast:show', { detail: { title: 'Evidencia actualizada', message: updated.nombre_archivo || file.name, type: 'success', ttl: 3500 } }))
+        }else{
+          window.dispatchEvent(new CustomEvent('toast:show', { detail: { title: 'Error', message: 'Actualización fallida', type: 'error', ttl: 5000 } }))
+        }
+      }catch(err){ console.error('update evidence', err); window.dispatchEvent(new CustomEvent('toast:show', { detail: { title: 'Error', message: 'Error actualizando evidencia', type: 'error', ttl: 5000 } })) }
+    }
+    input.click()
+  }
   const saveEvidenceComment = (id, comment) => {
-    setEvidences(prev => prev.map(e => e.id === id ? { ...e, comentario_evidencia: comment } : e))
-    closeEvidence()
+    (async ()=>{
+      try{
+        const res = await fetchWithAuth(`/api/evidencias/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ comentario_evidencia: comment }) })
+        if(!res.ok){ const j = await res.json().catch(()=>({})); alert('No se pudo guardar: ' + (j.error || res.statusText)); return }
+        const updated = await res.json()
+        setEvidences(prev => prev.map(e => e.id === id ? { ...e, comentario_evidencia: updated.comentario_evidencia } : e))
+        closeEvidence()
+      }catch(e){ console.error('save comment', e); alert('Error guardando comentario') }
+    })()
   }
   if(!node) return <div className="p-4">No encontrado</div>
   const children = node.children || []
+
+  // history filtering + pagination derived values
+  const filteredHistory = (historyLogs || []).filter(l => {
+    let ok = true
+    if(historyFilterStatus) ok = ok && l.tipo_accion === historyFilterStatus
+    if(historyFilterEstado) ok = ok && (l.estado_validacion_archivo || '') === historyFilterEstado
+    if(historyFilterFrom){ const d = new Date(l.fecha_accion).toISOString().slice(0,10); ok = ok && d >= historyFilterFrom }
+    if(historyFilterTo){ const d = new Date(l.fecha_accion).toISOString().slice(0,10); ok = ok && d <= historyFilterTo }
+    return ok
+  })
+  const historyTotal = filteredHistory.length
+  const historyTotalPages = Math.max(1, Math.ceil(historyTotal / historyPageSize))
+  const historyPageItems = filteredHistory.slice((historyPage-1)*historyPageSize, historyPage*historyPageSize)
+
+  const ACTION_LABELS = {
+    UPLOAD: 'Subida',
+    DELETE: 'Eliminación',
+    UPDATE: 'Actualización',
+    REPLACE: 'Reemplazo',
+    APPROVAL: 'Aprobación',
+    BULK_DELETE: 'Eliminación masiva'
+  }
 
   return (
     <div className="p-4">
@@ -103,6 +300,8 @@ function RequirementContent({ node }){
         {/* File storage area (placeholders) above evaluation area */}
         <div className="mt-3 p-3 border rounded bg-white">
           <h5 className="text-sm font-medium mb-2">Archivos</h5>
+          {/* Upload area */}
+          <UploadArea evaluacionId={evaluacionId} onUploaded={(newEv)=> setEvidences(prev => [newEv, ...prev])} />
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
             {evidences && evidences.length>0 ? evidences.map(ev => {
               const isImage = /\.(jpe?g|png|gif|webp)$/i.test(ev.nombre_archivo)
@@ -110,15 +309,34 @@ function RequirementContent({ node }){
               const dataUrl = `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`
               const status = ev.estado_validacion_archivo || 'Pendiente'
               const statusColor = status === 'Aceptado' ? 'bg-green-600 text-white' : (status === 'Rechazado' ? 'bg-red-600 text-white' : 'bg-yellow-500 text-white')
+              // compute image src: prefer URL from backend; if it's a server-relative uploads path, prefix backend origin
+              const computeSrc = (url) => {
+                if(!url) return null
+                if(url.startsWith('http')) return url
+                if(url.startsWith('/uploads')) return `${window.location.protocol}//${window.location.hostname}:3000${url}`
+                return url
+              }
+
               return (
                 <div key={ev.id} className="relative aspect-square p-2 border rounded flex flex-col items-center justify-between" >
                       {/* Delete X for responsables (simulated) */}
-                      {hasRole(user,'responsable') && (
+                      {user && user.id === ev.usuario_carga_id && hasRole(user,'responsable') && (
                     <button
-                      onClick={()=>{
-                        if(window.confirm('¿Eliminar esta evidencia? Esta acción es simulada y no afecta la base de datos.')){
+                      onClick={async ()=>{
+                        if(!window.confirm('¿Eliminar esta evidencia?')) return
+                        try{
+                          const res = await fetchWithAuth(`/api/evidencias/${ev.id}`, { method: 'DELETE' })
+                          if(!res.ok){ const j = await res.json().catch(()=>({})); alert('No se pudo eliminar: ' + (j.error || res.statusText)); return }
+                          // revoke local object URL if present
+                          try{ 
+                            if(ev && ev._localObjectUrl && ev.url_archivo && ev.url_archivo.startsWith('blob:')) URL.revokeObjectURL(ev.url_archivo)
+                            // revoke cached blob preview if present
+                            if(blobUrls && blobUrls[ev.id]){ try{ URL.revokeObjectURL(blobUrls[ev.id]) }catch(_){ } 
+                              setBlobUrls(prev => { const next = { ...prev }; delete next[ev.id]; return next })
+                            }
+                          }catch(_){ }
                           setEvidences(prev => prev.filter(x => x.id !== ev.id))
-                        }
+                        }catch(e){ console.error('delete evidence', e); alert('Error eliminando evidencia') }
                       }}
                       className="absolute top-2 left-2 w-6 h-6 rounded-full bg-red-600 text-white flex items-center justify-center text-xs"
                       style={{zIndex:30}}
@@ -134,27 +352,67 @@ function RequirementContent({ node }){
                     <div className="w-full h-0 flex-1 flex items-center justify-center overflow-hidden rounded bg-slate-50">
                       <div className="w-full h-full flex items-center justify-center">
                         {isImage ? (
-                          <img src={ev.url_archivo || dataUrl} alt={ev.nombre_archivo} className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="text-center text-sm text-slate-600">{ev.nombre_archivo.split('.').pop().toUpperCase()}</div>
-                        )}
+                            // If url_archivo is a drive reference, use authenticated blob URL cached in state
+                            <img src={ev.url_archivo && ev.url_archivo.startsWith('drive://') ? (blobUrls[ev.id] || dataUrl) : (computeSrc(ev.url_archivo) || dataUrl)} alt={ev.nombre_archivo} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="text-center text-sm text-slate-600">{ev.nombre_archivo.split('.').pop().toUpperCase()}</div>
+                          )}
                       </div>
                     </div>
                     <div className="mt-2 text-xs text-center truncate w-full px-1">{ev.nombre_archivo}</div>
-                    <div className="mt-2 flex gap-2 justify-center items-center">
+                      <div className="mt-2 flex gap-2 justify-center items-center">
                       <button onClick={()=>setSelectedEvidence(ev)} className="text-xs px-2 py-1 border rounded bg-white">Abrir</button>
-                      <button onClick={()=>console.log('historial', ev)} className="text-xs px-2 py-1 border rounded bg-white">Historial</button>
+                      <button onClick={async ()=>{
+                        try{
+                          const res = await fetchWithAuth(`/api/evidencias/${ev.id}/history`)
+                          if(!res.ok){ const j = await res.json().catch(()=>({})); alert('No se pudo obtener historial: ' + (j.error || res.statusText)); return }
+                          const json = await res.json()
+                          const logs = (json.logs || [])
+                          setHistoryLogs(logs)
+                          setHistoryPage(1)
+                          setHistoryFilterFrom('')
+                          setHistoryFilterTo('')
+                          setHistoryFilterStatus('')
+                          setHistoryModalOpen(true)
+                        }catch(e){ console.error('historial error', e); alert('Error obteniendo historial') }
+                      }} className="text-xs px-2 py-1 border rounded bg-white">Historial</button>
+                      <button onClick={async ()=>{
+                        // Trigger download via backend to avoid drive:// scheme
+                        try{
+                          const res = await fetchWithAuth(`/api/evidencias/${ev.id}/download`)
+                          if(!res.ok){ const j = await res.json().catch(()=>({})); alert('No se pudo descargar: ' + (j.error || res.statusText)); return }
+                          const blob = await res.blob()
+                          const url = URL.createObjectURL(blob)
+                          const a = document.createElement('a')
+                          a.href = url
+                          a.download = ev.nombre_archivo || 'evidencia'
+                          document.body.appendChild(a)
+                          a.click()
+                          a.remove()
+                          URL.revokeObjectURL(url)
+                        }catch(e){ console.error('download error', e); alert('Error descargando evidencia') }
+                      }} className="text-xs px-2 py-1 border rounded bg-white">Descargar</button>
                       {/* Actualizar visible solo para responsables (simulado) */}
                       {hasRole(user,'responsable') && (
-                        <button onClick={()=>console.log('actualizar', ev)} className="text-xs px-2 py-1 border rounded bg-[#00236f] text-white">Actualizar</button>
+                        <button onClick={()=>handleUpdate(ev)} className="text-xs px-2 py-1 border rounded bg-[#00236f] text-white">Actualizar</button>
                       )}
                       {/* Evaluador puede cambiar estado (simulado) */}
                       {hasRole(user,'evaluador') && (
                         <select
                           value={ev.estado_validacion_archivo || 'Pendiente'}
-                          onChange={(e)=>{
+                          onChange={async (e)=>{
                             const newVal = e.target.value
+                            // optimistic UI update
                             setEvidences(prev => prev.map(x => x.id===ev.id ? { ...x, estado_validacion_archivo: newVal } : x))
+                            try{
+                              const res = await fetchWithAuth(`/api/evidencias/${ev.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ estado_validacion_archivo: newVal }) })
+                              if(!res.ok){ const j = await res.json().catch(()=>({})); window.dispatchEvent(new CustomEvent('toast:show', { detail: { title: 'Error', message: 'No se pudo cambiar estado: ' + (j.error || res.statusText), type: 'error', ttl: 6000 } })); return }
+                              const json = await res.json()
+                              // backend returns updated evidence or wrapped object; try to extract
+                              const updated = json && json.evidence ? json.evidence : (json || {})
+                              setEvidences(prev => prev.map(x => x.id===ev.id ? { ...x, estado_validacion_archivo: updated.estado_validacion_archivo || newVal } : x))
+                              window.dispatchEvent(new CustomEvent('toast:show', { detail: { title: 'Estado actualizado', message: `Evidencia ${ev.id}: ${newVal}`, type: 'success', ttl: 3000 } }))
+                            }catch(err){ console.error('change estado', err); window.dispatchEvent(new CustomEvent('toast:show', { detail: { title: 'Error', message: 'Error cambiando estado', type: 'error', ttl: 5000 } })) }
                           }}
                           className="text-xs px-2 py-1 border rounded bg-white"
                         >
@@ -172,6 +430,88 @@ function RequirementContent({ node }){
             )}
           </div>
         </div>
+
+        {/* History modal */}
+        {historyModalOpen && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-start justify-center pt-20">
+            <div className="bg-white rounded p-4 max-w-3xl w-full mx-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold">Historial de evidencia</h3>
+                <div className="flex gap-2 items-center">
+                  <button onClick={()=>setHistoryModalOpen(false)} className="px-3 py-1 border rounded">Cerrar</button>
+                </div>
+              </div>
+                <div className="mt-3 grid grid-cols-1 md:grid-cols-4 gap-2">
+                <div>
+                  <label className="text-xs">Desde</label>
+                  <input type="date" value={historyFilterFrom} onChange={e=>{ setHistoryFilterFrom(e.target.value); setHistoryPage(1) }} className="w-full p-1 border rounded" />
+                </div>
+                <div>
+                  <label className="text-xs">Hasta</label>
+                  <input type="date" value={historyFilterTo} onChange={e=>{ setHistoryFilterTo(e.target.value); setHistoryPage(1) }} className="w-full p-1 border rounded" />
+                </div>
+                <div>
+                  <label className="text-xs">Tipo</label>
+                  <select value={historyFilterStatus} onChange={e=>{ setHistoryFilterStatus(e.target.value); setHistoryPage(1) }} className="w-full p-1 border rounded">
+                    <option value="">(Todos)</option>
+                    <option value="UPLOAD">{ACTION_LABELS.UPLOAD}</option>
+                    <option value="DELETE">{ACTION_LABELS.DELETE}</option>
+                    <option value="UPDATE">{ACTION_LABELS.UPDATE}</option>
+                    <option value="REPLACE">{ACTION_LABELS.REPLACE}</option>
+                    <option value="APPROVAL">{ACTION_LABELS.APPROVAL}</option>
+                    <option value="BULK_DELETE">{ACTION_LABELS.BULK_DELETE}</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs">Estado aprob.</label>
+                  <select value={historyFilterEstado} onChange={e=>{ setHistoryFilterEstado(e.target.value); setHistoryPage(1) }} className="w-full p-1 border rounded">
+                    <option value="">(Todos)</option>
+                    <option value="Pendiente">Pendiente</option>
+                    <option value="Aceptado">Aceptado</option>
+                    <option value="Rechazado">Rechazado</option>
+                  </select>
+                </div>
+              </div>
+              <div className="mt-3 overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left">
+                      <th className="px-2 py-1 border-b">Fecha</th>
+                      <th className="px-2 py-1 border-b">Usuario</th>
+                      <th className="px-2 py-1 border-b">Tipo</th>
+                      <th className="px-2 py-1 border-b">Estado</th>
+                      <th className="px-2 py-1 border-b">Archivo</th>
+                      <th className="px-2 py-1 border-b">Detalle</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {historyPageItems.map(h => (
+                      <tr key={h.id} className="hover:bg-slate-50">
+                        <td className="px-2 py-1 border-b">{new Date(h.fecha_accion).toLocaleString()}</td>
+                        <td className="px-2 py-1 border-b">{h.usuario_nombre}</td>
+                        <td className="px-2 py-1 border-b">{ACTION_LABELS[h.tipo_accion] || h.tipo_accion}</td>
+                        <td className="px-2 py-1 border-b">{h.estado_validacion_archivo || '—'}</td>
+                        <td className="px-2 py-1 border-b">{h.nombre_archivo}</td>
+                        <td className="px-2 py-1 border-b">{h.detalle}</td>
+                      </tr>
+                    ))}
+                    {historyPageItems.length===0 && (
+                      <tr><td className="px-2 py-4 border-b text-sm text-slate-500" colSpan={5}>No hay registros.</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              <div className="mt-3 flex items-center justify-between">
+                <div className="text-xs text-slate-600">Registros: {historyTotal}</div>
+                <div className="flex items-center gap-2">
+                  <button disabled={historyPage<=1} onClick={()=>setHistoryPage(p=>Math.max(1,p-1))} className="px-2 py-1 border rounded">Anterior</button>
+                  <div className="text-sm">Página {historyPage} / {historyTotalPages}</div>
+                  <button disabled={historyPage>=historyTotalPages} onClick={()=>setHistoryPage(p=>Math.min(historyTotalPages,p+1))} className="px-2 py-1 border rounded">Siguiente</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Evaluation area / No Conformidades area */}
         <div className="mt-4 p-4 border rounded bg-gray-50">
@@ -238,13 +578,27 @@ function RequirementContent({ node }){
                 <h3 className="text-lg font-semibold">{selectedEvidence.nombre_archivo}</h3>
                 <button onClick={()=>setSelectedEvidence(null)} className="text-sm px-2 py-1">Cerrar</button>
               </div>
-              <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="bg-slate-50 rounded overflow-hidden flex items-center justify-center">
-                  {(/\.(jpe?g|png|gif|webp)$/i).test(selectedEvidence.nombre_archivo) ? (
-                    <img src={selectedEvidence.url_archivo} alt={selectedEvidence.nombre_archivo} className="max-h-96 object-contain" />
-                  ) : (
-                    <div className="p-6 text-sm text-slate-600">Archivo: {selectedEvidence.nombre_archivo}</div>
-                  )}
+                  {(() => {
+                    const isImage = (/\.(jpe?g|png|gif|webp)$/i).test(selectedEvidence.nombre_archivo)
+                    const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='600' height='400'><rect width='100%' height='100%' fill='%23e2e8f0'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-size='20' fill='%234a5568'>${selectedEvidence.nombre_archivo}</text></svg>`
+                    const dataUrl = `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`
+                    if(isImage){
+                      let src = dataUrl
+                      if(selectedEvidence.url_archivo){
+                        if(selectedEvidence.url_archivo.startsWith('drive://')){
+                          src = blobUrls[selectedEvidence.id] || dataUrl
+                        }else if(selectedEvidence.url_archivo.startsWith('http')){
+                          src = selectedEvidence.url_archivo
+                        }else if(selectedEvidence.url_archivo.startsWith('/uploads')){
+                          src = `${window.location.protocol}//${window.location.hostname}:3000${selectedEvidence.url_archivo}`
+                        }
+                      }
+                      return <img src={src} alt={selectedEvidence.nombre_archivo} className="max-h-96 object-contain" />
+                    }
+                    return <div className="p-6 text-sm text-slate-600">Archivo: {selectedEvidence.nombre_archivo}</div>
+                  })()}
                 </div>
                 <div>
                   <div className="text-sm text-slate-500">Comentario de la evidencia</div>

@@ -12,8 +12,8 @@ app.use(cookieParser());
 
 // Middleware
 // Allow very large payloads for direct upload of files as base64 to be stored in Google Drive.
-// Set a very large limit (1000mb). If you want unlimited, set a sufficiently large value.
-app.use(express.json({ limit: '1000mb' }));
+// Set a very large limit (2000mb). If you want unlimited, set a sufficiently large value.
+app.use(express.json({ limit: '2000mb' }));
 
 // Simple CORS middleware for local development (moved to middleware file)
 const devCors = require('./middleware/cors');

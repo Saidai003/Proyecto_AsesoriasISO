@@ -30,6 +30,7 @@ services:
       - PORT=3000
       - JWT_SECRET=dev_jwt_secret
       - SEED_SECRET=dev_seed_secret
+      - GOOGLE_DRIVE_TOKEN_PATH=/app/.env.drive_token
     env_file:
       - backend-js/.env
     ports:
@@ -38,6 +39,8 @@ services:
       - mysql
     volumes:
       - ./backend-js/.credentials:/app/.credentials
+      - ./backend-js:/app
+      - ./.env.drive_token:/app/.env.drive_token:ro
 
   # Optional backend-py service example
   # backend-py removed: Python backend no longer used

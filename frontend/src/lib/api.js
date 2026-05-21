@@ -19,12 +19,28 @@
 export async function fetchWithAuth(input, init = {}){
   // Prefer explicit VITE_API_BASE; in local dev fall back to localhost:3000
   // In development use relative paths so Vite dev server proxy can forward requests
-  const envBase = import.meta.env.VITE_API_BASE
+  const envBase = import.meta.env.VITE_API_BASE || import.meta.env.VITE_BACKEND_URL
   const isDev = import.meta.env.DEV
-  const devFallback = (typeof window !== 'undefined' && window.location && window.location.hostname === 'localhost') ? 'http://localhost:3000' : ''
-  const API_BASE = isDev ? '' : (envBase || devFallback || '')
+  // In development use relative paths so Vite dev server proxy forwards requests
+  const API_BASE = isDev ? '' : (envBase || 'http://localhost:3000')
   const url = input.startsWith('http') ? input : `${API_BASE}${input}`
   const token = localStorage.getItem('accessToken')
+
+  // If there's no access token but a refresh cookie may exist, try refreshing first
+  let currentToken = token
+  if(!currentToken){
+    try{
+      const r = await fetch(`${API_BASE}/auth/refresh`, { method: 'POST', credentials: 'include' })
+      if(r.ok){
+        const body = await r.json().catch(()=>null)
+        if(body && body.accessToken){
+          localStorage.setItem('accessToken', body.accessToken)
+          currentToken = body.accessToken
+          try{ window.dispatchEvent(new CustomEvent('auth:refreshed', { detail: currentToken })) }catch(e){}
+        }
+      }
+    }catch(e){ /* ignore refresh errors here */ }
+  }
 
   // here at headers, we set the Authorization header with the token 
   // if it exists
@@ -35,7 +51,7 @@ export async function fetchWithAuth(input, init = {}){
   // the caller is any code that uses fetchWithAuth to make API requests,
   // such as AuthContext.jsx for login/logout and other API calls in the app
   const headers = new Headers(init.headers || {})
-  if(token) headers.set('Authorization', `Bearer ${token}`)
+  if(currentToken) headers.set('Authorization', `Bearer ${currentToken}`)
 
   // here, ... and init is the spread operator that takes all properties from the init object
   // and includes them in the new object we pass to fetch. This allows the caller to specify

@@ -16,7 +16,9 @@ export function hasRole(user, roleName){
   if(!roleName) return false
   const name = String(roleName).toLowerCase()
   const roles = getRoles(user)
-  return roles.includes(name)
+  if(roles.includes(name)) return true
+  // allow matching by word when backend stores 'responsable sgc' etc.
+  return roles.some(r => r.split(/\s+/).includes(name))
 }
 
 export default { getRoles, getRoleLower, hasRole }
