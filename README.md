@@ -1,3 +1,155 @@
+# ProyectoISO
+
+Descripción
+-----------
+
+Este repositorio contiene una aplicación para gestionar evidencias y requisitos ISO-9001.
+Incluye un backend en Node.js (`backend-js`), una interfaz frontend con Vite/React (`frontend`) y una base de datos MySQL configurada con `docker-compose`.
+
+Requisitos
+----------
+
+- Docker y Docker Compose
+- Node.js (para desarrollo local si no se usa Docker)
+
+Iniciar la aplicación
+---------------------
+
+Levantado rápido con Docker Compose:
+
+```bash
+docker compose up --build -d
+```
+
+Importar los seeds (MySQL UTF-8)
+--------------------------------
+
+Si necesitas cargar los archivos `seed` en la base de datos `proyecto_iso`, usa los siguientes comandos (ejecutar desde la raíz del proyecto):
+
+1) Importar `seedISO_utf8.sql`:
+
+```bash
+docker compose exec -T mysql bash -lc "mysql --default-character-set=utf8mb4 -u root -prootpassword proyecto_iso" < seeds/seedISO_utf8.sql
+```
+
+2) Importar `seed_users_workspaces.sql`:
+
+```bash
+docker compose exec -T mysql bash -lc "mysql --default-character-set=utf8mb4 -u root -prootpassword proyecto_iso" < seeds/seed_users_workspaces.sql
+```
+
+Alternativa (concatenar ambos seed si tienes problemas con redirección en PowerShell):
+
+```bash
+cmd /c "type seeds\\seedISO_utf8.sql & type seeds\\seed_users_workspaces.sql" | docker compose exec -T mysql mysql --default-character-set=utf8mb4 -u root -prootpassword proyecto_iso
+```
+
+Nota sobre el error `SET NAMES`
+-------------------------------
+
+Algunos clientes o herramientas pueden arrojar este error al ejecutar directamente `SET NAMES utf8mb4;` dentro de un script SQL:
+
+```
+Syntax Error at line 2, column 4
+
+
+SET NAMES utf8mb4;
+	^^^             
+Expected: paren_expr_list,'.',AND_OR,partition_extension_cla
+dbtools
+seed_users_workspaces.sql(2, 5): Syntax Error at line 2, column 4
+
+
+SET NAMES utf8mb4;
+^^^
+Expected: paren_expr_list,'.',AND_OR,partition_extension_cla
+```
+
+Solución recomendada: sustituir la línea problemática por un comentario condicional compatible con MySQL, o simplemente ejecutar el script con el cliente `mysql` indicando el juego de caracteres. Ejemplo de sustitución en el archivo SQL:
+
+```sql
+/*!40101 SET NAMES utf8mb4 */;
+```
+
+O bien, importar el archivo usando `--default-character-set=utf8mb4` como se muestra en los comandos anteriores.
+
+Usuarios de demostración
+-----------------------
+
+Los seeds crean cuentas de demostración (si no existen):
+
+- responsable@demo.local (password `1234`)
+- evaluador@demo.local (password `1234`)
+- admin@demo.local (password `1234`)
+
+Soporte
+-------
+
+Si quieres que importe los seeds por ti y verifique que las tildes y roles son correctos, indícamelo y lo ejecuto.
+
+Autorización Google Drive
+-------------------------
+
+URL completa de autorización (útil para abrir directamente en el navegador):
+
+https://accounts.google.com/o/oauth2/v2/auth?access_type=offline&scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fdrive.file&prompt=consent&response_type=code&client_id=676648574880-9p7letlq1kd3cgb6rr44m243dis741vd.apps.googleusercontent.com&redirect_uri=http%3A%2F%2Flocalhost%3A3000%2Fgoogle-drive%2Fcallback
+
+Version acotada / endpoints locales:
+
+- Redirección al flujo OAuth (abre la pantalla de consentimiento):
+
+	`GET http://localhost:3000/google-drive/auth`  -> redirige a la URL de Google
+
+- Obtener la URL en JSON (útil para UI que muestre el enlace):
+
+	`GET http://localhost:3000/google-drive/authurl`  -> { "url": "https://..." }
+
+- Intercambiar `code` por tokens (si no usas callback):
+
+	`POST http://localhost:3000/google-drive/token`  con JSON `{ "code": "<code>" }`
+
+Nota sobre el esquema `drive://` y el error en el navegador
+-------------------------------------------------------
+
+Si en la UI aparece un `url_archivo` con formato `drive://<FILE_ID>` y al hacer clic el navegador da error como:
+
+```
+GET drive://1NBKr7ZLxdBb_5UrhZcZYahIgRlqYpN0b net::ERR_UNKNOWN_URL_SCHEME
+```
+
+esto ocurre porque `drive://` es un esquema interno que usamos para almacenar referencias a archivos en Google Drive, no es un URL HTTP válido que el navegador pueda abrir.
+
+Soluciones recomendadas (elige una):
+
+- Frontend: no enlazar directamente a `drive://...`. En su lugar, llamar al endpoint de descarga del backend que sirve el fichero desde Drive:
+
+	`GET /api/evidencias/:id/download`
+
+	Ese endpoint descarga el contenido desde Drive y devuelve el binario al navegador con `Content-Disposition` para forzar la descarga.
+
+- Backend (opcional): si quieres permitir que el frontend reciba un enlace de vista segura, el backend puede obtener `webViewLink` de Drive y devolverlo **solo** a usuarios autorizados; ten en cuenta que ese enlace puede requerir permisos adicionales y puede exponer el archivo si no se controla.
+
+Snippet sugerido para frontend (reemplazar enlaces `drive://` por llamada al download):
+
+```js
+// ejemplo: sustituir <a href={url_archivo}> por una función que llama al API
+async function downloadEvidence(evidenceId){
+	const res = await fetch(`/api/evidencias/${evidenceId}/download`, { credentials: 'include' })
+	if(!res.ok) throw new Error('download failed')
+	const blob = await res.blob()
+	const url = URL.createObjectURL(blob)
+	const a = document.createElement('a')
+	a.href = url
+	a.download = 'evidencia'
+	document.body.appendChild(a)
+	a.click()
+	a.remove()
+	URL.revokeObjectURL(url)
+}
+```
+
+Después de autorizar con la URL proporcionada arriba, verifica `GET http://localhost:3000/google-drive/status` para confirmar que el backend tiene tokens guardados (`{"authorized":true}`).
+
 # Proyecto_AsesoriasISO
 
 Repositorio inicial creado por asistente.
@@ -55,3 +207,42 @@ setClausesByIso(prev => ({ ...prev, [isoId]: data }));
 ```
 
 Esto mantiene las entradas previas y actualiza/añade solo la entrada para `isoId`.
+
+## Seeding the database (tests / demo users)
+
+To recreate the database from scratch and apply seeds, run these two commands first (stops and removes volumes, then rebuilds):
+
+```powershell
+docker compose down -v
+docker compose up --build -d
+```
+
+If you need to populate the database with demo data (workspaces and test users), there's a prepared seed file: `seeds/seed_users_workspaces.sql`.
+
+On Windows PowerShell (works on older versions too) run:
+
+```powershell
+cmd /c "type .\seeds\*.sql" | docker compose exec -T mysql mysql --default-character-set=utf8mb4 -u root -prootpassword proyecto_iso
+```
+
+Or, using a more PowerShell-native approach:
+
+```powershell
+$files = Get-ChildItem .\seeds\*.sql | Sort-Object Name
+((Get-Content $files.FullName) -join "`n") | docker compose exec -T mysql mysql --default-character-set=utf8mb4 -u root -prootpassword proyecto_iso
+```
+
+The seed file creates a demo workspace, ensures `ROLES` entries and adds three demo users (password: `1234`, stored as bcrypt hash):
+
+- responsable@demo.local — role: Responsable
+- evaluador@demo.local — role: Evaluador
+- admin@demo.local — role: Admin
+
+Verify inserted users with:
+
+```powershell
+docker compose exec mysql mysql -u root -prootpassword proyecto_iso -e "SELECT id,email,nombre,role_id,workspace_id FROM USUARIOS;"
+```
+
+Seed file: [seeds/seed_users_workspaces.sql](seeds/seed_users_workspaces.sql#L1-L200)
+

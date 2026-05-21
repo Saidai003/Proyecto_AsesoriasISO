@@ -11,7 +11,9 @@ const { signAccessToken, createRefreshSession, revokeRefreshSession, getSession,
 app.use(cookieParser());
 
 // Middleware
-app.use(express.json());
+// Allow very large payloads for direct upload of files as base64 to be stored in Google Drive.
+// Set a very large limit (1000mb). If you want unlimited, set a sufficiently large value.
+app.use(express.json({ limit: '1000mb' }));
 
 // Simple CORS middleware for local development (moved to middleware file)
 const devCors = require('./middleware/cors');
@@ -31,7 +33,14 @@ const isoRouter = require('./routes/iso');
 const evidencesRouter = require('./routes/evidences');
 const ncRouter = require('./routes/nc');
 const evaluacionesRouter = require('./routes/evaluaciones');
+const driveRouter = require('./routes/drive');
 
+// app.use here is where we mount the routers to specific paths. 
+// For example, all routes defined in authRouter will be prefixed 
+// with /auth, so if authRouter has a route for POST /login, 
+// it will be accessible at POST /auth/login. 
+// 
+// This helps organize the API and group related endpoints together.
 app.use('/auth', authRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/operational', operationalRouter);
@@ -40,6 +49,10 @@ app.use('/seed', seedRouter); // development-only seed endpoint
 app.use('/api/workspaces', workspacesRouter);
 app.use('/api/isos', isoRouter);
 app.use('/api/evidencias', evidencesRouter);
+app.use('/google-drive', driveRouter);
+const path = require('path')
+const uploadsPath = path.join(__dirname, '..', 'uploads')
+app.use('/uploads', express.static(uploadsPath))
 app.use('/api/nc', ncRouter);
 app.use('/api/evaluaciones', evaluacionesRouter);
 

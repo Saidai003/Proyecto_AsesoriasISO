@@ -9,12 +9,16 @@ const pool = mysql.createPool({
   database: process.env.DB_NAME || 'proyecto_iso',
   waitForConnections: true,
   connectionLimit: 10,
+  // ensure proper UTF-8 handling including emojis and tildes
+  charset: 'utf8mb4'
 });
 
 async function testConnection() {
   const conn = await pool.getConnection();
   try {
     await conn.ping();
+    // Ensure connection uses utf8mb4 for names and collation
+    try{ await conn.query("SET NAMES utf8mb4"); await conn.query("SET SESSION collation_connection = 'utf8mb4_unicode_ci'"); }catch(e){ console.error('failed to set utf8mb4 on connection', e) }
   } finally {
     conn.release();
   }

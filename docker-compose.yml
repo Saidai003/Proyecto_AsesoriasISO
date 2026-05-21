@@ -30,10 +30,14 @@ services:
       - PORT=3000
       - JWT_SECRET=dev_jwt_secret
       - SEED_SECRET=dev_seed_secret
+    env_file:
+      - backend-js/.env
     ports:
       - "3000:3000"
     depends_on:
       - mysql
+    volumes:
+      - ./backend-js/.credentials:/app/.credentials
 
   # Optional backend-py service example
   # backend-py removed: Python backend no longer used

@@ -5,3 +5,6 @@ venv/
 __pycache__/
 .DS_Store
 /.vscode/
+.credentials/
+# drive token (allow custom path via GOOGLE_DRIVE_TOKEN_PATH)
+.env.drive_token

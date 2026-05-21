@@ -111,6 +111,7 @@ CREATE TABLE IF NOT EXISTS EVIDENCIAS (
 	ev_id INT,
 	nombre_archivo VARCHAR(500),
 	url_archivo VARCHAR(1000),
+	drive_file_id VARCHAR(255),
 	tipo_formato VARCHAR(100),
 	estado_validacion_archivo ENUM('Pendiente','Aceptado','Rechazado') DEFAULT 'Pendiente',
 	comentario_evidencia TEXT,
@@ -228,8 +229,6 @@ ALTER TABLE USUARIOS
 	ADD CONSTRAINT fk_usuarios_workspace FOREIGN KEY (workspace_id) REFERENCES ESPACIO_TRABAJO(id) ON DELETE CASCADE,
 	ADD CONSTRAINT fk_usuarios_role FOREIGN KEY (role_id) REFERENCES ROLES(id) ON DELETE SET NULL;
 
-ALTER TABLE ESPACIO_TRABAJO
-	ADD CONSTRAINT fk_espacio_responsable FOREIGN KEY (responsable_sgc_principal_id) REFERENCES USUARIOS(id) ON DELETE SET NULL;
 
 ALTER TABLE SESIONES_USUARIO
 	ADD CONSTRAINT fk_sesiones_usuario FOREIGN KEY (usuario_id) REFERENCES USUARIOS(id) ON DELETE CASCADE;
@@ -275,11 +274,11 @@ ALTER TABLE AUDITORIA_NC
 	ADD CONSTRAINT fk_auditoria_ultima_edicion FOREIGN KEY (ultima_edicion_por) REFERENCES USUARIOS(id) ON DELETE SET NULL;
 
 -- Índices útiles
-CREATE INDEX IF NOT EXISTS idx_clausulas_iso ON CLAUSULAS(iso_id);
-CREATE INDEX IF NOT EXISTS idx_req_clausula ON REQUISITOS_BASE(clausula_id);
-CREATE INDEX IF NOT EXISTS idx_eval_req_workspace ON EVALUACION_REQUISITO(workspace_id);
-CREATE INDEX IF NOT EXISTS idx_nc_eval ON AUDITORIA_NC(evaluacion_requisito_id);
-CREATE INDEX IF NOT EXISTS idx_notif_user_read ON NOTIFICACIONES(usuario_id, read_flag);
-CREATE INDEX IF NOT EXISTS idx_procesos_requisito ON PROCESOS(requisito_base_id);
+CREATE INDEX idx_clausulas_iso ON CLAUSULAS(iso_id);
+CREATE INDEX idx_req_clausula ON REQUISITOS_BASE(clausula_id);
+CREATE INDEX idx_eval_req_workspace ON EVALUACION_REQUISITO(workspace_id);
+CREATE INDEX idx_nc_eval ON AUDITORIA_NC(evaluacion_requisito_id);
+CREATE INDEX idx_notif_user_read ON NOTIFICACIONES(usuario_id, read_flag);
+CREATE INDEX idx_procesos_requisito ON PROCESOS(requisito_base_id);
 
 -- Fin del script
