@@ -115,6 +115,18 @@ CREATE TABLE IF NOT EXISTS ACCIONES_CORRECTIVAS (
 	fecha_accion DATETIME
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- History table for corrective actions
+CREATE TABLE IF NOT EXISTS ACCIONES_CORRECTIVAS_HIST (
+	id INT AUTO_INCREMENT PRIMARY KEY,
+	accion_id INT NOT NULL,
+	estado_anterior VARCHAR(50),
+	estado_nuevo VARCHAR(50),
+	usuario_id INT,
+	comentario TEXT,
+	fecha_snapshot DATETIME DEFAULT CURRENT_TIMESTAMP,
+	CONSTRAINT fk_acc_hist_acc FOREIGN KEY (accion_id) REFERENCES ACCIONES_CORRECTIVAS(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE TABLE IF NOT EXISTS EVIDENCIAS (
 	id INT AUTO_INCREMENT PRIMARY KEY,
 	evaluacion_requisito_id INT,
@@ -141,7 +153,7 @@ CREATE TABLE IF NOT EXISTS EVALUACION_REQUISITO_HIST (
 CREATE TABLE IF NOT EXISTS AUDITORIA_NC_HIST (
 	id INT AUTO_INCREMENT PRIMARY KEY,
 	nc_id INT,
-	estado_flujo ENUM('Abierta','Análisis','Ejecución','Verificación','Cerrada'),
+	estado_flujo VARCHAR(50),
 	estado_validacion ENUM('Acepto','Parcial','No Acepto'),
 	fecha_verificacion_eficacia DATE,
 	evaluador_id INT,
@@ -166,7 +178,7 @@ CREATE TABLE IF NOT EXISTS AUDITORIA_NC (
 	evaluacion_requisito_id INT,
 	evaluador_id INT,
 	evaluado_id INT,
-	estado_flujo ENUM('Abierta','Análisis','Ejecución','Verificación','Cerrada'),
+	estado_flujo VARCHAR(50),
 	estado_validacion ENUM('Acepto','Parcial','No Acepto'),
 	fecha_verificacion_eficacia DATE,
 	comentario_nc TEXT,
@@ -176,6 +188,17 @@ CREATE TABLE IF NOT EXISTS AUDITORIA_NC (
 	fecha_ultima_edicion DATETIME
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Scheduled notifications table for future triggers
+CREATE TABLE IF NOT EXISTS SCHEDULED_NOTIFICATIONS (
+	id INT AUTO_INCREMENT PRIMARY KEY,
+	nc_id INT NOT NULL,
+	usuario_id INT NOT NULL,
+	trigger_at DATETIME NOT NULL,
+	sent_flag TINYINT(1) DEFAULT 0,
+	created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+	CONSTRAINT fk_sched_nc FOREIGN KEY (nc_id) REFERENCES AUDITORIA_NC(id) ON DELETE CASCADE,
+	CONSTRAINT fk_sched_user FOREIGN KEY (usuario_id) REFERENCES USUARIOS(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 -- Pivot table: responsables asignados a una NC
 CREATE TABLE IF NOT EXISTS AUDITORIA_NC_RESPONSABLES (
     auditoria_nc_id INT NOT NULL,

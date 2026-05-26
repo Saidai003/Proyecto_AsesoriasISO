@@ -4,6 +4,8 @@ import { useAuth } from '../AuthContext'
 import Layout from '../components/Layout'
 import fetchWithAuth from '../lib/api'
 import NavBarISO from '../components/NavBarISO'
+import ChatPlaceholder from '../components/ChatPlaceholder'
+import ConfirmDialog from '../components/ConfirmDialog'
 import { hasRole } from '../lib/userUtils'
 
 function UploadArea({ evaluacionId, onUploaded }){
@@ -162,7 +164,16 @@ function RequirementContent({ node }){
         if(!ncr.ok) return
         const list = await ncr.json()
         if(!mounted) return
-        setNcList(list || [])
+        try{ if(typeof setNcList === 'function') setNcList(list || []) }catch(e){ console.error('setNcList error', e) }
+        // clear unread notifications related to this requisito (delete in DB)
+        (async ()=>{
+          try{
+            const resp = await fetchWithAuth(`/api/notifications/for-requisito/${node.id}/clear`, { method: 'POST' })
+            if(resp && resp.ok){
+              try{ window.dispatchEvent(new CustomEvent('notifications:cleared', { detail: { requisitoId: Number(node.id) } })) }catch(_){ }
+            }
+          }catch(e){ console.error('clear notifications for requisito error', e) }
+        })()
       }catch(e){ console.error('load NCs', e) }
     }
     loadNCs()
@@ -186,14 +197,26 @@ function RequirementContent({ node }){
   },[selectedEvidence])
 
   const closeEvidence = () => setSelectedEvidence(null)
-  // Handle updating/replacing an evidence file: delete old Drive file first, then upload replacement
-  const handleUpdate = (ev) => {
-    const input = document.createElement('input')
-    input.type = 'file'
-    input.onchange = async (e) => {
-      const file = e.target.files && e.target.files[0]
-      if(!file) return
-      if(!window.confirm('Se eliminará el archivo actual en Drive y se subirá el nuevo. ¿Continuar?')) return
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [confirmTitle, setConfirmTitle] = useState('')
+  const [confirmMessage, setConfirmMessage] = useState('')
+  const [confirmCallback, setConfirmCallback] = useState(null)
+
+  // For updating an evidence file: keep a hidden input and a pending selection
+  const updateFileRef = React.useRef(null)
+  const [pendingUpdateEv, setPendingUpdateEv] = useState(null)
+  const [pendingUpdateFile, setPendingUpdateFile] = useState(null)
+
+  // create a hidden file input once (rendered later) and handle its change to open confirm
+  const onUpdateFileChosen = async (e)=>{
+    const file = e.target.files && e.target.files[0]
+    if(!file) return
+    setPendingUpdateFile(file)
+    setConfirmTitle('Reemplazar archivo')
+    setConfirmMessage('Se eliminará el archivo actual en Drive y se subirá el nuevo. ¿Continuar?')
+    setConfirmCallback(()=>async ()=>{
+      const ev = pendingUpdateEv
+      const fileLocal = file
       try{
         const readAsDataURL = (f) => new Promise((resolve, reject) => {
           const fr = new FileReader()
@@ -201,29 +224,23 @@ function RequirementContent({ node }){
           fr.onerror = reject
           fr.readAsDataURL(f)
         })
-        const fileData = await readAsDataURL(file)
-        // send PATCH with force_delete_before_upload flag
-        const payload = { fileData, nombre_archivo: file.name, tipo_formato: (file.name.split('.').pop()||'').toLowerCase(), force_delete_before_upload: true }
+        const fileData = await readAsDataURL(fileLocal)
+        const payload = { fileData, nombre_archivo: fileLocal.name, tipo_formato: (fileLocal.name.split('.').pop()||'').toLowerCase(), force_delete_before_upload: true }
         const res = await fetchWithAuth(`/api/evidencias/${ev.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
         if(!res.ok){ const j = await res.json().catch(()=>({})); window.dispatchEvent(new CustomEvent('toast:show', { detail: { title: 'Error', message: 'No se pudo actualizar evidencia: ' + (j.error || res.statusText), type: 'error', ttl: 6000 } })); return }
         const json = await res.json()
-        // backend returns { evidence, forceDeleteResult } or raw evidence
         const updated = json && json.evidence ? json.evidence : json
         const fd = json && json.forceDeleteResult ? json.forceDeleteResult : null
         if(fd){
           if(fd.ok) window.dispatchEvent(new CustomEvent('toast:show', { detail: { title: 'Eliminado', message: `Archivo anterior eliminado.`, type: 'info', ttl: 2500 } }))
           else window.dispatchEvent(new CustomEvent('toast:show', { detail: { title: 'Advertencia', message: `No se pudo eliminar archivo anterior: ${fd.error}`, type: 'warning', ttl: 5000 } }))
         }
-        // Upload result assumed included in updated object
         if(updated){
           setEvidences(prev => prev.map(x => x.id===ev.id ? { ...x, ...updated } : x))
-          // refresh preview if this is an image stored on Drive
           try{
-            const isImage = (/\.(jpe?g|png|gif|webp)$/i).test(updated.nombre_archivo || file.name)
-            // revoke any previous object URL for this evidence
+            const isImage = (/\.(jpe?g|png|gif|webp)$/i).test(updated.nombre_archivo || fileLocal.name)
             if(blobUrls && blobUrls[ev.id]){ try{ URL.revokeObjectURL(blobUrls[ev.id]) }catch(_){ } setBlobUrls(prev => { const next = { ...prev }; delete next[ev.id]; return next }) }
             if(isImage && updated.url_archivo && String(updated.url_archivo).startsWith('drive://')){
-              // fetch new preview from backend
               (async ()=>{
                 try{
                   const r = await fetchWithAuth(`/api/evidencias/${ev.id}/download?inline=1`)
@@ -236,13 +253,28 @@ function RequirementContent({ node }){
               })()
             }
           }catch(e){ console.error('preview refresh', e) }
-          window.dispatchEvent(new CustomEvent('toast:show', { detail: { title: 'Evidencia actualizada', message: updated.nombre_archivo || file.name, type: 'success', ttl: 3500 } }))
+          window.dispatchEvent(new CustomEvent('toast:show', { detail: { title: 'Evidencia actualizada', message: updated.nombre_archivo || fileLocal.name, type: 'success', ttl: 3500 } }))
         }else{
           window.dispatchEvent(new CustomEvent('toast:show', { detail: { title: 'Error', message: 'Actualización fallida', type: 'error', ttl: 5000 } }))
         }
       }catch(err){ console.error('update evidence', err); window.dispatchEvent(new CustomEvent('toast:show', { detail: { title: 'Error', message: 'Error actualizando evidencia', type: 'error', ttl: 5000 } })) }
+    })
+    setConfirmOpen(true)
+  }
+
+  // Request to start update: set pending ev and trigger hidden input click
+  const requestUpdateEvidence = (ev) => {
+    setPendingUpdateEv(ev)
+    if(!updateFileRef.current){
+      // create a temporary input if not yet rendered
+      const inp = document.createElement('input')
+      inp.type = 'file'
+      inp.onchange = onUpdateFileChosen
+      inp.click()
+    }else{
+      updateFileRef.current.value = null
+      updateFileRef.current.click()
     }
-    input.click()
   }
   const saveEvidenceComment = (id, comment) => {
     (async ()=>{
@@ -322,21 +354,21 @@ function RequirementContent({ node }){
                       {/* Delete X for responsables (simulated) */}
                       {user && user.id === ev.usuario_carga_id && hasRole(user,'responsable') && (
                     <button
-                      onClick={async ()=>{
-                        if(!window.confirm('¿Eliminar esta evidencia?')) return
-                        try{
-                          const res = await fetchWithAuth(`/api/evidencias/${ev.id}`, { method: 'DELETE' })
-                          if(!res.ok){ const j = await res.json().catch(()=>({})); alert('No se pudo eliminar: ' + (j.error || res.statusText)); return }
-                          // revoke local object URL if present
-                          try{ 
-                            if(ev && ev._localObjectUrl && ev.url_archivo && ev.url_archivo.startsWith('blob:')) URL.revokeObjectURL(ev.url_archivo)
-                            // revoke cached blob preview if present
-                            if(blobUrls && blobUrls[ev.id]){ try{ URL.revokeObjectURL(blobUrls[ev.id]) }catch(_){ } 
-                              setBlobUrls(prev => { const next = { ...prev }; delete next[ev.id]; return next })
-                            }
-                          }catch(_){ }
-                          setEvidences(prev => prev.filter(x => x.id !== ev.id))
-                        }catch(e){ console.error('delete evidence', e); alert('Error eliminando evidencia') }
+                      onClick={()=>{
+                        setConfirmTitle('Eliminar evidencia')
+                        setConfirmMessage('¿Confirmar eliminación de la evidencia? Esta acción no se puede deshacer.')
+                        setConfirmCallback(()=>async ()=>{
+                          try{
+                            const res = await fetchWithAuth(`/api/evidencias/${ev.id}`, { method: 'DELETE' })
+                            if(!res.ok){ const j = await res.json().catch(()=>({})); alert('No se pudo eliminar: ' + (j.error || res.statusText)); return }
+                            try{ 
+                              if(ev && ev._localObjectUrl && ev.url_archivo && ev.url_archivo.startsWith('blob:')) URL.revokeObjectURL(ev.url_archivo)
+                              if(blobUrls && blobUrls[ev.id]){ try{ URL.revokeObjectURL(blobUrls[ev.id]) }catch(_){ } setBlobUrls(prev => { const next = { ...prev }; delete next[ev.id]; return next }) }
+                            }catch(_){ }
+                            setEvidences(prev => prev.filter(x => x.id !== ev.id))
+                          }catch(e){ console.error('delete evidence', e); alert('Error eliminando evidencia') }
+                        })
+                        setConfirmOpen(true)
                       }}
                       className="absolute top-2 left-2 w-6 h-6 rounded-full bg-red-600 text-white flex items-center justify-center text-xs"
                       style={{zIndex:30}}
@@ -361,7 +393,20 @@ function RequirementContent({ node }){
                     </div>
                     <div className="mt-2 text-xs text-center truncate w-full px-1">{ev.nombre_archivo}</div>
                       <div className="mt-2 flex gap-2 justify-center items-center">
-                      <button onClick={()=>setSelectedEvidence(ev)} className="text-xs px-2 py-1 border rounded bg-white">Abrir</button>
+                      <button onClick={async ()=>{
+                        // Ensure blob preview is available for drive:// files before opening modal
+                        try{
+                          if(ev.url_archivo && String(ev.url_archivo).startsWith('drive://') && !blobUrls[ev.id]){
+                            const r = await fetchWithAuth(`/api/evidencias/${ev.id}/download?inline=1`)
+                            if(r.ok){
+                              const b = await r.blob()
+                              const u = URL.createObjectURL(b)
+                              setBlobUrls(prev => ({ ...prev, [ev.id]: u }))
+                            }
+                          }
+                        }catch(e){ console.error('on open preview fetch error', e) }
+                        setSelectedEvidence(ev)
+                      }} className="text-xs px-2 py-1 border rounded bg-white">Abrir</button>
                       <button onClick={async ()=>{
                         try{
                           const res = await fetchWithAuth(`/api/evidencias/${ev.id}/history`)
@@ -394,7 +439,7 @@ function RequirementContent({ node }){
                       }} className="text-xs px-2 py-1 border rounded bg-white">Descargar</button>
                       {/* Actualizar visible solo para responsables (simulado) */}
                       {hasRole(user,'responsable') && (
-                        <button onClick={()=>handleUpdate(ev)} className="text-xs px-2 py-1 border rounded bg-[#00236f] text-white">Actualizar</button>
+                        <button onClick={()=>requestUpdateEvidence(ev)} className="text-xs px-2 py-1 border rounded bg-[#00236f] text-white">Actualizar</button>
                       )}
                       {/* Evaluador puede cambiar estado (simulado) */}
                       {hasRole(user,'evaluador') && (
@@ -406,7 +451,7 @@ function RequirementContent({ node }){
                             setEvidences(prev => prev.map(x => x.id===ev.id ? { ...x, estado_validacion_archivo: newVal } : x))
                             try{
                               const res = await fetchWithAuth(`/api/evidencias/${ev.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ estado_validacion_archivo: newVal }) })
-                              if(!res.ok){ const j = await res.json().catch(()=>({})); window.dispatchEvent(new CustomEvent('toast:show', { detail: { title: 'Error', message: 'No se pudo cambiar estado: ' + (j.error || res.statusText), type: 'error', ttl: 6000 } })); return }
+                              if(!res.ok){ const j = await res.json().catch(()=>({})); window.dispatchEvent(new CustomEvent('toast:show', { detail: { title: 'Error', message: 'No se pudo cambiar estado: ' + (j.message || j.error || res.statusText), type: 'error', ttl: 6000 } })); return }
                               const json = await res.json()
                               // backend returns updated evidence or wrapped object; try to extract
                               const updated = json && json.evidence ? json.evidence : (json || {})
@@ -543,6 +588,7 @@ function RequirementContent({ node }){
               <thead>
                 <tr className="text-left">
                   <th className="px-3 py-2 border-b">ID</th>
+                  <th className="px-3 py-2 border-b">Nombre</th>
                   <th className="px-3 py-2 border-b">Estado flujo</th>
                   <th className="px-3 py-2 border-b">Validación</th>
                   <th className="px-3 py-2 border-b">Fecha verificación</th>
@@ -555,6 +601,7 @@ function RequirementContent({ node }){
                 {(ncList || []).map(nc => (
                   <tr key={nc.id} className="hover:bg-slate-50">
                     <td className="px-3 py-2 border-b"><a onClick={()=>navigate(`/nc/${nc.id}`)} className="text-blue-600 hover:underline cursor-pointer">{nc.id}</a></td>
+                    <td className="px-3 py-2 border-b">{nc.titulo || nc.nombre || '—'}</td>
                     <td className="px-3 py-2 border-b">{nc.estado_flujo}</td>
                     <td className="px-3 py-2 border-b">{nc.estado_validacion}</td>
                     <td className="px-3 py-2 border-b">{nc.fecha_verificacion_eficacia}</td>
@@ -564,12 +611,15 @@ function RequirementContent({ node }){
                   </tr>
                 ))}
                 {(!ncList || ncList.length===0) && (
-                  <tr><td className="px-3 py-4 border-b text-sm text-slate-500" colSpan={7}>No hay No Conformidades registradas.</td></tr>
+                  <tr><td className="px-3 py-4 border-b text-sm text-slate-500" colSpan={8}>No hay No Conformidades registradas.</td></tr>
                 )}
               </tbody>
             </table>
           </div>
         </div>
+
+        {/* Chat placeholder debajo de la tabla de NC */}
+        <ChatPlaceholder />
         {/* Evidence modal (simulated) */}
         {selectedEvidence && (
           <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
@@ -618,6 +668,9 @@ function RequirementContent({ node }){
             </div>
           </div>
         )}
+        {/* Hidden input for update-file flow and confirm dialog */}
+        <input ref={updateFileRef} type="file" className="hidden" onChange={onUpdateFileChosen} />
+        <ConfirmDialog open={confirmOpen} title={confirmTitle} message={confirmMessage} confirmText="Confirmar" cancelText="Cancelar" onConfirm={async ()=>{ setConfirmOpen(false); try{ if(confirmCallback) await confirmCallback(); }catch(e){ console.error('confirm callback error', e) } finally{ setConfirmCallback(null); setPendingUpdateEv(null); setPendingUpdateFile(null) } }} onCancel={()=>{ setConfirmOpen(false); setConfirmCallback(null); setPendingUpdateEv(null); setPendingUpdateFile(null) }} />
       </div>
     </div>
   )
@@ -704,6 +757,8 @@ export default function RequirementView(){
       const json = await res.json()
       // notify sidebar and show toast, then close modal
       window.dispatchEvent(new CustomEvent('nc:created', { detail: { requisito_base_id: ncModalData.requisito_base_id, nc_id: json.id } }))
+      // also emit a notifications:new event so navbars can update badge counts immediately for assigned responsables
+      try{ window.dispatchEvent(new CustomEvent('notifications:new', { detail: { nc_id: json.id, requisito_base_id: ncModalData.requisito_base_id, responsables: payload.responsables || [] } })) }catch(_){ }
       window.dispatchEvent(new CustomEvent('toast:show', { detail: { title: 'NC creada', message: `NC #${json.id} creada y asignada.`, type: 'info', ttl: 6000 } }))
       setNcModalOpen(false)
     }catch(e){ console.error('submitNC error', e); alert('Error interno') }

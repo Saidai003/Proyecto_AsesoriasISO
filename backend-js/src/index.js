@@ -20,7 +20,60 @@ const devCors = require('./middleware/cors');
 app.use(devCors);
 
 // Test database connection
-testConnection().then(() => console.log('DB connection OK')).catch(err => console.error('DB connection failed', err));
+testConnection().then(async () => {
+        console.log('DB connection OK')
+        // Ensure history table exists in case DB was initialized earlier
+        try{
+            const { pool } = require('./db')
+            await pool.execute(`
+                CREATE TABLE IF NOT EXISTS ACCIONES_CORRECTIVAS_HIST (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    accion_id INT NOT NULL,
+                    estado_anterior VARCHAR(50),
+                    estado_nuevo VARCHAR(50),
+                    usuario_id INT,
+                    comentario TEXT,
+                    fecha_snapshot DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    CONSTRAINT fk_acc_hist_acc FOREIGN KEY (accion_id) REFERENCES ACCIONES_CORRECTIVAS(id) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+            `)
+            console.log('Ensured ACCIONES_CORRECTIVAS_HIST exists')
+        }catch(e){ console.error('failed to ensure history table', e) }
+            // Ensure scheduled notifications table exists
+            try{
+                await pool.execute(`
+                    CREATE TABLE IF NOT EXISTS SCHEDULED_NOTIFICATIONS (
+                      id INT AUTO_INCREMENT PRIMARY KEY,
+                      nc_id INT NOT NULL,
+                      usuario_id INT NOT NULL,
+                      trigger_at DATETIME NOT NULL,
+                      sent_flag TINYINT(1) DEFAULT 0,
+                      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                      CONSTRAINT fk_sched_nc FOREIGN KEY (nc_id) REFERENCES AUDITORIA_NC(id) ON DELETE CASCADE,
+                      CONSTRAINT fk_sched_user FOREIGN KEY (usuario_id) REFERENCES USUARIOS(id) ON DELETE CASCADE
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+                `)
+                console.log('Ensured SCHEDULED_NOTIFICATIONS exists')
+            }catch(e){ console.error('failed to ensure scheduled notifications table', e) }
+
+            // Start a periodic worker to process scheduled notifications
+            setInterval(async ()=>{
+                try{
+                    const [rows] = await pool.execute('SELECT id, nc_id, usuario_id FROM SCHEDULED_NOTIFICATIONS WHERE sent_flag = 0 AND trigger_at <= NOW() LIMIT 100')
+                    if(!rows || rows.length===0) return
+                    for(const r of rows){
+                        try{
+                            // Create a user notification
+                            const msg = `Recordatorio: Verificación pendiente para NC #${r.nc_id}`
+                            const link = `/nc/${r.nc_id}`
+                            await pool.execute('INSERT INTO NOTIFICACIONES (usuario_id, tipo, mensaje, link, created_at) VALUES (?, ?, ?, ?, NOW())', [r.usuario_id, 'Verificación NC', msg, link])
+                            // mark scheduled as sent
+                            await pool.execute('UPDATE SCHEDULED_NOTIFICATIONS SET sent_flag = 1 WHERE id = ?', [r.id])
+                        }catch(e){ console.error('processing scheduled notif error for id', r.id, e) }
+                    }
+                }catch(e){ console.error('scheduled notification worker error', e) }
+            }, 30 * 1000) // every 30s
+}).catch(err => console.error('DB connection failed', err));
 
 // Mount feature routers (routes are implemented in src/routes/*)
 const authRouter = require('./routes/auth');
@@ -32,8 +85,10 @@ const workspacesRouter = require('./routes/workspaces');
 const isoRouter = require('./routes/iso');
 const evidencesRouter = require('./routes/evidences');
 const ncRouter = require('./routes/nc');
+const notificationsRouter = require('./routes/notifications');
 const evaluacionesRouter = require('./routes/evaluaciones');
 const driveRouter = require('./routes/drive');
+const accionesRouter = require('./routes/acciones');
 
 // app.use here is where we mount the routers to specific paths. 
 // For example, all routes defined in authRouter will be prefixed 
@@ -54,7 +109,11 @@ const path = require('path')
 const uploadsPath = path.join(__dirname, '..', 'uploads')
 app.use('/uploads', express.static(uploadsPath))
 app.use('/api/nc', ncRouter);
+app.use('/api/notifications', notificationsRouter);
 app.use('/api/evaluaciones', evaluacionesRouter);
+app.use('/api/acciones', accionesRouter);
+
+// debug route removed
 
 // why do we use /api if there is no folder called API?
 // The /api prefix is a common convention to indicate that these routes 

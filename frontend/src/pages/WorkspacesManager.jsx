@@ -4,27 +4,17 @@ import Layout from '../components/Layout'
 import StatCard from '../components/StatCard'
 import SearchInput from '../components/SearchInput'
 import useWorkspaces from '../hooks/useWorkspaces'
+import ConfirmDialog from '../components/ConfirmDialog'
 import { useForm } from 'react-hook-form'
 import { Link, useNavigate } from 'react-router-dom'
 
 function SideNav() {
   return (
-    <aside className="fixed left-0 top-0 h-full w-64 bg-[#f2f4f6] flex flex-col py-8 px-4 gap-y-6">
-      <div className="px-2 mb-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center text-white">W</div>
-          <div>
-            <h1 className="text-xl font-bold text-[#00236f]">GAP Análisis</h1>
-            <p className="text-[10px] uppercase tracking-wider text-slate-500">ISO 9001:2015</p>
-          </div>
-        </div>
-      </div>
-      <nav className="flex-1 flex flex-col gap-y-1">
-        <Link className="px-4 py-3 rounded-lg text-slate-600 hover:text-[#00236f]" to="/lobby">Panel Principal</Link>
-        <Link className="px-4 py-3 rounded-lg text-[#00236f] font-bold border-l-4 border-[#00236f] bg-white/50" to="/workspaces">Espacios de Trabajo</Link>
-        <Link className="px-4 py-3 rounded-lg text-slate-600" to="/users">Usuarios</Link>
-      </nav>
-    </aside>
+    <>
+      <Link className="flex items-center px-3 py-2 text-blue-900 font-bold border-l-4 border-blue-900 bg-slate-100" to="/lobby">Panel Principal</Link>
+      <Link className="flex items-center px-3 py-2 text-slate-600" to="/workspaces">Espacios de Trabajo</Link>
+      <Link className="flex items-center px-3 py-2 text-slate-600" to="/users">Usuarios</Link>
+    </>
   )
 }
 
@@ -69,8 +59,13 @@ export default function WorkspacesManager() {
     }catch(err){ setMessage({ type: 'error', text: err.error || err.message || 'Error actualizando' }) }
   }
 
-  async function handleDelete(id){
-    if(!confirm('Eliminar espacio de trabajo?')) return
+  const [confirmOpen, setConfirmOpen] = React.useState(false)
+  const [confirmPayload, setConfirmPayload] = React.useState(null)
+  function handleDeleteRequest(id){ setConfirmPayload(id); setConfirmOpen(true) }
+  async function handleDeleteConfirmed(){
+    const id = confirmPayload
+    setConfirmOpen(false)
+    setConfirmPayload(null)
     try{
       await deleteWorkspace(id)
       setMessage({ type: 'success', text: 'Espacio eliminado' })
@@ -142,9 +137,10 @@ export default function WorkspacesManager() {
                                 <button onClick={cancelEdit} className="px-3 py-1.5 border rounded-lg">Cancelar</button>
                               </>
                             ) : (
-                              <>
+                                <>
                                 <button onClick={()=>startEdit(w)} className="px-3 py-1.5 border rounded-lg">Editar</button>
-                                <button onClick={()=>handleDelete(w.id)} className="px-3 py-1.5 bg-red-600 text-white rounded-lg">Eliminar</button>
+                                <button onClick={()=>{ navigate(`/lobby?workspace=${w.id}`) }} className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg">Acceder</button>
+                                <button onClick={()=>handleDeleteRequest(w.id)} className="px-3 py-1.5 bg-red-600 text-white rounded-lg">Eliminar</button>
                               </>
                             )}
                           </div>
@@ -182,7 +178,8 @@ export default function WorkspacesManager() {
               <button onClick={() => setNewWorkspaceRow(true)} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-xl font-bold shadow">Agregar Espacio</button>
             </div>
 
-          </div>
+            </div>
+            <ConfirmDialog open={confirmOpen} title="Eliminar espacio" message="¿Confirmar eliminación del espacio de trabajo? Esta acción eliminará datos asociados." confirmText="Eliminar" cancelText="Cancelar" onConfirm={handleDeleteConfirmed} onCancel={()=>{ setConfirmOpen(false); setConfirmPayload(null) }} />
           </Layout>
 
     </Protected>

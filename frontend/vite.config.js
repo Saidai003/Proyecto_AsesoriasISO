@@ -10,7 +10,7 @@ export default defineConfig(({ command, mode }) => ({
     proxy: {
       // Proxy API and auth requests to backend to keep same-origin for cookies
       '/api': {
-        target: 'http://localhost:3000',
+        target: process.env.VITE_BACKEND_URL || 'http://localhost:3000',
         changeOrigin: true,
         secure: false,
         cookieDomainRewrite: '',
@@ -22,7 +22,7 @@ export default defineConfig(({ command, mode }) => ({
         rewrite: (path) => path.replace(/^\/api/, '/api')
       },
       '/auth': {
-        target: 'http://localhost:3000',
+        target: process.env.VITE_BACKEND_URL || 'http://localhost:3000',
         changeOrigin: true,
         secure: false,
         cookieDomainRewrite: '',

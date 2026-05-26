@@ -40,7 +40,7 @@ services:
     volumes:
       - ./backend-js/.credentials:/app/.credentials
       - ./backend-js:/app
-      - ./.env.drive_token:/app/.env.drive_token:ro
+      - ./.env.drive_token:/app/.env.drive_token
 
   # Optional backend-py service example
   # backend-py removed: Python backend no longer used
@@ -49,7 +49,7 @@ services:
     build: ./frontend
     command: npm run dev -- --host 0.0.0.0
     environment:
-      - VITE_BACKEND_URL=http://localhost:3000
+      - VITE_BACKEND_URL=http://backend-js:3000
     ports:
       - "5173:5173"
     depends_on:

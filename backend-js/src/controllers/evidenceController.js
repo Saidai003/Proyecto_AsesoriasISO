@@ -43,6 +43,12 @@ async function downloadEvidence(req, res){
     const [rows] = await pool.query('SELECT * FROM EVIDENCIAS WHERE id = ?', [id])
     if(!rows || rows.length===0) return res.status(404).json({ error: 'not_found' })
     const ev = rows[0]
+    const role = req.user && req.user.role ? req.user.role : ''
+    const uid = req.user && req.user.id ? req.user.id : null
+    // Allow Admin, Evaluador, Responsable SGC, or the original uploader to download
+    if(role !== 'Admin' && role !== 'Evaluador' && role !== 'Responsable SGC' && ev.usuario_carga_id !== uid){
+      return res.status(403).json({ error: 'forbidden' })
+    }
     if(ev.drive_file_id){
       try{
         const file = await driveService.downloadFile(ev.drive_file_id)
@@ -88,7 +94,13 @@ async function createEvidence(req, res){
     let drive_file_id = null
 
     // determine workspace folder name/id
-    const workspaceId = req.user && req.user.workspace_id ? req.user.workspace_id : null
+    let workspaceId = null
+    if(req.user && req.user.workspace_id) workspaceId = req.user.workspace_id
+    else if(req.user && req.user.role === 'Admin'){
+      const q = (req.query && (req.query.workspace || req.query.workspace_id)) || (req.body && req.body.workspace_id)
+      const wid = q ? Number(q) : null
+      if(wid && !Number.isNaN(wid)) workspaceId = wid
+    }
     let workspaceFolderId = null
     if(workspaceId && process.env.GOOGLE_DRIVE_FOLDER_ID){
       // lookup workspace name
@@ -227,10 +239,18 @@ async function updateEvidence(req, res){
 
         try{
           // ensure workspace folder and requisito subfolder
-          if(req.user && req.user.workspace_id && process.env.GOOGLE_DRIVE_FOLDER_ID){
-            const [wrows] = await pool.query('SELECT * FROM ESPACIO_TRABAJO WHERE id = ?', [req.user.workspace_id])
-            const workspaceName = (wrows && wrows[0] && (wrows[0].nombre_cliente || `workspace-${req.user.workspace_id}`)) || `workspace-${req.user.workspace_id}`
-            const workspaceFolderId = await driveService.ensureFolder(process.env.GOOGLE_DRIVE_FOLDER_ID, workspaceName)
+          // resolve workspace id for Drive folder resolution (allow Admin to supply via query/body)
+          let workspaceIdForDrive = null
+          if(req.user && req.user.workspace_id) workspaceIdForDrive = req.user.workspace_id
+          else if(req.user && req.user.role === 'Admin'){
+            const q = (req.query && (req.query.workspace || req.query.workspace_id)) || (payload && payload.workspace_id)
+            const wid = q ? Number(q) : null
+            if(wid && !Number.isNaN(wid)) workspaceIdForDrive = wid
+          }
+          if(workspaceIdForDrive){
+              const [wrows] = await pool.query('SELECT * FROM ESPACIO_TRABAJO WHERE id = ?', [workspaceIdForDrive])
+              const workspaceName = (wrows && wrows[0] && (wrows[0].nombre_cliente || `workspace-${workspaceIdForDrive}`)) || `workspace-${workspaceIdForDrive}`
+              const workspaceFolderId = await driveService.ensureFolder(process.env.GOOGLE_DRIVE_FOLDER_ID, workspaceName)
             const requisitoName = existing.evaluacion_requisito_id ? String(existing.evaluacion_requisito_id) : (payload.evaluacion_requisito_id ? String(payload.evaluacion_requisito_id) : 'unknown')
             const requisitoFolderId = await driveService.ensureFolder(workspaceFolderId, requisitoName)
             const filename = payload.nombre_archivo || existing.nombre_archivo || `evidence-${Date.now()}`

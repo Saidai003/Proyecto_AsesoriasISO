@@ -28,8 +28,14 @@ npm run dev
 
 4. Obtener URL de autorización:
 - Llamar: `GET http://localhost:3000/google-drive/authurl`
-- Abrir la `url` devuelta en el navegador.
-- Autorizar el acceso; Google redirigirá a la `GOOGLE_REDIRECT_URI` con `?code=...`.
+- Recomendado (PowerShell): obtener y abrir la URL automáticamente para evitar truncados o errores de copia/pega:
+
+```powershell
+Start-Process (Invoke-RestMethod 'http://localhost:3000/google-drive/authurl').url
+```
+
+- Alternativa: visitar `http://localhost:3000/google-drive/auth` (endpoint de conveniencia) que redirige directamente a la pantalla de consentimiento de Google.
+- IMPORTANTE: no abras manualmente `http://localhost:3000/google-drive/callback` en el navegador; esa URL debe ser la target de la redirección de Google y solo contendrá `?code=...` después del consentimiento. Abrirla a mano produce `missing_code`.
 
 Nota: hay una ruta de conveniencia que redirige directamente a la pantalla de consentimiento:
 
@@ -38,6 +44,14 @@ Nota: hay una ruta de conveniencia que redirige directamente a la pantalla de co
 
 5. Guardar tokens automáticamente:
 - Si registraste `GOOGLE_REDIRECT_URI` apuntando a `http://localhost:3000/google-drive/callback`, el servidor canjeará el `code` y guardará los tokens en `backend-js/.credentials/drive_token.json`.
+
+Nota adicional: si el contenedor monta el archivo de token en modo solo-lectura (por ejemplo `./.env.drive_token:/app/.env.drive_token:ro`) el servidor fallará al intentar escribir el token y verás errores similares a:
+
+```
+callback token exchange failed [Error: EROFS: read-only file system, open '/app/.env.drive_token']
+```
+
+En ese caso, actualiza `docker-compose.yml` para remover `:ro` y permitir escritura por parte del contenedor.
 - Alternativa: si no quieres usar redirect, copia el `code` y haz `POST /google-drive/token` con JSON `{ "code": "EL_CODE" }`.
 
 Ejemplo verificado: al completar el flujo el servidor guarda el archivo `/app/.credentials/drive_token.json` dentro del contenedor. Para inspeccionarlo desde el host:

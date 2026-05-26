@@ -149,6 +149,13 @@ async function downloadEvidence(evidenceId){
 ```
 
 Después de autorizar con la URL proporcionada arriba, verifica `GET http://localhost:3000/google-drive/status` para confirmar que el backend tiene tokens guardados (`{"authorized":true}`).
+Importante: no abras manualmente la URL de callback (`http://localhost:3000/google-drive/callback`) en el navegador; hacerlo producirá el error `missing_code` porque el parámetro `code` de OAuth2 solo está presente cuando Google redirige después del consentimiento. Para iniciar el flujo de manera segura desde PowerShell (recomendado en Windows), ejecuta:
+
+```powershell
+Start-Process (Invoke-RestMethod 'http://localhost:3000/google-drive/authurl').url
+```
+
+Este comando obtiene la URL completa de consentimiento de Google desde el backend y la abre en tu navegador. Completa la pantalla de consentimiento; Google redirigirá de nuevo a la `GOOGLE_REDIRECT_URI` registrada incluyendo `?code=...` para que el servidor pueda intercambiar y guardar tokens. Si previamente montaste el archivo de token como de solo lectura, el servidor no podrá persistir los tokens; asegúrate de que el contenedor del backend pueda escribir el archivo de token (ver `docker-compose.yml`).
 
 # Proyecto_AsesoriasISO
 

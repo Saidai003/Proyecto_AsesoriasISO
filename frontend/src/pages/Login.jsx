@@ -1,16 +1,20 @@
 import React from 'react'
 import { useAuth } from '../AuthContext'
 import { useForm } from 'react-hook-form'
+import { useNavigate } from 'react-router-dom'
 
 export default function Login({ onLogin }) {
   const [error, setError] = React.useState(null)
   const { login } = useAuth() || {}
+  const navigate = useNavigate()
   const { register, handleSubmit } = useForm({ defaultValues: { email: '', password: '' } })
 
   const submit = async (data) => {
     setError(null)
     try{
-      await login({ email: data.email, password: data.password })
+      const body = await login({ email: data.email, password: data.password })
+      // after login, go to lobby; workspace selection handled by UI/navigation
+      navigate('/lobby')
       if(onLogin) onLogin()
     }catch(err){
       setError(err.error || 'Login failed')

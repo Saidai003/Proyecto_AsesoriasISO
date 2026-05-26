@@ -23,23 +23,41 @@ export async function fetchWithAuth(input, init = {}){
   const isDev = import.meta.env.DEV
   // In development use relative paths so Vite dev server proxy forwards requests
   const API_BASE = isDev ? '' : (envBase || 'http://localhost:3000')
-  const url = input.startsWith('http') ? input : `${API_BASE}${input}`
+  // If current page includes a workspace query param (e.g. /lobby?workspace=123)
+  // forward it to backend so Admin can request data scoped to that workspace.
+  const appendWorkspaceFromLocation = (u) => {
+    try{
+      if(typeof window === 'undefined') return u
+      const params = new URLSearchParams(window.location.search)
+      const ws = params.get('workspace')
+      if(!ws) return u
+      const sep = u.includes('?') ? '&' : '?'
+      return `${u}${sep}workspace=${encodeURIComponent(ws)}`
+    }catch(e){ return u }
+  }
+
+  const baseUrl = input.startsWith('http') ? input : `${API_BASE}${input}`
+  const url = appendWorkspaceFromLocation(baseUrl)
   const token = localStorage.getItem('accessToken')
+  try{ console.debug('fetchWithAuth -> url=', url, 'localTokenExists=', !!token) }catch(e){}
 
   // If there's no access token but a refresh cookie may exist, try refreshing first
   let currentToken = token
   if(!currentToken){
     try{
+      console.debug('fetchWithAuth: no token, attempting /auth/refresh')
       const r = await fetch(`${API_BASE}/auth/refresh`, { method: 'POST', credentials: 'include' })
+      console.debug('fetchWithAuth: refresh response status=', r.status)
       if(r.ok){
         const body = await r.json().catch(()=>null)
+        console.debug('fetchWithAuth: refresh body=', body)
         if(body && body.accessToken){
           localStorage.setItem('accessToken', body.accessToken)
           currentToken = body.accessToken
           try{ window.dispatchEvent(new CustomEvent('auth:refreshed', { detail: currentToken })) }catch(e){}
         }
       }
-    }catch(e){ /* ignore refresh errors here */ }
+    }catch(e){ console.debug('fetchWithAuth: refresh error', e) }
   }
 
   // here at headers, we set the Authorization header with the token 
@@ -52,6 +70,7 @@ export async function fetchWithAuth(input, init = {}){
   // such as AuthContext.jsx for login/logout and other API calls in the app
   const headers = new Headers(init.headers || {})
   if(currentToken) headers.set('Authorization', `Bearer ${currentToken}`)
+  // No workspace override header is sent (use explicit workspace_id in requests)
 
   // here, ... and init is the spread operator that takes all properties from the init object
   // and includes them in the new object we pass to fetch. This allows the caller to specify
@@ -74,11 +93,14 @@ export async function fetchWithAuth(input, init = {}){
   // because the refresh endpoint relies on cookies to authenticate the request and issue a new access token.
   const res = await fetch(url, { ...init, headers, credentials: init.credentials ?? 'include' })
   if(res.status !== 401) return res
+  try{ console.debug('fetchWithAuth: received 401 for', url) }catch(e){}
 
   // on 401, try refresh once
   const r = await fetch(`${API_BASE}/auth/refresh`, { method: 'POST', credentials: 'include' })
+  console.debug('fetchWithAuth: attempted refresh after 401, status=', r.status)
   if(!r.ok) return res
   const body = await r.json().catch(()=>null)
+  console.debug('fetchWithAuth: refresh-after-401 body=', body)
   const newToken = body && body.accessToken
   if(newToken){
     // update localStorage and notify other parts of the app

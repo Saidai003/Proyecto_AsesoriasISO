@@ -1,6 +1,8 @@
 import React from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import Layout from '../../components/Layout'
+import NavBarISO from '../../components/NavBarISO'
+import { useAuth } from '../../AuthContext'
 
 function Sidebar(){
   return (
@@ -13,8 +15,14 @@ function Sidebar(){
 }
 
 export default function LobbyAdmin(){
+  const location = useLocation()
+  const params = new URLSearchParams(location.search || '')
+  const ws = params.get('workspace')
+  // Show NavBarISO only when an explicit workspace param is present (entering a workspace)
+  const sidebarContent = ws ? <NavBarISO/> : <Sidebar/>
+
   return (
-    <Layout title="Dashboard General" subtitle="Consolidado de auditorías y cumplimiento ISO 9001:2015" sidebar={<Sidebar/>}>
+    <Layout title="Dashboard General" subtitle="Consolidado de auditorías y cumplimiento ISO 9001:2015" sidebar={sidebarContent}>
       <section className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="md:col-span-2 bg-white p-6 rounded-xl">
           <h3 className="text-4xl font-black text-primary">142</h3>

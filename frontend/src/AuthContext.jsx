@@ -23,6 +23,7 @@ export function AuthProvider({ children }){
     if(user) localStorage.setItem('user', JSON.stringify(user))
     else localStorage.removeItem('user')
   },[user])
+  
 
   function decodeJwt(token){
     try{
@@ -95,6 +96,7 @@ export function AuthProvider({ children }){
     const body = await res.json()
     setAccessToken(body.accessToken)
     setUser(body.user)
+    // clear any acting workspace on login
     // schedule refresh on login (only if active)
     scheduleRefresh(body.accessToken)
     return body
@@ -109,6 +111,8 @@ export function AuthProvider({ children }){
     setUser(null)
     if(refreshTimeoutRef.current){ clearTimeout(refreshTimeoutRef.current); refreshTimeoutRef.current = null }
   }
+
+  
 
   // on mount: attempt refresh using cookie (if any)
   useEffect(()=>{

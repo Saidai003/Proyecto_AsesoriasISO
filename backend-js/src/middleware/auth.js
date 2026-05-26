@@ -1,5 +1,8 @@
 const { verifyAccessToken } = require('../auth');
 
+// General auth middleware to protect routes.
+// Checks for Bearer token, verifies it, 
+// and attaches user info to req.user.
 function requireAuth(req, res, next){
   const auth = req.headers.authorization;
   if(!auth || !auth.startsWith('Bearer ')) return res.status(401).json({ error: 'unauthenticated' });

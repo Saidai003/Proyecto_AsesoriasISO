@@ -14,13 +14,25 @@ const pool = mysql.createPool({
 });
 
 async function testConnection() {
-  const conn = await pool.getConnection();
-  try {
-    await conn.ping();
-    // Ensure connection uses utf8mb4 for names and collation
-    try{ await conn.query("SET NAMES utf8mb4"); await conn.query("SET SESSION collation_connection = 'utf8mb4_unicode_ci'"); }catch(e){ console.error('failed to set utf8mb4 on connection', e) }
-  } finally {
-    conn.release();
+  // Try to obtain a connection with retry logic to handle DB cold-starts or transient network issues
+  const maxAttempts = 8
+  const delayMs = 2000
+  let attempt = 0
+  while(true){
+    attempt++
+    let conn
+    try{
+      conn = await pool.getConnection()
+      await conn.ping()
+      try{ await conn.query("SET NAMES utf8mb4"); await conn.query("SET SESSION collation_connection = 'utf8mb4_unicode_ci'"); }catch(e){ console.error('failed to set utf8mb4 on connection', e) }
+      conn.release()
+      return
+    }catch(err){
+      if(conn) try{ conn.release() }catch(_){}
+      console.error(`DB connection attempt ${attempt} failed`, err)
+      if(attempt >= maxAttempts) throw err
+      await new Promise(r => setTimeout(r, delayMs))
+    }
   }
 }
 

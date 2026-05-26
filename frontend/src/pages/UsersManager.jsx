@@ -5,6 +5,7 @@ import StatCard from '../components/StatCard'
 import SearchInput from '../components/SearchInput'
 import useUsers from '../hooks/useUsers'
 import useWorkspaces from '../hooks/useWorkspaces'
+import ConfirmDialog from '../components/ConfirmDialog'
 import { useForm } from 'react-hook-form'
 import { Link, useNavigate } from 'react-router-dom'
 
@@ -55,8 +56,16 @@ export default function UsersManager() {
 
   
 
-  async function handleDelete(id){
-    if(!confirm('Eliminar usuario?')) return
+  const [confirmOpen, setConfirmOpen] = React.useState(false)
+  const [confirmPayload, setConfirmPayload] = React.useState(null)
+  function handleDeleteRequest(id){
+    setConfirmPayload(id)
+    setConfirmOpen(true)
+  }
+  async function handleDeleteConfirmed(){
+    const id = confirmPayload
+    setConfirmOpen(false)
+    setConfirmPayload(null)
     try{
       await deleteUser(id)
       setMessage({ type: 'success', text: 'Usuario eliminado' })
@@ -250,7 +259,7 @@ export default function UsersManager() {
                     </td>
                     <td className="px-6 py-5"><span className="text-xs font-bold text-blue-900">Activo</span></td>
                     <td className="px-6 py-5 text-right">
-                      {editingId === u.id ? (
+                          {editingId === u.id ? (
                         <div className="flex flex-wrap justify-end items-center gap-2">
                           <input placeholder="Nueva contraseña (opcional)" type="password" {...registerEdit('password')} className="px-3 py-2 border rounded max-w-[180px]" />
                           <button onClick={handleEditSubmit(data=>saveEdit(u.id, data))} className="px-4 py-2 bg-blue-600 text-white rounded-lg">Guardar</button>
@@ -259,8 +268,8 @@ export default function UsersManager() {
                       ) : (
                         <div className="flex justify-end gap-1">
                           <button onClick={()=>startEdit(u)} className="p-2">Editar</button>
-                          <button onClick={()=>handleAssign(u)} className="px-3 py-1.5 bg-tertiary-container rounded-lg">Asignar</button>
-                          <button onClick={()=>handleDelete(u.id)} className="px-3 py-1.5 bg-red-600 text-white rounded-lg">Eliminar</button>
+                          {/* Asignar removed: assignment via editing user workspace is supported */}
+                          <button onClick={()=>handleDeleteRequest(u.id)} className="px-3 py-1.5 bg-red-600 text-white rounded-lg">Eliminar</button>
                         </div>
                       )}
                     </td>
@@ -276,6 +285,7 @@ export default function UsersManager() {
             {/* bottom CTA removed to keep single create button at top */}
           </div>
         </div>
+        <ConfirmDialog open={confirmOpen} title="Eliminar usuario" message="¿Confirmar eliminación del usuario? Esta acción no se puede deshacer." confirmText="Eliminar" cancelText="Cancelar" onConfirm={handleDeleteConfirmed} onCancel={()=>{ setConfirmOpen(false); setConfirmPayload(null) }} />
       </Layout>
     </Protected>
   )

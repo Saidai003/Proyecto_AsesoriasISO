@@ -6,10 +6,16 @@ async function login(req, res){
   try{
     const { email, password } = req.body;
     if(!email || !password) return res.status(400).json({ error: 'email and password required' });
+    // Log the email attempting to login (do NOT log password)
+    try{ console.log('login attempt for email=', String(email).trim().toLowerCase()) }catch(e){}
     const emailNorm = String(email).trim().toLowerCase();
     const [rows] = await pool.execute('SELECT id, nombre, email, password_hash, role_id, workspace_id FROM USUARIOS WHERE email = ?', [emailNorm]);
     const user = rows[0];
     if(!user) return res.status(401).json({ error: 'invalid_credentials' });
+    if(!user.password_hash){
+      console.error('login error: user has no password_hash, id=', user.id)
+      return res.status(401).json({ error: 'invalid_credentials' })
+    }
     const ok = await bcrypt.compare(password, user.password_hash);
     if(!ok) return res.status(401).json({ error: 'invalid_credentials' });
     
@@ -24,7 +30,10 @@ async function login(req, res){
     const accessToken = signAccessToken({ id: user.id, email: user.email, role: roleName, workspace_id: user.workspace_id });
     const refreshToken = await createRefreshSession(user.id);
     // Cookie maxAge should match the refresh session lifetime (in ms)
-    res.cookie('refreshToken', refreshToken, { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', maxAge: REFRESH_TOKEN_MINUTES * 60 * 1000 });
+    // For local debugging force insecure cookie so it is sent over http
+    const cookieSecure = false // force false for local/dev testing; revert in production
+    try{ console.log('login: setting refreshToken cookie, token=', refreshToken, 'sameSite=lax secure=', cookieSecure) }catch(e){}
+    res.cookie('refreshToken', refreshToken, { httpOnly: true, sameSite: 'lax', secure: cookieSecure, maxAge: REFRESH_TOKEN_MINUTES * 60 * 1000 });
     return res.json({ accessToken, user: { id: user.id, nombre: user.nombre, role: roleName, workspace_id: user.workspace_id } });
   }catch(err){
     console.error('login error', err);
