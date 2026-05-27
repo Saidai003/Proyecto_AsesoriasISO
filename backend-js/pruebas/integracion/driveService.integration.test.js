@@ -1,4 +1,4 @@
-const driveService = require('../src/services/driveService')
+const driveService = require('../../src/services/driveService')
 
 const RUN_INT = process.env.RUN_DRIVE_INTEGRATION === '1'
 

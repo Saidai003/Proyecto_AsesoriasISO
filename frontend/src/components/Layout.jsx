@@ -1,8 +1,27 @@
 import React from 'react'
 import { useAuth } from '../AuthContext'
+import { useLocation, NavLink } from 'react-router-dom'
 
 export default function Layout({ title, subtitle, sidebar, children }){
   const { user } = useAuth()
+  const location = useLocation()
+
+  // If an admin is on the main /lobby route, always show the simple admin
+  // navigation (Dashboard / Workspaces / Users) instead of any workspace
+  // specific sidebar (NavBarISO). This prevents admins from seeing the
+  // clause/requisito tree when they are on the global lobby.
+  const forceAdminLobbySidebar = location && location.pathname === '/lobby' && user && (user.role || '').toLowerCase() === 'admin'
+  const baseClass = 'flex items-center px-3 py-2'
+  const activeClass = baseClass + ' text-blue-900 font-bold border-l-4 border-blue-900 bg-slate-100'
+  const inactiveClass = baseClass + ' text-slate-600'
+
+  const adminSidebar = (
+    <>
+      <NavLink to="/lobby" end className={({isActive}) => isActive ? activeClass : inactiveClass}>Panel Principal</NavLink>
+      <NavLink to="/workspaces" end className={({isActive}) => isActive ? activeClass : inactiveClass}>Espacios de Trabajo</NavLink>
+      <NavLink to="/users" end className={({isActive}) => isActive ? activeClass : inactiveClass}>Usuarios</NavLink>
+    </>
+  )
   return (
     <div className="flex min-h-screen bg-surface text-on-surface">
       <aside className="h-screen w-64 fixed left-0 top-0 bg-slate-50 border-r border-slate-200 flex flex-col py-4 z-50">
@@ -10,7 +29,10 @@ export default function Layout({ title, subtitle, sidebar, children }){
           <h1 className="text-lg font-black text-blue-900 leading-tight">GAP Análisis</h1>
           <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold">ISO 9001:2015 Portal</p>
         </div>
-        <nav className="flex-1 space-y-1 px-3">{sidebar}</nav>
+        <nav className="flex-1 space-y-1 px-3">
+          <div className="text-[11px] text-slate-400 mb-2">Sidebar source: {forceAdminLobbySidebar ? 'admin' : 'provided'}</div>
+          {forceAdminLobbySidebar ? adminSidebar : sidebar}
+        </nav>
       </aside>
       <main className="ml-64 flex-1 flex flex-col min-h-screen">
         <header className="w-full h-16 sticky top-0 z-40 bg-white/80 backdrop-blur-md flex justify-end items-center px-8 shadow-sm">

@@ -1,4 +1,4 @@
-const driveService = require('../src/services/driveService')
+const driveService = require('../../src/services/driveService')
 
 describe('driveService basic exports', () => {
   test('exports expected functions', () => {

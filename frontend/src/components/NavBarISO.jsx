@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { NavLink, useLocation } from 'react-router-dom'
 import { useAuth } from '../AuthContext'
 import useISO from '../hooks/useISO'
 import { useNavigate } from 'react-router-dom'
@@ -93,11 +93,38 @@ export default function NavBarISO(){
   const [notifCountsByReq, setNotifCountsByReq] = useState({})
   const ncToReqRef = React.useRef({})
 
-  // Compute an effective workspace: prefer URL param, then user.workspace_id
+  // If admin is on top-level /lobby, do not render the clause tree here —
+  // return a simple admin navigation instead. This is the authoritative
+  // guard to prevent admins seeing clauses in the global lobby.
+  if(location && location.pathname === '/lobby' && hasRole(user, 'admin')){
+    const baseClass = 'block w-full text-left px-4 py-2 rounded-lg'
+    const activeClass = baseClass + ' bg-[#00236f] text-white font-semibold'
+    const inactiveClass = baseClass + ' text-slate-700'
+    return (
+      <div className="flex flex-col px-2">
+        <div className="px-6 mb-4">
+          <h2 className="text-sm font-bold">Administración</h2>
+          <p className="text-xs text-slate-500">Acciones globales</p>
+        </div>
+        <nav className="space-y-2">
+          <NavLink to="/lobby" end className={({isActive}) => isActive ? activeClass : inactiveClass}>Dashboard</NavLink>
+          <NavLink to="/workspaces" end className={({isActive}) => isActive ? activeClass : inactiveClass}>Espacios de Trabajo</NavLink>
+          <NavLink to="/users" end className={({isActive}) => isActive ? activeClass : inactiveClass}>Usuarios</NavLink>
+        </nav>
+      </div>
+    )
+  }
+
+  // Compute an effective workspace: prefer URL param. As a safeguard, do NOT
+  // treat `user.workspace_id` as an implicit workspace for Admin users — that
+  // causes admins to see clauses while on the global /lobby. Only fall back to
+  // `user.workspace_id` for non-admin roles.
   let workspaceParam = null
   try{ const params = new URLSearchParams(location.search || ''); workspaceParam = params.get('workspace') }catch(e){ workspaceParam = null }
 
-  const effectiveWorkspace = workspaceParam || (user && user.workspace_id ? String(user.workspace_id) : null)
+  const userWorkspace = (user && user.workspace_id && !hasRole(user, 'admin')) ? String(user.workspace_id) : null
+  const effectiveWorkspace = workspaceParam || userWorkspace
+  try{ console.log('NavBarISO: pathname=', location.pathname, 'search=', location.search, 'effectiveWorkspace=', effectiveWorkspace, 'userRole=', user && user.role) }catch(_){ }
 
   // Load ISOs when we have an effective workspace and no ISOs loaded yet.
   useEffect(()=>{
@@ -224,7 +251,12 @@ export default function NavBarISO(){
   const clauses = selectedIso ? (clausesByIso[selectedIso] || []) : []
 
   // If no effective workspace selected, show admin-style links so admins can navigate
-  if(!effectiveWorkspace){
+  // Also ensure admins on the top-level /lobby never see clause tree unless a ?workspace is present
+  if(!effectiveWorkspace || (location.pathname === '/lobby' && hasRole(user, 'admin') && !workspaceParam)){
+    const baseClass = 'block w-full text-left px-4 py-2 rounded-lg'
+    const activeClass = baseClass + ' bg-[#00236f] text-white font-semibold'
+    const inactiveClass = baseClass + ' text-slate-700'
+
     return (
       <div className="flex flex-col px-2">
         <div className="px-6 mb-4">
@@ -232,9 +264,9 @@ export default function NavBarISO(){
           <p className="text-xs text-slate-500">Acciones globales</p>
         </div>
         <nav className="space-y-2">
-          <Link to={user && (hasRole(user, 'evaluador') || hasRole(user, 'responsable')) ? '/lobby' : '/dashboard'} className="block w-full text-left px-4 py-2 rounded-lg bg-[#00236f] text-white font-semibold">Dashboard</Link>
-          {hasRole(user, 'admin') && <Link to="/workspaces" className="block w-full text-left px-4 py-2 rounded-lg">Espacios de Trabajo</Link>}
-          {hasRole(user, 'admin') && <Link to="/users" className="block w-full text-left px-4 py-2 rounded-lg">Usuarios</Link>}
+          <NavLink to="/lobby" end className={({isActive}) => isActive ? activeClass : inactiveClass}>Dashboard</NavLink>
+          {hasRole(user, 'admin') && <NavLink to="/workspaces" end className={({isActive}) => isActive ? activeClass : inactiveClass}>Espacios de Trabajo</NavLink>}
+          {hasRole(user, 'admin') && <NavLink to="/users" end className={({isActive}) => isActive ? activeClass : inactiveClass}>Usuarios</NavLink>}
         </nav>
       </div>
     )

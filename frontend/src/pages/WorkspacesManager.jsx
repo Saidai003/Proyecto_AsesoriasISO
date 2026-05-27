@@ -6,14 +6,18 @@ import SearchInput from '../components/SearchInput'
 import useWorkspaces from '../hooks/useWorkspaces'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { useForm } from 'react-hook-form'
-import { Link, useNavigate } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
 
 function SideNav() {
+  const baseClass = 'flex items-center px-3 py-2'
+  const activeClass = baseClass + ' text-blue-900 font-bold border-l-4 border-blue-900 bg-slate-100'
+  const inactiveClass = baseClass + ' text-slate-600'
+
   return (
     <>
-      <Link className="flex items-center px-3 py-2 text-blue-900 font-bold border-l-4 border-blue-900 bg-slate-100" to="/lobby">Panel Principal</Link>
-      <Link className="flex items-center px-3 py-2 text-slate-600" to="/workspaces">Espacios de Trabajo</Link>
-      <Link className="flex items-center px-3 py-2 text-slate-600" to="/users">Usuarios</Link>
+      <NavLink to="/lobby" end className={({isActive}) => isActive ? activeClass : inactiveClass}>Panel Principal</NavLink>
+      <NavLink to="/workspaces" end className={({isActive}) => isActive ? activeClass : inactiveClass}>Espacios de Trabajo</NavLink>
+      <NavLink to="/users" end className={({isActive}) => isActive ? activeClass : inactiveClass}>Usuarios</NavLink>
     </>
   )
 }

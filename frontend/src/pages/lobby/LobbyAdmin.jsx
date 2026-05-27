@@ -1,15 +1,19 @@
 import React from 'react'
-import { Link, useNavigate, useLocation } from 'react-router-dom'
+import { NavLink, useLocation } from 'react-router-dom'
 import Layout from '../../components/Layout'
 import NavBarISO from '../../components/NavBarISO'
 import { useAuth } from '../../AuthContext'
 
 function Sidebar(){
+  const baseClass = 'flex items-center px-3 py-2'
+  const activeClass = baseClass + ' text-blue-900 font-bold border-l-4 border-blue-900 bg-slate-100'
+  const inactiveClass = baseClass + ' text-slate-600'
+
   return (
     <>
-      <Link className="flex items-center px-3 py-2 text-blue-900 font-bold border-l-4 border-blue-900 bg-slate-100" to="/lobby">Panel Principal</Link>
-      <Link className="flex items-center px-3 py-2 text-slate-600" to="/workspaces">Espacios de Trabajo</Link>
-      <Link className="flex items-center px-3 py-2 text-slate-600" to="/users">Usuarios</Link>
+      <NavLink to="/lobby" end className={({isActive}) => isActive ? activeClass : inactiveClass}>Panel Principal</NavLink>
+      <NavLink to="/workspaces" end className={({isActive}) => isActive ? activeClass : inactiveClass}>Espacios de Trabajo</NavLink>
+      <NavLink to="/users" end className={({isActive}) => isActive ? activeClass : inactiveClass}>Usuarios</NavLink>
     </>
   )
 }
@@ -17,9 +21,12 @@ function Sidebar(){
 export default function LobbyAdmin(){
   const location = useLocation()
   const params = new URLSearchParams(location.search || '')
-  const ws = params.get('workspace')
-  // Show NavBarISO only when an explicit workspace param is present (entering a workspace)
-  const sidebarContent = ws ? <NavBarISO/> : <Sidebar/>
+  const wsRaw = params.get('workspace')
+  // Show NavBarISO only when an explicit, non-empty numeric workspace param is present
+  const hasWorkspace = wsRaw && String(wsRaw).trim() !== '' && !Number.isNaN(Number(wsRaw))
+  // debug: log search and decision
+  try{ console.log('LobbyAdmin: location.search=', location.search, 'wsRaw=', wsRaw, 'hasWorkspace=', hasWorkspace) }catch(_){ }
+  const sidebarContent = hasWorkspace ? <NavBarISO/> : <Sidebar/>
 
   return (
     <Layout title="Dashboard General" subtitle="Consolidado de auditorías y cumplimiento ISO 9001:2015" sidebar={sidebarContent}>
