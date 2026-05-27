@@ -10,12 +10,13 @@ import { hasRole } from '../lib/userUtils'
 
 function UploadArea({ evaluacionId, onUploaded }){
   const [dragOver, setDragOver] = React.useState(false)
-  const fileRef = React.useRef(null)
+  const fileRef = React.useRef(null) //useRef for hidden file input to trigger on button click
   const { user } = useAuth()
 
+  // handle file upload: read file, convert to data URL, send to backend, handle response
   const handleFiles = async (files) => {
     if(!files || files.length===0) return
-    const file = files[0]
+    const file = files[0] // if more than one file is retrieved, we only take the first one for now
     const nombre = file.name
     // ext: lowercase file extension without 
     // dot, or empty string if no extension
@@ -29,6 +30,7 @@ function UploadArea({ evaluacionId, onUploaded }){
         fr.readAsDataURL(f) // start reading the file as data URL
       })
       const fileData = await readAsDataURL(file)
+      
       // payload contains evaluacionId (nullable), nombre, ext, and fileData as data URL
       // does fileData contain the full pdf or image or whatever it is?
       // Yes, fileData will contain the full content of the file encoded as a data URL. For example, 

@@ -106,7 +106,14 @@ async function createEvidence(req, res){
       // lookup workspace name
       try{
         const [wrows] = await pool.query('SELECT * FROM ESPACIO_TRABAJO WHERE id = ?', [workspaceId])
+        
+        // Assigns a default workspace name if one is not found.
+        // workspaceName resolution strategy: prefer nombre_cliente if available, fallback to 'workspace-{id}' pattern
         const workspaceName = (wrows && wrows[0] && (wrows[0].nombre_cliente || `workspace-${workspaceId}`)) || `workspace-${workspaceId}`
+        
+        // driveService.ensureFolder will check if a folder with the given name exists under the specified parent
+        // folder (GOOGLE_DRIVE_FOLDER_ID) and return its id, or create it if it doesn't exist. This allows us to organize evidence files 
+        // in subfolders per workspace.
         workspaceFolderId = await driveService.ensureFolder(process.env.GOOGLE_DRIVE_FOLDER_ID, workspaceName)
       }catch(err){
         console.error('workspace folder resolution error', err)
@@ -118,27 +125,50 @@ async function createEvidence(req, res){
     // - payload.drive_file_id (existing Drive id),
     // - payload.url_archivo starting with 'drive://', or
     // - payload.fileData (base64) to upload now.
+
+    // but it only uploads to Drive if the fileData field is provided; 
+    // if drive_file_id or drive:// URL is provided, it will link to existing 
+    // Drive file without uploading. This allows flexibility for clients to manage 
+    // Drive uploads separately if desired, while still enforcing that all evidence 
+    // files must be stored on Drive.
     if(payload.drive_file_id){
       drive_file_id = payload.drive_file_id
       url_archivo = `drive://${drive_file_id}`
     } else if(payload.url_archivo && String(payload.url_archivo).startsWith('drive://')){
+      // support legacy url_archivo field for Drive links, but normalize to drive_file_id + drive:// URL pattern for consistency
       drive_file_id = String(payload.url_archivo).replace(/^drive:\/\//, '')
       url_archivo = `drive://${drive_file_id}`
     } else if(payload.fileData){
+      // match data URL pattern: data:<mime-type>;base64,<data>
+      // This allows clients to upload file content directly as base64-encoded strings.
+      // We will parse the data URL, extract the MIME type and base64 data, and then 
+      // upload the file to Drive. The filename can be provided by the client or generated automatically.
       const matches = String(payload.fileData).match(/^data:(.+);base64,(.+)$/)
       let ext = tipo_formato || ''
       if(!matches) return res.status(400).json({ error: 'invalid_file_data' })
-      const mime = matches[1]
-      const b64 = matches[2]
+
+      const mime = matches[1] // MIME type extracted from data URL, e.g. "image/jpeg"
+      const b64 = matches[2] // Base64-encoded file content extracted from data URL
+
+      // if tipo_formato is not provided from payload, 
+      // attempt to derive file extension from MIME type
       if(!ext){
         const m = mime.split('/')
         ext = m[1] || ext
       }
+
+      // generate filename: prefer provided nombre_archivo, fallback to evidence-{timestamp}-{random}.{ext} pattern
+      // the latter ensures a unique filename if multiple uploads have the same original name or if no name is provided,
+      // while still preserving the file extension for better handling on Drive and client applications.
       const filename = nombre_archivo || `evidence-${Date.now()}-${Math.random().toString(36).slice(2,8)}.${ext}`
+
+      // convert base64 string to buffer for upload. b64 is the base64-encoded file content extracted from the data URL.
+      // We create a Buffer from this string, specifying 'base64' as the encoding, which gives us the raw binary data of
+      // the file that we can then upload to Drive.
       const buf = Buffer.from(b64, 'base64')
       try{
-        let uploaded = null
-        if(workspaceFolderId){
+        let uploaded = null // basically, what was 'uploaded' to Drive, containing at least the new file id and name
+        if(workspaceFolderId){ // pending for explanation, but in a few words, this is to ensure that evidence files are stored in subfolders per workspace
           const requisitoName = evaluacion_requisito_id ? String(evaluacion_requisito_id) : 'unknown'
           const requisitoFolderId = await driveService.ensureFolder(workspaceFolderId, requisitoName)
           const existingFile = await driveService.findFileInFolder(requisitoFolderId, filename)
@@ -391,3 +421,16 @@ async function getEvidenceHistory(req, res){
 }
 
 module.exports = { listByRequisito, createEvidence, updateEvidence, deleteEvidence, downloadEvidence, getEvidenceHistory }
+
+
+      // Is "matches" a boolean that indicates whether the pattern was matched?
+      // A: Well, in JavaScript, the `match` method returns an array of matches if the pattern is found, or `null` if it is not.
+      // So `matches` itself is not a boolean, but you can check if it is truthy to determine if the pattern was matched. If `matches`
+      // is not `null`, it means the pattern was matched and you can access the captured groups through the array. For example, 
+      // `matches[1]` would give you the MIME type and `matches[2]` would give you the base64 data if the pattern was matched successfully.
+
+      // what is MIME type?
+      // MIME type is a standard way of describing the format of a file. It consists of a type
+      // and a subtype, separated by a slash. For example, "image/jpeg" is a MIME type where 
+      // "image" is the type and "jpeg" is the subtype. The MIME type helps the system understand
+      // the format of the file and how to handle the file, such as how to display it or which application to use to open it.

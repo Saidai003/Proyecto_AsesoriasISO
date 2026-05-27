@@ -183,3 +183,74 @@ export function AuthProvider({ children }){
 export function useAuth(){ return useContext(AuthContext) }
 
 export default AuthContext
+
+
+// what does useContext(AuthContext) return, exactly?
+// It returns the value provided by the nearest AuthContext.Provider
+// in the component tree.
+
+// AuthContext is initialized with createContext(null), 
+// so if there is no Provider, it will return null.
+
+// In our case, the AuthProvider component provides an object with 
+// { accessToken, user, login, logout, initializing } as the value.
+
+// Why does it provide these specific values and not null anymore?
+// Because the AuthProvider component is designed to manage authentication state and actions. 
+// It provides the current access token, user information, and functions to log in and log out, 
+// as well as an initializing flag to indicate if it's still checking for an existing session. 
+// This allows any component that consumes this context to easily access authentication-related 
+// data and functions without needing to pass them down through props.
+
+// Lets see if i understand correctly. const AuthContext = createContext(null)
+// creates a new context object called AuthContext with a default value of null.
+// This means that if a component tries to consume this context without being wrapped 
+// in an AuthContext.Provider, it will receive null as the value, naturally, because
+// there is no provider to supply a different value. However, when we use the AuthProvider
+// component to wrap parts of our application, it provides a specific value (an object containing 
+// accessToken, user, login, logout, and initializing) to all of its child components.
+// This also means AuthContext is actually the very object returned by createContext,
+//  which has a Provider component and can be consumed by useContext.
+
+// how are the values filled tho?
+// The values are filled by the AuthProvider component. When you use the AuthProvider to wrap your application,
+// it initializes state variables for accessToken, user, and initializing. It also defines the login and logout functions.
+// The AuthProvider then passes these values as an object to the AuthContext.Provider's value prop. 
+// This way, any component that consumes the AuthContext will have access to these values and functions.
+
+// But in order for that to happen the children components must import the useAuth hook and AuthContext, right?
+// Yes, that's correct. The child components that want to access the authentication context would typically import 
+// the useAuth hook, which internally uses useContext(AuthContext) to access the context values. This allows them
+//  to easily access the authentication state and functions provided by the AuthProvider without needing to directly 
+// interact with the AuthContext object itself.
+
+// I also noticed Auth Context has the same name as this file, AuthContext.jsx, but that's not a coincidence, is it?
+// No, it's not a coincidence. It's a common convention in React to name the context object the same as the file it is defined in. 
+// This helps with organization and makes it clear where the context is coming from when it is imported and used in other parts of the application. 
+// In this case, AuthContext is defined in AuthContext.jsx, and it is exported for use in other components that need to access authentication-related data and functions.
+
+// So, in summary:
+// - AuthContext is a context object created with createContext(null) in the AuthContext.jsx file.
+// - The AuthProvider component is a React component that manages authentication state and provides it to its children via the AuthContext.Provider.
+// - The useAuth hook is a custom hook that allows components to easily consume the AuthContext and access the authentication values and functions.
+// - When a component uses the useAuth hook, it will receive the current accessToken, user information, login and logout functions, and an initializing flag from the nearest AuthContext.Provider in the component tree.
+// - The AuthProvider component provides an object with { accessToken, user, login, logout, initializing } as the value.
+// - Any component that consumes the AuthContext will have access to these values and functions.
+
+// So if i did this in another file: 
+// import ChatPlaceholder from '../components/ChatPlaceholder'
+// import ConfirmDialog from '../components/ConfirmDialog'
+// import { hasRole } from '../lib/userUtils'
+
+// function UploadArea({ evaluacionId, onUploaded }){
+//   const [dragOver, setDragOver] = React.useState(false)
+//   const fileRef = React.useRef(null) //useRef for hidden file input to trigger on button click
+//   const { user } = useAuth()
+
+// user will contain accessToken, user, login, logout, initializing
+
+// user: { id, email, role, workspace_id }
+// accessToken: string
+// login: function
+// logout: function
+// initializing: boolean -> this is a flag to indicate if the user is still checking for an existing session given a valid token
