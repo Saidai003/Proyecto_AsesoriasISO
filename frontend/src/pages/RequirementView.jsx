@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../AuthContext'
 import Layout from '../components/Layout'
 import fetchWithAuth from '../lib/api'
@@ -80,6 +80,7 @@ function UploadArea({ evaluacionId, onUploaded }){
 
 function RequirementContent({ node }){
   const navigate = useNavigate()
+  const location = useLocation()
   const { user } = useAuth()
   const [evidences, setEvidences] = useState([])
   const [selectedEvidence, setSelectedEvidence] = useState(null)
@@ -283,8 +284,13 @@ function RequirementContent({ node }){
       try{
         const res = await fetchWithAuth(`/api/evidencias/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ comentario_evidencia: comment }) })
         if(!res.ok){ const j = await res.json().catch(()=>({})); alert('No se pudo guardar: ' + (j.error || res.statusText)); return }
-        const updated = await res.json()
-        setEvidences(prev => prev.map(e => e.id === id ? { ...e, comentario_evidencia: updated.comentario_evidencia } : e))
+        const json = await res.json()
+        // backend may return { evidence: { ... } } or the raw updated row
+        const updated = json && json.evidence ? json.evidence : json
+        // update list of evidences with full updated object when available
+        setEvidences(prev => prev.map(e => e.id === id ? { ...e, ...(updated || {}) } : e))
+        // also update selectedEvidence if it's the same item so reopening shows fresh data
+        setSelectedEvidence(prev => prev && prev.id === id ? { ...prev, ...(updated || {}) } : prev)
         closeEvidence()
       }catch(e){ console.error('save comment', e); alert('Error guardando comentario') }
     })()
@@ -680,7 +686,7 @@ function RequirementContent({ node }){
 
 export default function RequirementView(){
   const { id } = useParams()
-  const { accessToken, user } = useAuth()
+  const { accessToken, user, actingWorkspace } = useAuth()
   const [node, setNode] = useState(null)
   const [loading, setLoading] = useState(true)
 

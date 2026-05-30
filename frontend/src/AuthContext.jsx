@@ -11,6 +11,9 @@ export function AuthProvider({ children }){
     try{ return JSON.parse(localStorage.getItem('user')) }catch(e){return null}
   })
   const [initializing, setInitializing] = useState(true)
+  const [actingWorkspace, setActingWorkspaceState] = useState(() => {
+    try{ return sessionStorage.getItem('actingWorkspace') }catch(e){ return null }
+  })
 
   const refreshTimeoutRef = useRef(null)
   const [isIdle, setIsIdle] = useState(false)
@@ -23,6 +26,17 @@ export function AuthProvider({ children }){
     if(user) localStorage.setItem('user', JSON.stringify(user))
     else localStorage.removeItem('user')
   },[user])
+  // Any changes will be reflected in sessionStorage for actingWorkspace, which is 
+  // used by fetchWithAuth to append ?workspace= to API calls. This allows the app
+  // to maintain an "acting workspace" context across page reloads and API calls
+  // without needing to include it in the URL or manage it in a global state separately.
+  // persist actingWorkspace to sessionStorage
+  useEffect(()=>{
+    try{
+      if(actingWorkspace) sessionStorage.setItem('actingWorkspace', String(actingWorkspace))
+      else sessionStorage.removeItem('actingWorkspace')
+    }catch(e){}
+  },[actingWorkspace])
   
 
   function decodeJwt(token){
@@ -109,6 +123,7 @@ export function AuthProvider({ children }){
     try{ await fetch(`${API_BASE}/auth/logout`, { method: 'POST', credentials: 'include' }) }catch(e){}
     setAccessToken(null)
     setUser(null)
+    setActingWorkspaceState(null)
     if(refreshTimeoutRef.current){ clearTimeout(refreshTimeoutRef.current); refreshTimeoutRef.current = null }
   }
 
@@ -173,8 +188,10 @@ export function AuthProvider({ children }){
     if(!accessToken && refreshTimeoutRef.current){ clearTimeout(refreshTimeoutRef.current); refreshTimeoutRef.current = null }
   },[accessToken, isIdle])
 
+  const setActingWorkspace = (ws) => setActingWorkspaceState(ws ? String(ws) : null)
+
   return (
-    <AuthContext.Provider value={{ accessToken, user, login, logout, initializing }}>
+    <AuthContext.Provider value={{ accessToken, user, login, logout, initializing, actingWorkspace, setActingWorkspace }}>
       {children}
     </AuthContext.Provider>
   )

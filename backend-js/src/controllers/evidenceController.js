@@ -82,6 +82,38 @@ const fs = require('fs').promises
 const path = require('path')
 const driveService = require('../services/driveService')
 
+// Permission helpers for updateEvidence
+function _toNumber(v){ return v === null || v === undefined ? null : Number(v) }
+
+function checkEvaluatorRestrictions(role, payload){
+  if(role !== 'Evaluador') return true
+  const allowed = ['estado_validacion_archivo']
+  const keys = Object.keys(payload || {})
+  const hasForbidden = keys.some(k => !allowed.includes(k))
+  return !hasForbidden
+}
+
+function checkStatusChangePermission(role, existing, uid, payload){
+  if(!Object.prototype.hasOwnProperty.call(payload, 'estado_validacion_archivo')) return true
+  const isAdmin = role === 'Admin'
+  const isEvaluator = role === 'Evaluador'
+  const isResponsable = role === 'Responsable SGC'
+  const isOwner = _toNumber(existing.usuario_carga_id) === _toNumber(uid)
+  if(!isAdmin && !isEvaluator && !isResponsable) return false
+  if(isOwner && !isAdmin && !isEvaluator) return false
+  return true
+}
+
+function checkGeneralPermission(role, existing, uid){
+  // Admin and Responsable SGC can always modify evidences.
+  // Evaluador may modify only when allowed by checkEvaluatorRestrictions/checkStatusChangePermission
+  // so here we allow Evaluador as well (previous logic required owner equality which prevented
+  // evaluadores from changing approval state when they weren't the uploader).
+  if(role === 'Admin' || role === 'Responsable SGC' || role === 'Evaluador') return true
+  return _toNumber(existing.usuario_carga_id) === _toNumber(uid)
+}
+
+// Checked. Now supports Drive-hosted files
 async function createEvidence(req, res){
   try{
     const payload = req.body || {}
@@ -165,10 +197,13 @@ async function createEvidence(req, res){
       // convert base64 string to buffer for upload. b64 is the base64-encoded file content extracted from the data URL.
       // We create a Buffer from this string, specifying 'base64' as the encoding, which gives us the raw binary data of
       // the file that we can then upload to Drive.
+
+      // We upload and update the file in Drive depending on whether the file already exists (based on filename) in the target folder. 
+      // This allows for idempotent uploads where clients can retry with the same data without creating duplicates on Drive.
       const buf = Buffer.from(b64, 'base64')
       try{
         let uploaded = null // basically, what was 'uploaded' to Drive, containing at least the new file id and name
-        if(workspaceFolderId){ // pending for explanation, but in a few words, this is to ensure that evidence files are stored in subfolders per workspace
+        if(workspaceFolderId){ //this is to ensure that evidence files are stored in subfolders per workspace
           const requisitoName = evaluacion_requisito_id ? String(evaluacion_requisito_id) : 'unknown'
           const requisitoFolderId = await driveService.ensureFolder(workspaceFolderId, requisitoName)
           const existingFile = await driveService.findFileInFolder(requisitoFolderId, filename)
@@ -179,6 +214,11 @@ async function createEvidence(req, res){
             uploaded = await driveService.uploadBuffer({ buffer: buf, mimeType: mime, name: filename, parents: [requisitoFolderId] })
           }
         }else{
+          // if no workspace folder, upload to root (or default) folder in Drive
+          // could prove to be a dumping ground, but at least ensures the file is on Drive as 
+          // required, even if we can't organize by workspace. Consider not allowing uploads at all
+          // if we can't determine a folder, but for now we allow it as a fallback to ensure functionality
+          // even if folder resolution fails.
           uploaded = await driveService.uploadBuffer({ buffer: buf, mimeType: mime, name: filename })
         }
         if(uploaded && uploaded.id){
@@ -203,7 +243,7 @@ async function createEvidence(req, res){
     }
 
     const [result] = await pool.query('INSERT INTO EVIDENCIAS (evaluacion_requisito_id, usuario_carga_id, ev_id, nombre_archivo, url_archivo, tipo_formato, drive_file_id) VALUES (?,?,?,?,?,?,?)', [evaluacion_requisito_id, usuario_carga_id, ev_id, nombre_archivo, url_archivo, tipo_formato, drive_file_id])
-    const insertId = result.insertId
+    const insertId = result.insertId // get the ID of the inserted row
     // log upload
     await pool.query('INSERT INTO EVIDENCIAS_LOG (evidencia_id, usuario_id, ev_id, tipo_accion, nombre_archivo) VALUES (?,?,?,?,?)', [insertId, usuario_carga_id, ev_id, 'UPLOAD', nombre_archivo])
     const [rows] = await pool.query('SELECT * FROM EVIDENCIAS WHERE id = ?', [insertId])
@@ -214,8 +254,9 @@ async function createEvidence(req, res){
   }
 }
 
+// Pending for revision. Now supports updating Drive-hosted files and logging changes.
 async function updateEvidence(req, res){
-  const id = Number(req.params.id) || 0
+  const id = Number(req.params.id) || 0 // id of the evidence
   try{
     const [rows] = await pool.query('SELECT * FROM EVIDENCIAS WHERE id = ?', [id])
     if(!rows || rows.length===0) return res.status(404).json({ error: 'not_found' })
@@ -225,19 +266,22 @@ async function updateEvidence(req, res){
     const payload = req.body || {}
 
     // If user is Evaluador, only allow setting approval state
-    if(role === 'Evaluador'){
-      const allowedForEvaluator = ['estado_validacion_archivo']
-      const keys = Object.keys(payload)
-      // here we check if all keys are allowed for evaluators; 
-      // if there are any keys in the payload that are not in the allowedForEvaluator list,
-      // then we return a 403 Forbidden error. This ensures that evaluators can only update 
-      // the approval state and not other fields of the evidence.
-      const others = keys.filter(k => !allowedForEvaluator.includes(k))
-      if(others.length>0) return res.status(403).json({ error: 'forbidden' })
-    } else {
-      if(role !== 'Admin' && role !== 'Responsable SGC' && existing.usuario_carga_id !== uid){
-        return res.status(403).json({ error: 'forbidden' })
-      }
+
+    // Where does estado_validacion_archivo come from and what are its possible values?
+    // estado_validacion_archivo is a field in the EVIDENCIAS table that represents the approval state of the evidence file. 
+    // Its possible values are typically 'Pendiente' (Pending), 'Aceptado' (Accepted), and 'Rechazado' (Rejected), 
+    // but it may vary based on the application's specific implementation and requirements.
+    // Permission checks delegated to helpers for clarity
+    if(!checkEvaluatorRestrictions(role, payload)){
+      return res.status(403).json({ error: 'forbidden' })
+    }
+
+    if(!checkStatusChangePermission(role, existing, uid, payload)){
+      return res.status(403).json({ error: 'forbidden' })
+    }
+
+    if(!checkGeneralPermission(role, existing, uid)){
+      return res.status(403).json({ error: 'forbidden' })
     }
 
     const fields = []

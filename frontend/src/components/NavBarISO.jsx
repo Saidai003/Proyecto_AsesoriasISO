@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react'
-import { NavLink, useLocation } from 'react-router-dom'
+import { NavLink, Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../AuthContext'
 import useISO from '../hooks/useISO'
-import { useNavigate } from 'react-router-dom'
 import { hasRole } from '../lib/userUtils'
 import fetchWithAuth from '../lib/api'
 import { showToast } from '../lib/toast'
@@ -61,10 +60,11 @@ function RequisitoItem({ requisito, all, requisitosWithNC, notifCountsByReq }){
   const children = all.filter(a => a.requisito_padre_id === requisito.id)
   const [open, setOpen] = useState(false)
   const navigate = useNavigate()
+  const location = useLocation()
   return (
     <div>
       <div className="flex items-center justify-between gap-2">
-        <button onClick={()=> navigate(`/requisitos/${requisito.id}`)} className="text-sm text-slate-700 text-left w-full text-left flex items-center gap-2" aria-expanded={open}>
+        <button onClick={()=>{ navigate(`/requisitos/${requisito.id}`) }} className="text-sm text-slate-700 text-left w-full text-left flex items-center gap-2" aria-expanded={open}>
           <span>{requisito.descripcion_normativa}</span>
           {/** numeric badge when there are unread notifications for this requisito */}
           {notifCountsByReq && notifCountsByReq[Number(requisito.id)] > 0 && (
@@ -84,8 +84,17 @@ function RequisitoItem({ requisito, all, requisitosWithNC, notifCountsByReq }){
 
 export default function NavBarISO(){
   const { isos, clausesByIso, requisitosByClausula, loadISOs, loadClauses, loadRequisitos } = useISO()
-  const { user } = useAuth()
+  const { user, actingWorkspace } = useAuth()
   const location = useLocation()
+  // read workspace query param early so admins with ?workspace=... see clauses
+  // workspaceParamEarly corresponds to the workspace query param that may be present on initial load 
+  // (e.g. when an admin clicks "Acceder" from WorkspacesManager, which sets ?workspace= in the URL).
+  // This allows the NavBarISO to render the clause tree immediately for admins when they have a workspace context,
+  // regardless of whether the user context has fully loaded (even if the user context has not fully updated yet).
+  // We treat this as an early hint for workspace context to ensure admins see clauses when they have a valid workspace selection, while still relying
+  //  on the effective workspace logic that prefers URL params and actingWorkspace for determining the authoritative workspace context throughout the app.
+  let workspaceParamEarly = null
+  try{ const params = new URLSearchParams(location.search || ''); workspaceParamEarly = params.get('workspace') }catch(e){ workspaceParamEarly = null }
   const [selectedIso, setSelectedIso] = useState(null)
   const [requisitosWithNC, setRequisitosWithNC] = useState(new Set())
   const [notifications, setNotifications] = useState([])
@@ -95,8 +104,10 @@ export default function NavBarISO(){
 
   // If admin is on top-level /lobby, do not render the clause tree here —
   // return a simple admin navigation instead. This is the authoritative
-  // guard to prevent admins seeing clauses in the global lobby.
-  if(location && location.pathname === '/lobby' && hasRole(user, 'admin')){
+  // guard to prevent admins seeing clauses in the global lobby. Consider
+  // actingWorkspace (set when pressing "Acceder") as a valid workspace
+  // selection so admins who entered a workspace see the clause tree.
+  if(location && location.pathname === '/lobby' && hasRole(user, 'admin') && !(workspaceParamEarly || actingWorkspace)){
     const baseClass = 'block w-full text-left px-4 py-2 rounded-lg'
     const activeClass = baseClass + ' bg-[#00236f] text-white font-semibold'
     const inactiveClass = baseClass + ' text-slate-700'
@@ -121,6 +132,14 @@ export default function NavBarISO(){
   // `user.workspace_id` for non-admin roles.
   let workspaceParam = null
   try{ const params = new URLSearchParams(location.search || ''); workspaceParam = params.get('workspace') }catch(e){ workspaceParam = null }
+
+  // if an early workspace param was detected (e.g. LobbyAdmin passed it), prefer it
+  if(!workspaceParam && typeof workspaceParamEarly !== 'undefined' && workspaceParamEarly) workspaceParam = workspaceParamEarly
+
+  // Fallback: if no workspace param in URL, check AuthContext.actingWorkspace (persisted to sessionStorage)
+  if(!workspaceParam){
+    try{ if(actingWorkspace) workspaceParam = actingWorkspace }catch(_){ }
+  }
 
   const userWorkspace = (user && user.workspace_id && !hasRole(user, 'admin')) ? String(user.workspace_id) : null
   const effectiveWorkspace = workspaceParam || userWorkspace

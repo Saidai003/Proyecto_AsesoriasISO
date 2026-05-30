@@ -22,10 +22,11 @@ export default function LobbyAdmin(){
   const location = useLocation()
   const params = new URLSearchParams(location.search || '')
   const wsRaw = params.get('workspace')
+  const { actingWorkspace } = useAuth()
   // Show NavBarISO only when an explicit, non-empty numeric workspace param is present
-  const hasWorkspace = wsRaw && String(wsRaw).trim() !== '' && !Number.isNaN(Number(wsRaw))
+  const hasWorkspace = (wsRaw && String(wsRaw).trim() !== '' && !Number.isNaN(Number(wsRaw))) || (actingWorkspace && String(actingWorkspace).trim() !== '' && !Number.isNaN(Number(actingWorkspace)))
   // debug: log search and decision
-  try{ console.log('LobbyAdmin: location.search=', location.search, 'wsRaw=', wsRaw, 'hasWorkspace=', hasWorkspace) }catch(_){ }
+  try{ console.log('LobbyAdmin: location.search=', location.search, 'wsRaw=', wsRaw, 'actingWorkspace=', actingWorkspace, 'hasWorkspace=', hasWorkspace) }catch(_){ }
   const sidebarContent = hasWorkspace ? <NavBarISO/> : <Sidebar/>
 
   return (

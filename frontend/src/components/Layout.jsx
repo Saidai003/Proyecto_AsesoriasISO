@@ -6,11 +6,18 @@ export default function Layout({ title, subtitle, sidebar, children }){
   const { user } = useAuth()
   const location = useLocation()
 
-  // If an admin is on the main /lobby route, always show the simple admin
+  // If an admin is on the main /lobby route, normally show the simple admin
   // navigation (Dashboard / Workspaces / Users) instead of any workspace
-  // specific sidebar (NavBarISO). This prevents admins from seeing the
-  // clause/requisito tree when they are on the global lobby.
-  const forceAdminLobbySidebar = location && location.pathname === '/lobby' && user && (user.role || '').toLowerCase() === 'admin'
+  // specific sidebar (NavBarISO). However, if the URL includes an explicit
+  // `workspace` query param (e.g. /lobby?workspace=1) we should allow the
+  // workspace sidebar to be shown so admins can view a workspace as if they
+  // were a Responsable/Evaluador.
+  const params = new URLSearchParams(location.search || '')
+  const wsRaw = params.get('workspace')
+  const hasWorkspaceParam = wsRaw && String(wsRaw).trim() !== '' && !Number.isNaN(Number(wsRaw))
+  const { actingWorkspace } = useAuth()
+  const hasActingWorkspace = actingWorkspace && String(actingWorkspace).trim() !== '' && !Number.isNaN(Number(actingWorkspace))
+  const forceAdminLobbySidebar = location && location.pathname === '/lobby' && user && (user.role || '').toLowerCase() === 'admin' && !hasWorkspaceParam && !hasActingWorkspace
   const baseClass = 'flex items-center px-3 py-2'
   const activeClass = baseClass + ' text-blue-900 font-bold border-l-4 border-blue-900 bg-slate-100'
   const inactiveClass = baseClass + ' text-slate-600'

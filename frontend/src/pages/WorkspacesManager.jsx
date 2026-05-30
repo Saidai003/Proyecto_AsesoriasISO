@@ -7,6 +7,7 @@ import useWorkspaces from '../hooks/useWorkspaces'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { useForm } from 'react-hook-form'
 import { NavLink, useNavigate } from 'react-router-dom'
+import { useAuth } from '../AuthContext'
 
 function SideNav() {
   const baseClass = 'flex items-center px-3 py-2'
@@ -26,6 +27,7 @@ export default function WorkspacesManager() {
   const navigate = useNavigate()
   const [message, setMessage] = React.useState(null)
   const { workspaces, loading, loadWorkspaces, createWorkspace, updateWorkspace, deleteWorkspace } = useWorkspaces()
+  const { setActingWorkspace } = useAuth()
 
   React.useEffect(()=>{ loadWorkspaces() }, [loadWorkspaces])
 
@@ -143,7 +145,7 @@ export default function WorkspacesManager() {
                             ) : (
                                 <>
                                 <button onClick={()=>startEdit(w)} className="px-3 py-1.5 border rounded-lg">Editar</button>
-                                <button onClick={()=>{ navigate(`/lobby?workspace=${w.id}`) }} className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg">Acceder</button>
+                                <button onClick={()=>{ try{ if(typeof setActingWorkspace === 'function') setActingWorkspace(w.id); else sessionStorage.setItem('actingWorkspace', String(w.id)) }catch(_){ } navigate('/lobby') }} className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg">Acceder</button>
                                 <button onClick={()=>handleDeleteRequest(w.id)} className="px-3 py-1.5 bg-red-600 text-white rounded-lg">Eliminar</button>
                               </>
                             )}

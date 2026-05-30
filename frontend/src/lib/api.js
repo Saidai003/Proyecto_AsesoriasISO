@@ -29,7 +29,10 @@ export async function fetchWithAuth(input, init = {}){
     try{
       if(typeof window === 'undefined') return u
       const params = new URLSearchParams(window.location.search)
-      const ws = params.get('workspace')
+      let ws = params.get('workspace')
+      if(!ws){
+        try{ ws = sessionStorage.getItem('actingWorkspace') }catch(_){ ws = null }
+      }
       if(!ws) return u
       const sep = u.includes('?') ? '&' : '?'
       return `${u}${sep}workspace=${encodeURIComponent(ws)}`
