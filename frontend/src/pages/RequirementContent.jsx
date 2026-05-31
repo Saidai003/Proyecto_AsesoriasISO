@@ -802,8 +802,8 @@ export default function RequirementContent({ node, onRequestCreateNc }){
       )}
 
       {respModalOpen && (
-        <div className="fixed inset-0 bg-black/40 z-60 flex items-start justify-center p-6">
-          <div className="bg-white rounded-lg w-full max-w-md p-4">
+        <div className="fixed inset-0 bg-black/40 z-[9999] flex items-center justify-center p-6 overflow-auto">
+          <div className="bg-white rounded-lg w-full max-w-md p-4 max-h-[80vh] overflow-auto">
             <div className="flex items-center justify-between mb-3">
               <h4 className="font-semibold">Responsables asignados</h4>
               <button onClick={()=>setRespModalOpen(false)} className="px-2 py-1 border rounded">Cerrar</button>
