@@ -18,6 +18,7 @@ export default function RequirementView(){
   const [ncForm, setNcForm] = useState({ titulo: '', descripcion: '' })
   const [responsables, setResponsables] = useState([])
   const [selectedResponsables, setSelectedResponsables] = useState([])
+  const [responsableQuery, setResponsableQuery] = useState('')
 
   const isEvaluador = hasRole(user, 'evaluador')
 
@@ -146,8 +147,8 @@ export default function RequirementView(){
       </div>
 
       {ncModalOpen && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-start justify-center p-6">
-          <div className="bg-white rounded-lg w-full max-w-2xl p-4">
+        <div className="fixed inset-0 bg-black/40 z-[9999] flex items-center justify-center p-6 overflow-auto">
+          <div className="bg-white rounded-lg w-full max-w-2xl p-4 max-h-[90vh] overflow-auto">
             <div className="flex items-center justify-between mb-3">
               <h4 className="font-semibold">Crear No Conformidad</h4>
               <button onClick={()=>setNcModalOpen(false)} className="px-2 py-1 border rounded">Cerrar</button>
@@ -163,20 +164,37 @@ export default function RequirementView(){
               </div>
               <div>
                 <label className="text-xs text-slate-500">Responsables (opcional)</label>
-                <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-40 overflow-auto border rounded p-2">
-                  {responsables.length === 0 ? (
-                    <div className="text-xs text-slate-500">No hay responsables disponibles.</div>
-                  ) : responsables.map(r => {
-                    const checked = selectedResponsables.includes(r.id)
-                    return (
-                      <label key={r.id} className="flex items-center gap-2 text-sm">
-                        <input type="checkbox" checked={checked} onChange={()=>{
-                          setSelectedResponsables(prev => checked ? prev.filter(id => id !== r.id) : [...prev, r.id])
-                        }} />
-                        <span>{r.nombre} ({r.email})</span>
-                      </label>
-                    )
-                  })}
+                <div className="mt-2">
+                  <input
+                    type="text"
+                    value={responsableQuery}
+                    onChange={(e)=>setResponsableQuery(e.target.value)}
+                    placeholder="Buscar responsables por nombre o email"
+                    className="w-full px-3 py-2 border rounded text-sm mb-2"
+                  />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-40 overflow-auto border rounded p-2">
+                    {(!responsables || responsables.length) === 0 ? (
+                      <div className="text-xs text-slate-500">No hay responsables disponibles.</div>
+                    ) : (() => {
+                      const q = (responsableQuery || '').toLowerCase().trim()
+                      const filtered = q ? (responsables || []).filter(r => {
+                        const hay = [r.nombre, r.email, r.nombre_usuario, r.nombre_completo].filter(Boolean).join(' ').toLowerCase()
+                        return hay.includes(q)
+                      }) : responsables
+                      if(!filtered || filtered.length === 0) return (<div className="text-xs text-slate-500">No se encontraron responsables.</div>)
+                      return filtered.map(r => {
+                        const checked = selectedResponsables.includes(r.id)
+                        return (
+                          <label key={r.id} className="flex items-center gap-2 text-sm">
+                            <input type="checkbox" checked={checked} onChange={()=>{
+                              setSelectedResponsables(prev => checked ? prev.filter(id => id !== r.id) : [...prev, r.id])
+                            }} />
+                            <span>{r.nombre} ({r.email})</span>
+                          </label>
+                        )
+                      })
+                    })()}
+                  </div>
                 </div>
               </div>
             </div>

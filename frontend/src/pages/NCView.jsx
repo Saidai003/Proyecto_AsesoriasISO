@@ -275,6 +275,10 @@ export default function NCView(){
         if(!fechaVerificacion) return showToast({ title: 'Error', message: 'Debe elegir fecha y hora de verificación', type: 'error' })
         body.fecha_verificacion_eficacia = new Date(fechaVerificacion).toISOString()
       }
+      // If evaluator/actor set the flow state to 'Cerrada', set verification date to now
+      if(flowState === 'Cerrada'){
+        body.fecha_verificacion_eficacia = new Date().toISOString()
+      }
       if(typeof acceptState === 'string' && acceptState.trim() !== '') body.estado_validacion = acceptState
       const res = await fetchWithAuth(`/api/nc/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       if(res.ok){

@@ -441,6 +441,16 @@ export default function RequirementContent({ node, onRequestCreateNc }){
     return 'bg-yellow-500 text-white'
   }
 
+  const renderNcBadge = (s) => {
+    const st = (s || '').toString().toLowerCase()
+    if(!st) return 'bg-slate-100 text-slate-700'
+    if(st.includes('acept')) return 'bg-green-600 text-white'
+    if(st.includes('no acept') || st.includes('rechaz')) return 'bg-red-600 text-white'
+    if(st.includes('parcial')) return 'bg-yellow-500 text-white'
+    // fallback
+    return 'bg-slate-100 text-slate-700'
+  }
+
   const canDeleteEvidence = (ev) => {
     if(!user) return false
     if(hasRole(user, 'admin') || hasRole(user, 'responsable')) return true
@@ -685,27 +695,51 @@ export default function RequirementContent({ node, onRequestCreateNc }){
               <div className="overflow-auto">
                 <table className="w-full text-sm table-fixed">
                   <thead>
-                    <tr className="text-xs text-slate-500 text-center">
-                      <th className="p-2 w-12">ID</th>
-                      <th className="p-2">Título</th>
-                      <th className="p-2">Descripción</th>
-                      <th className="p-2">Estado flujo</th>
-                      <th className="p-2">Estado validación</th>
-                      <th className="p-2">Fecha veredicto</th>
-                      <th className="p-2 w-20">Acciones</th>
+                    <tr className="text-xs text-slate-500 text-left">
+                      <th className="p-2 w-10">ID</th>
+                      <th className="p-2 w-36">Título</th>
+                      <th className="p-2 w-28">Estado flujo</th>
+                      <th className="p-2 w-28">Estado validación</th>
+                      <th className="p-2 w-36">Fecha veredicto</th>
+                      <th className="p-2 w-36">Fecha última edición</th>
+                      <th className="p-2 w-24">Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
                     {ncList.map(nc => (
-                      <tr ref={el => { try{ ncRowRefs.current[nc.id] = el }catch(_){} }} key={nc.id} className="border-b bg-slate-50 text-center">
+                      <tr ref={el => { try{ ncRowRefs.current[nc.id] = el }catch(_){} }} key={nc.id} className="border-b bg-slate-50 text-left">
                         <td className="p-2">{nc.id}</td>
                         <td className="p-2 font-medium">{nc.titulo || '-'}</td>
-                        <td className="p-2 text-xs text-slate-600 truncate">{nc.descripcion || nc.comentario_nc || '-'}</td>
-                        <td className="p-2">{nc.estado_flujo || '-'}</td>
-                        <td className="p-2">{nc.estado_validacion || '-'}</td>
-                        <td className="p-2">{formatDate(nc.fecha_verificacion_eficacia || nc.fecha_ultima_edicion || nc.created_at)}</td>
                         <td className="p-2">
-                          <div className="flex items-center justify-center gap-2">
+                          {nc.estado_flujo ? (
+                            <span className={`${renderNcBadge(nc.estado_flujo)} px-2 py-0.5 rounded text-[12px]`}>{nc.estado_flujo}</span>
+                          ) : '-'}
+                        </td>
+                        <td className="p-2">
+                          {nc.estado_validacion ? (
+                            <span className={`${renderNcBadge(nc.estado_validacion)} px-2 py-0.5 rounded text-[12px]`}>{nc.estado_validacion}</span>
+                          ) : '-'}
+                        </td>
+                        <td className="p-2">
+                          {(() => {
+                            const d = nc.fecha_verificacion_eficacia
+                            if(!d) return '-' 
+                            try{
+                              const verdict = new Date(d)
+                              const now = new Date()
+                              const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+                              const target = new Date(verdict.getFullYear(), verdict.getMonth(), verdict.getDate())
+                              const overdue = today.getTime() >= target.getTime()
+                              if(nc.estado_flujo === 'Cerrada'){
+                                return (<span className={'text-slate-900 font-medium'}>{formatDate(d)}</span>)
+                              }
+                              return (<span className={overdue ? 'text-red-600 font-semibold' : ''}>{formatDate(d)}</span>)
+                            }catch(_){ return formatDate(d) }
+                          })()}
+                        </td>
+                        <td className="p-2">{formatDate(nc.fecha_ultima_edicion)}</td>
+                        <td className="p-2">
+                          <div className="flex items-center gap-2 justify-start">
                             <button onClick={()=>{ navigate(`/nc/${nc.id}`) }} className="px-2 py-1 border rounded text-xs">Ver</button>
                             <button onClick={()=>{ setRespModalList(nc.responsables || []); setRespModalOpen(true) }} className="px-2 py-1 border rounded text-xs">Responsables</button>
                           </div>
