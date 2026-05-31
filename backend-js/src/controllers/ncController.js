@@ -231,6 +231,20 @@ async function listByEvaluacion(req, res){
     const evaluacionId = req.params.id;
     if(!evaluacionId) return res.status(400).json({ error: 'id required' });
     const [rows] = await pool.execute('SELECT id, evaluador_id, estado_flujo, estado_validacion, fecha_verificacion_eficacia, comentario_nc, fecha_ultima_edicion, titulo, descripcion FROM AUDITORIA_NC WHERE evaluacion_requisito_id = ?', [evaluacionId]);
+    // attach responsables for each nc (if pivot table exists)
+    try{
+      for(const r of (rows||[])){
+        const [respRows] = await pool.execute(
+          `SELECT u.id, u.nombre, u.email FROM AUDITORIA_NC_RESPONSABLES ar JOIN USUARIOS u ON u.id = ar.usuario_id WHERE ar.auditoria_nc_id = ?`,
+          [r.id]
+        )
+        r.responsables = respRows || []
+      }
+    }catch(e){
+      console.error('attach responsables error', e)
+      // continue without responsables
+      for(const r of (rows||[])) r.responsables = []
+    }
     return res.json(rows);
   }catch(err){
     console.error('listByEvaluacion error', err);
@@ -251,7 +265,17 @@ async function getNC(req, res){
       [id]
     )
     if(!rows || rows.length===0) return res.status(404).json({ error: 'not_found' })
-    return res.json(rows[0])
+    const nc = rows[0]
+    try{
+      const [respRows] = await pool.execute(
+        `SELECT u.id, u.nombre, u.email FROM AUDITORIA_NC_RESPONSABLES ar JOIN USUARIOS u ON u.id = ar.usuario_id WHERE ar.auditoria_nc_id = ?`,
+        [id]
+      )
+      nc.responsables = respRows || []
+    }catch(e){
+      nc.responsables = []
+    }
+    return res.json(nc)
   }catch(err){ console.error('getNC error', err); return res.status(500).json({ error: 'internal_error' }) }
 }
 

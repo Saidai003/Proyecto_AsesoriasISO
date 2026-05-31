@@ -17,6 +17,10 @@ export default function RequirementContent({ node, onRequestCreateNc }){
   const blobUrlsRef = useRef({})
   const [modalComment, setModalComment] = useState('')
   const [ncList, setNcList] = useState([])
+  const [lastCreatedNcId, setLastCreatedNcId] = useState(null)
+  const ncRowRefs = useRef({})
+  const [respModalOpen, setRespModalOpen] = useState(false)
+  const [respModalList, setRespModalList] = useState([])
   const [evaluacionId, setEvaluacionId] = useState(null)
   const [historyModalOpen, setHistoryModalOpen] = useState(false)
   const [historyLogs, setHistoryLogs] = useState([])
@@ -36,6 +40,7 @@ export default function RequirementContent({ node, onRequestCreateNc }){
   const [evidenceHistoryLoading, setEvidenceHistoryLoading] = useState(false)
   const [evidenceHistoryLogs, setEvidenceHistoryLogs] = useState([])
   const [evidenceHistoryTarget, setEvidenceHistoryTarget] = useState(null)
+  const [evidenceNotifs, setEvidenceNotifs] = useState({})
 
   // keep ref in sync for cleanup on unmount
   useEffect(()=>{ blobUrlsRef.current = blobUrls },[blobUrls])
@@ -115,12 +120,32 @@ export default function RequirementContent({ node, onRequestCreateNc }){
     const handler = (e) => {
       const detail = e.detail || {}
       if(detail.requisito_base_id == node.id){
+        // remember created id to allow scroll+flash after refresh
+        if(detail.nc_id) setLastCreatedNcId(detail.nc_id)
         loadNCs()
       }
     }
     window.addEventListener('nc:created', handler)
     return ()=>{ mounted = false; window.removeEventListener('nc:created', handler) }
   },[node])
+
+  const isEvaluador = hasRole(user, 'evaluador')
+
+  // after ncList updates, if there is a lastCreatedNcId and user is evaluador, scroll to it and flash
+  useEffect(()=>{
+    if(!lastCreatedNcId) return
+    if(!isEvaluador) return
+    const el = ncRowRefs.current && ncRowRefs.current[lastCreatedNcId]
+    if(el && el.scrollIntoView){
+      try{ el.scrollIntoView({ behavior: 'smooth', block: 'center' }) }catch(_){ try{ el.scrollIntoView() }catch(_){} }
+      // add highlight
+      el.classList.add('ring-4','ring-yellow-300')
+      setTimeout(()=>{ try{ el.classList.remove('ring-4','ring-yellow-300') }catch(_){}; setLastCreatedNcId(null) }, 2000)
+    }else{
+      // nothing found, clear after short timeout
+      setTimeout(()=>setLastCreatedNcId(null), 2000)
+    }
+  },[ncList, lastCreatedNcId, isEvaluador])
 
   // modal comment sync when selected evidence changes
   useEffect(()=>{
@@ -191,6 +216,11 @@ export default function RequirementContent({ node, onRequestCreateNc }){
             }
           }catch(e){ console.error('preview refresh', e) }
           window.dispatchEvent(new CustomEvent('toast:show', { detail: { title: 'Evidencia actualizada', message: updated.nombre_archivo || fileLocal.name, type: 'success', ttl: 3500 } }))
+          try{
+            if(hasRole(user, 'responsable')){
+              window.dispatchEvent(new CustomEvent('notifications:new', { detail: { requisito_base_id: node && node.id ? Number(node.id) : null, evidencia_id: updated.id || ev.id } }))
+            }
+          }catch(_){ }
         }else{
           window.dispatchEvent(new CustomEvent('toast:show', { detail: { title: 'Error', message: 'Actualizacion fallida', type: 'error', ttl: 5000 } }))
         }
@@ -294,6 +324,17 @@ export default function RequirementContent({ node, onRequestCreateNc }){
     return url
   }
 
+  const formatDate = (d) => {
+    if(!d) return '-'
+    try{
+      const dt = new Date(d)
+      const dd = String(dt.getDate()).padStart(2, '0')
+      const mm = String(dt.getMonth() + 1).padStart(2, '0')
+      const yyyy = dt.getFullYear()
+      return `${dd}/${mm}/${yyyy}`
+    }catch(_){ return d }
+  }
+
   const openHistoryModal = async ()=>{
     setHistoryModalOpen(true)
     setHistoryLoading(true)
@@ -326,8 +367,37 @@ export default function RequirementContent({ node, onRequestCreateNc }){
     }
   }
 
+  // Listen for external notification events and mark evidence-level badges
+  useEffect(()=>{
+    const handler = (e) => {
+      try{
+        const d = e.detail || {}
+        const reqId = d.requisito_base_id || d.requisitoId || null
+        const evId = d.evidencia_id || d.evidenciaId || null
+        if(!reqId) return
+        if(node && Number(node.id) !== Number(reqId)) return
+        if(evId){
+          setEvidenceNotifs(prev => ({ ...(prev||{}), [Number(evId)]: true }))
+        }
+      }catch(_){ }
+    }
+    window.addEventListener('notifications:new', handler)
+    // Also clear badges when requisito cleared globally
+    const clearHandler = (e) => {
+      try{
+        const rid = e.detail && e.detail.requisitoId
+        if(!rid) return
+        if(node && Number(node.id) === Number(rid)) setEvidenceNotifs({})
+      }catch(_){ }
+    }
+    window.addEventListener('notifications:cleared', clearHandler)
+    return ()=>{ window.removeEventListener('notifications:new', handler); window.removeEventListener('notifications:cleared', clearHandler) }
+  },[node])
+
   const openEvidenceHistory = async (ev) => {
     if(!ev) return
+    // clear evidence-level notification visual immediately
+    try{ clearNotificationsForEvidence(ev.id) }catch(_){ }
     setEvidenceHistoryTarget(ev)
     setEvidenceHistoryOpen(true)
     setEvidenceHistoryLoading(true)
@@ -345,6 +415,24 @@ export default function RequirementContent({ node, onRequestCreateNc }){
     }finally{
       setEvidenceHistoryLoading(false)
     }
+  }
+
+  const clearNotificationsForEvidence = async (evidenceId) => {
+    try{
+      setEvidenceNotifs(prev => { const next = { ...(prev||{}) }; delete next[Number(evidenceId)]; return next })
+    }catch(_){ }
+    try{
+      const r = await fetchWithAuth('/api/notifications')
+      if(!r.ok) return
+      const list = await r.json()
+      for(const n of (list||[])){
+        try{
+          if(n && n.link && String(n.link).includes(String(evidenceId))){
+            await fetchWithAuth(`/api/notifications/${n.id}/read`, { method: 'PATCH' })
+          }
+        }catch(_){ }
+      }
+    }catch(e){ console.error('clear notif for evidence error', e) }
   }
 
   const renderStatus = (status) => {
@@ -469,7 +557,10 @@ export default function RequirementContent({ node, onRequestCreateNc }){
             </select>
           </div>
 
-          <UploadArea evaluacionId={evaluacionId} onUploaded={(newEv)=> setEvidences(prev => [newEv, ...prev])} />
+          <UploadArea evaluacionId={evaluacionId} onUploaded={(newEv)=>{
+            setEvidences(prev => [newEv, ...prev])
+            try{ if(hasRole(user, 'responsable')) window.dispatchEvent(new CustomEvent('notifications:new', { detail: { requisito_base_id: node && node.id ? Number(node.id) : null, evidencia_id: newEv.id } })) }catch(_){ }
+          }} />
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
             {filteredEvidences && filteredEvidences.length>0 ? filteredEvidences.map(ev => {
               const isImage = /\.(jpe?g|png|gif|webp)$/i.test(ev.nombre_archivo || '')
@@ -479,6 +570,9 @@ export default function RequirementContent({ node, onRequestCreateNc }){
 
               return (
                 <div key={ev.id} className="relative rounded border bg-white p-1 flex flex-col" >
+                  {hasRole(user, 'evaluador') && evidenceNotifs && evidenceNotifs[ev.id] && (
+                    <span className="absolute top-2 left-2 w-3 h-3 rounded-full bg-red-600 ring-2 ring-white" aria-hidden="true" />
+                  )}
                   <div className="absolute top-1 right-1 flex items-center gap-1" style={{zIndex:20}}>
                     <button
                       onClick={(e)=>{ e.stopPropagation(); openEvidenceHistory(ev) }}
@@ -518,7 +612,7 @@ export default function RequirementContent({ node, onRequestCreateNc }){
                       <span className={`${renderStatus(status)} px-1.5 py-0.5 rounded text-[10px]`}>{status}</span>
                     )}
                   </div>
-                  <button onClick={()=>setSelectedEvidence(ev)} className="flex-1 text-left">
+                  <button onClick={()=>{ setSelectedEvidence(ev); try{ clearNotificationsForEvidence(ev.id) }catch(_){ } }} className="flex-1 text-left">
                     <div className="aspect-[4/3] w-full overflow-hidden rounded bg-slate-50 flex items-center justify-center">
                       {isImage ? (
                         <img src={ev.url_archivo && ev.url_archivo.startsWith('drive://') ? (blobUrls[ev.id] || dataUrl) : (computeSrc(ev.url_archivo) || dataUrl)} alt={ev.nombre_archivo} className="w-full h-full object-cover" />
@@ -559,6 +653,7 @@ export default function RequirementContent({ node, onRequestCreateNc }){
                                 if(blobUrls && blobUrls[ev.id]){ try{ URL.revokeObjectURL(blobUrls[ev.id]) }catch(_){ } setBlobUrls(prev => { const next = { ...prev }; delete next[ev.id]; return next }) }
                               }catch(_){ }
                               setEvidences(prev => prev.filter(x => x.id !== ev.id))
+                              try{ if(hasRole(user, 'responsable')) window.dispatchEvent(new CustomEvent('notifications:new', { detail: { requisito_base_id: node && node.id ? Number(node.id) : null, evidencia_id: ev.id } })) }catch(_){ }
                             }catch(e){ console.error('delete evidence', e); alert('Error eliminando evidencia') }
                           })
                           setConfirmOpen(true)
@@ -585,16 +680,42 @@ export default function RequirementContent({ node, onRequestCreateNc }){
               <button onClick={onRequestCreateNc} className="px-3 py-1 border rounded text-xs">Crear NC</button>
             )}
           </div>
-          <div className="mt-2 space-y-2">
-            {ncList && ncList.length > 0 ? ncList.map(nc => (
-              <div key={nc.id} className="p-2 border rounded bg-slate-50 flex items-center justify-between">
-                <div>
-                  <div className="text-sm font-medium">NC #{nc.id}</div>
-                  <div className="text-xs text-slate-500">{nc.titulo || nc.comentario_nc || 'Sin titulo'}</div>
-                </div>
-                <button onClick={()=>navigate(`/nc/${nc.id}`)} className="px-2 py-1 border rounded text-xs">Ver</button>
+          <div className="mt-2">
+            {ncList && ncList.length > 0 ? (
+              <div className="overflow-auto">
+                <table className="w-full text-sm table-fixed">
+                  <thead>
+                    <tr className="text-xs text-slate-500 text-center">
+                      <th className="p-2 w-12">ID</th>
+                      <th className="p-2">Título</th>
+                      <th className="p-2">Descripción</th>
+                      <th className="p-2">Estado flujo</th>
+                      <th className="p-2">Estado validación</th>
+                      <th className="p-2">Fecha veredicto</th>
+                      <th className="p-2 w-20">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {ncList.map(nc => (
+                      <tr ref={el => { try{ ncRowRefs.current[nc.id] = el }catch(_){} }} key={nc.id} className="border-b bg-slate-50 text-center">
+                        <td className="p-2">{nc.id}</td>
+                        <td className="p-2 font-medium">{nc.titulo || '-'}</td>
+                        <td className="p-2 text-xs text-slate-600 truncate">{nc.descripcion || nc.comentario_nc || '-'}</td>
+                        <td className="p-2">{nc.estado_flujo || '-'}</td>
+                        <td className="p-2">{nc.estado_validacion || '-'}</td>
+                        <td className="p-2">{formatDate(nc.fecha_verificacion_eficacia || nc.fecha_ultima_edicion || nc.created_at)}</td>
+                        <td className="p-2">
+                          <div className="flex items-center justify-center gap-2">
+                            <button onClick={()=>{ navigate(`/nc/${nc.id}`) }} className="px-2 py-1 border rounded text-xs">Ver</button>
+                            <button onClick={()=>{ setRespModalList(nc.responsables || []); setRespModalOpen(true) }} className="px-2 py-1 border rounded text-xs">Responsables</button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-            )) : (
+            ) : (
               <div className="text-sm text-slate-500">No hay NCs asociadas.</div>
             )}
           </div>
@@ -641,6 +762,30 @@ export default function RequirementContent({ node, onRequestCreateNc }){
                   )}
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {respModalOpen && (
+        <div className="fixed inset-0 bg-black/40 z-60 flex items-start justify-center p-6">
+          <div className="bg-white rounded-lg w-full max-w-md p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="font-semibold">Responsables asignados</h4>
+              <button onClick={()=>setRespModalOpen(false)} className="px-2 py-1 border rounded">Cerrar</button>
+            </div>
+            <div className="space-y-2">
+              {(!respModalList || respModalList.length===0) ? (
+                <div className="text-sm text-slate-500">No hay responsables asignados.</div>
+              ) : respModalList.map(r => (
+                <div key={r.id} className="p-2 border rounded flex items-center justify-between">
+                  <div>
+                    <div className="text-sm font-medium">{r.nombre || r.nombre_completo || r.nombre_usuario}</div>
+                    <div className="text-xs text-slate-500">{r.email || r.correo || ''}</div>
+                  </div>
+                  <div className="text-xs text-slate-500">ID {r.id}</div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
