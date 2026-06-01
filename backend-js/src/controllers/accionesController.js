@@ -91,3 +91,14 @@ async function getActionHistory(req, res){
 }
 
 module.exports = { updateAction, getActionHistory }
+
+async function getAccionesByEvaluacion(req, res){
+  try{
+    const evalId = Number(req.params.id)
+    if(!evalId) return res.status(400).json({ error: 'invalid_evaluacion_id' })
+    const [rows] = await pool.execute('SELECT * FROM ACCIONES_CORRECTIVAS WHERE auditoria_nc_id IN (SELECT id FROM AUDITORIA_NC WHERE evaluacion_requisito_id = ?)', [evalId])
+    return res.json(rows)
+  }catch(e){ console.error('getAccionesByEvaluacion error', e); return res.status(500).json({ error: 'internal' }) }
+}
+
+module.exports.getAccionesByEvaluacion = getAccionesByEvaluacion

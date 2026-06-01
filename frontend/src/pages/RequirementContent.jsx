@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../AuthContext'
 import fetchWithAuth from '../lib/api'
-import ChatPlaceholder from '../components/ChatPlaceholder'
+import Chat from '../components/Chat'
 import ConfirmDialog from '../components/ConfirmDialog'
 import EvidenceHistoryModal from '../components/EvidenceHistoryModal'
 import { hasRole } from '../lib/userUtils'
@@ -579,7 +579,7 @@ export default function RequirementContent({ node, onRequestCreateNc }){
               const status = ev.estado_validacion_archivo || 'Pendiente'
 
               return (
-                <div key={ev.id} className="relative rounded border bg-white p-1 flex flex-col" >
+                <div id={`evidence-${ev.id}`} key={ev.id} className="relative rounded border bg-white p-1 flex flex-col" >
                   {hasRole(user, 'evaluador') && evidenceNotifs && evidenceNotifs[ev.id] && (
                     <span className="absolute top-2 left-2 w-3 h-3 rounded-full bg-red-600 ring-2 ring-white" aria-hidden="true" />
                   )}
@@ -707,7 +707,7 @@ export default function RequirementContent({ node, onRequestCreateNc }){
                   </thead>
                   <tbody>
                     {ncList.map(nc => (
-                      <tr ref={el => { try{ ncRowRefs.current[nc.id] = el }catch(_){} }} key={nc.id} className="border-b bg-slate-50 text-left">
+                      <tr id={`nc-${nc.id}`} ref={el => { try{ ncRowRefs.current[nc.id] = el }catch(_){} }} key={nc.id} className="border-b bg-slate-50 text-left">
                         <td className="p-2">{nc.id}</td>
                         <td className="p-2 font-medium">{nc.titulo || '-'}</td>
                         <td className="p-2">
@@ -755,7 +755,7 @@ export default function RequirementContent({ node, onRequestCreateNc }){
           </div>
         </div>
 
-        <ChatPlaceholder />
+        <Chat requisitoId={node && node.id} evaluacionId={evaluacionId} evidences={evidences} ncList={ncList} />
       </div>
 
       {selectedEvidence && (

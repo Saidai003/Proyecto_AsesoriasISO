@@ -22,40 +22,6 @@ app.use(devCors);
 // Test database connection
 testConnection().then(async () => {
         console.log('DB connection OK')
-        // Ensure history table exists in case DB was initialized earlier
-        try{
-            const { pool } = require('./db')
-            await pool.execute(`
-                CREATE TABLE IF NOT EXISTS ACCIONES_CORRECTIVAS_HIST (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
-                    accion_id INT NOT NULL,
-                    estado_anterior VARCHAR(50),
-                    estado_nuevo VARCHAR(50),
-                    usuario_id INT,
-                    comentario TEXT,
-                    fecha_snapshot DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    CONSTRAINT fk_acc_hist_acc FOREIGN KEY (accion_id) REFERENCES ACCIONES_CORRECTIVAS(id) ON DELETE CASCADE
-                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-            `)
-            console.log('Ensured ACCIONES_CORRECTIVAS_HIST exists')
-        }catch(e){ console.error('failed to ensure history table', e) }
-            // Ensure scheduled notifications table exists
-            try{
-                await pool.execute(`
-                    CREATE TABLE IF NOT EXISTS SCHEDULED_NOTIFICATIONS (
-                      id INT AUTO_INCREMENT PRIMARY KEY,
-                      nc_id INT NOT NULL,
-                      usuario_id INT NOT NULL,
-                      trigger_at DATETIME NOT NULL,
-                      sent_flag TINYINT(1) DEFAULT 0,
-                      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                      CONSTRAINT fk_sched_nc FOREIGN KEY (nc_id) REFERENCES AUDITORIA_NC(id) ON DELETE CASCADE,
-                      CONSTRAINT fk_sched_user FOREIGN KEY (usuario_id) REFERENCES USUARIOS(id) ON DELETE CASCADE
-                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-                `)
-                console.log('Ensured SCHEDULED_NOTIFICATIONS exists')
-            }catch(e){ console.error('failed to ensure scheduled notifications table', e) }
-
             // Start a periodic worker to process scheduled notifications
             setInterval(async ()=>{
                 try{
@@ -89,6 +55,7 @@ const notificationsRouter = require('./routes/notifications');
 const evaluacionesRouter = require('./routes/evaluaciones');
 const driveRouter = require('./routes/drive');
 const accionesRouter = require('./routes/acciones');
+const chatRouter = require('./routes/chat');
 
 // app.use here is where we mount the routers to specific paths. 
 // For example, all routes defined in authRouter will be prefixed 
@@ -112,6 +79,7 @@ app.use('/api/nc', ncRouter);
 app.use('/api/notifications', notificationsRouter);
 app.use('/api/evaluaciones', evaluacionesRouter);
 app.use('/api/acciones', accionesRouter);
+app.use('/api/chat', chatRouter);
 
 // debug route removed
 
@@ -133,7 +101,7 @@ app.get('/', (req, res) => {
 })
 
 // Start server
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server listening on port ${PORT}`);
 });
 
