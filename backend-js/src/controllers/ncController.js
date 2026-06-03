@@ -212,6 +212,11 @@ async function createAction(req, res){
 
     const [result] = await pool.execute('INSERT INTO ACCIONES_CORRECTIVAS (auditoria_nc_id, accion_previa_id, autor_id, tipo_autor, nc, accion, contenido_comentario, estado_accion, acciones_futuras_propuestas, requiere_nueva_nc, fecha_accion) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())', [id, accion_previa_id, user.id, user.role || 'Responsable SGC', `NC #${id}`, accion, contenido_comentario, estado_accion, acciones_futuras_propuestas, requiere_nueva_nc])
     const insertId = result.insertId
+    // insert history record for creation
+    try{
+      await pool.execute('INSERT INTO ACCIONES_CORRECTIVAS_HIST (accion_id, estado_anterior, estado_nuevo, usuario_id, comentario, fecha_snapshot) VALUES (?, ?, ?, ?, ?, NOW())', [insertId, null, estado_accion, user.id || null, contenido_comentario || null])
+    }catch(e){ console.error('insert accion hist error on create', e) }
+
     // notify responsables and evaluator
     try{
       const [resps] = await pool.execute('SELECT usuario_id FROM AUDITORIA_NC_RESPONSABLES WHERE auditoria_nc_id = ?', [id])
@@ -219,6 +224,14 @@ async function createAction(req, res){
       for(const r of (resps||[])){
         await pool.execute('INSERT INTO NOTIFICACIONES (usuario_id, tipo, mensaje, link) VALUES (?, ?, ?, ?)', [r.usuario_id, 'ACCION_NC', msg, `/nc/${id}`])
       }
+      // also notify evaluator assigned to the NC (if any)
+      try{
+        const [ncRows] = await pool.execute('SELECT evaluador_id FROM AUDITORIA_NC WHERE id = ?', [id])
+        if(ncRows && ncRows.length && ncRows[0].evaluador_id){
+          const evalId = ncRows[0].evaluador_id
+          await pool.execute('INSERT INTO NOTIFICACIONES (usuario_id, tipo, mensaje, link) VALUES (?, ?, ?, ?)', [evalId, 'ACCION_NC', msg, `/nc/${id}`])
+        }
+      }catch(_){ }
     }catch(e){ console.error('notify on action error', e) }
 
     const [rows] = await pool.execute('SELECT * FROM ACCIONES_CORRECTIVAS WHERE id = ?', [insertId])

@@ -11,6 +11,10 @@ export default function EditableEstado({ action, onUpdated }){
   const [state, setState] = React.useState(action.estado_accion || 'Pendiente')
   const [comentario, setComentario] = React.useState('')
 
+  React.useEffect(()=>{
+    setState(action.estado_accion || 'Pendiente')
+  }, [action.estado_accion])
+
   const save = async ()=>{
     try{
       const payload = { estado_accion: state }
@@ -28,17 +32,17 @@ export default function EditableEstado({ action, onUpdated }){
   }
 
   return (
-    <div>
+    <div className="inline-flex items-center">
       {!editing ? (
-        <div className={`p-2 rounded h-10 text-sm flex items-center justify-center ${statusColor(action.estado_accion)}`}>
-          <div className="flex items-center gap-2">
-            <div>{action.estado_accion}</div>
-            <button onClick={()=>setEditing(true)} className="ml-2 text-xs px-2 py-1 border rounded">Editar</button>
-          </div>
+        <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium ${statusColor(action.estado_accion)}`}>
+          <span>{action.estado_accion}</span>
+          <button onClick={()=>setEditing(true)} className="text-[11px] px-2 py-0.5 border rounded-full bg-white/80 text-slate-700 hover:bg-white">
+            Editar
+          </button>
         </div>
       ) : (
-        <div className="p-2 rounded bg-white border">
-          <div className="flex gap-2 items-center">
+        <div className="rounded-lg bg-white border p-2 shadow-sm">
+          <div className="flex flex-wrap gap-2 items-center">
             <select value={state} onChange={e=>setState(e.target.value)} className="px-2 py-1 border rounded text-sm">
               <option value="Pendiente">Pendiente</option>
               <option value="En_Progreso">En_Progreso</option>

@@ -8,30 +8,66 @@ async function updateAction(req, res){
     if(!id) return res.status(400).json({ error: 'id required' })
     const user = req.user
     const payload = req.body || {}
-    if(!payload || typeof payload.estado_accion === 'undefined') return res.status(400).json({ error: 'estado_accion required' })
-    const newState = String(payload.estado_accion)
-    if(!ALLOWED.includes(newState)) return res.status(400).json({ error: 'invalid_state' })
 
     const [rows] = await pool.execute('SELECT * FROM ACCIONES_CORRECTIVAS WHERE id = ?', [id])
     if(!rows || rows.length===0) return res.status(404).json({ error: 'not_found' })
     const action = rows[0]
-    const prev = action.estado_accion
 
-    await pool.execute('UPDATE ACCIONES_CORRECTIVAS SET estado_accion = ?, fecha_accion = NOW() WHERE id = ?', [newState, id])
-
-    // insert history
-    try{
-      await pool.execute('INSERT INTO ACCIONES_CORRECTIVAS_HIST (accion_id, estado_anterior, estado_nuevo, usuario_id, comentario, fecha_snapshot) VALUES (?, ?, ?, ?, ?, NOW())', [id, prev, newState, user.id || null, payload.comentario || null])
-    }catch(e){ console.error('insert accion hist error', e) }
-
-    // notify responsables of NC if any
-    try{
-      const [resps] = await pool.execute('SELECT usuario_id FROM AUDITORIA_NC_RESPONSABLES WHERE auditoria_nc_id = ?', [action.auditoria_nc_id])
-      const msg = `Acción correctiva #${id} actualizada: ${prev} -> ${newState}`
-      for(const r of (resps||[])){
-        await pool.execute('INSERT INTO NOTIFICACIONES (usuario_id, tipo, mensaje, link) VALUES (?, ?, ?, ?)', [r.usuario_id, 'ACCION_UPDATED', msg, `/nc/${action.auditoria_nc_id}`])
+    // If request contains only general editable fields, update them
+    const editableFields = ['accion','contenido_comentario','acciones_futuras_propuestas','requiere_nueva_nc']
+    const updates = []
+    const params = []
+    for(const f of editableFields){
+      if(Object.prototype.hasOwnProperty.call(payload, f)){
+        updates.push(`${f} = ?`)
+        // coerce boolean-ish for requiere_nueva_nc
+        if(f === 'requiere_nueva_nc') params.push(payload[f] ? 1 : 0)
+        else params.push(payload[f])
       }
-    }catch(e){ console.error('notify responsables on action update error', e) }
+    }
+
+    // Handle state change separately (keeps previous behavior)
+    if(Object.prototype.hasOwnProperty.call(payload, 'estado_accion')){
+      const newState = String(payload.estado_accion)
+      if(!ALLOWED.includes(newState)) return res.status(400).json({ error: 'invalid_state' })
+      const prev = action.estado_accion
+      // update state and timestamp
+      updates.push('estado_accion = ?')
+      params.push(newState)
+      updates.push('fecha_accion = NOW()')
+
+      // insert history with optional comentario
+      try{
+        await pool.execute('INSERT INTO ACCIONES_CORRECTIVAS_HIST (accion_id, estado_anterior, estado_nuevo, usuario_id, comentario, fecha_snapshot) VALUES (?, ?, ?, ?, ?, NOW())', [id, prev, newState, user.id || null, payload.comentario || null])
+      }catch(e){ console.error('insert accion hist error', e) }
+
+      // if comentario provided, also reflect it on the main action record so it appears on the card
+      if(payload.comentario && String(payload.comentario).trim() !== ''){
+        // ensure we overwrite contenido_comentario unless the payload also included it explicitly
+        if(!Object.prototype.hasOwnProperty.call(payload, 'contenido_comentario')){
+          updates.push('contenido_comentario = ?')
+          params.push(payload.comentario)
+        }
+      }
+
+      // notify responsables of NC if any
+      try{
+        const [resps] = await pool.execute('SELECT usuario_id FROM AUDITORIA_NC_RESPONSABLES WHERE auditoria_nc_id = ?', [action.auditoria_nc_id])
+        const msg = `Acción correctiva #${id} actualizada: ${prev} -> ${newState}`
+        for(const r of (resps||[])){
+          await pool.execute('INSERT INTO NOTIFICACIONES (usuario_id, tipo, mensaje, link) VALUES (?, ?, ?, ?)', [r.usuario_id, 'ACCION_UPDATED', msg, `/nc/${action.auditoria_nc_id}`])
+        }
+      }catch(e){ console.error('notify responsables on action update error', e) }
+    }
+
+    // If we have updates to apply, run the UPDATE
+    if(updates.length){
+      const sql = `UPDATE ACCIONES_CORRECTIVAS SET ${updates.join(', ')} WHERE id = ?`
+      const sqlParams = [ ...params, id ]
+      try{
+        await pool.execute(sql, sqlParams)
+      }catch(e){ console.error('update accion execute error', e, sql, sqlParams) }
+    }
 
     const [updated] = await pool.execute('SELECT * FROM ACCIONES_CORRECTIVAS WHERE id = ?', [id])
     return res.json(updated[0])

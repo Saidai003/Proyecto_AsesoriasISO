@@ -1,5 +1,5 @@
 #!/bin/sh
-set -e
+# portable wait-for-db script — avoid features not supported by all /bin/sh implementations
 
 echo "Waiting for database to become available..."
 tries=0
