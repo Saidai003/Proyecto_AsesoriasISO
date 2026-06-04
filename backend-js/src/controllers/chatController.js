@@ -2,51 +2,59 @@ const { pool } = require('../db')
 const { sendEvent } = require('../services/sse')
 const { verifyAccessToken } = require('../auth')
 
-async function getMessages(req, res){
-  try{
+async function getMessages(req, res) {
+  try {
     const ncId = req.query.nc_id ? Number(req.query.nc_id) : null
     const reqId = req.query.requisito_id ? Number(req.query.requisito_id) : null
-    const limit = Math.min(1000, Number(req.query.limit||200))
+    const limit = Math.min(1000, Number(req.query.limit || 200)) // limite de mensajes a obtener
     let sql = 'SELECT * FROM CHAT_MESSAGES '
     const params = []
-    if(ncId){ sql += 'WHERE nc_id = ? '; params.push(ncId) }
-    else if(reqId){ sql += 'WHERE requisito_id = ? '; params.push(reqId) }
+    if (ncId) { sql += 'WHERE nc_id = ? '; params.push(ncId) }
+    else if (reqId) { sql += 'WHERE requisito_id = ? '; params.push(reqId) }
     sql += 'ORDER BY created_at ASC '
     // some MySQL servers/drivers don't accept a parameter placeholder for LIMIT
     sql += `LIMIT ${Number(limit)}`
     const [rows] = await pool.execute(sql, params)
-    res.json(rows)
-  }catch(e){ console.error('getMessages error', e); res.status(500).json({ error: 'internal' }) }
+    const formattedRows = rows.map(row => {
+      if (row.metadata && typeof row.metadata === 'string') {
+        try {
+          row.metadata = JSON.parse(row.metadata)
+        } catch (_) { }
+      }
+      return row
+    })
+    res.json(formattedRows)
+  } catch (e) { console.error('getMessages error', e); res.status(500).json({ error: 'internal' }) }
 }
 
-async function postMessage(req, res){
-  try{
+async function postMessage(req, res) {
+  try {
     const token = req.headers.authorization && req.headers.authorization.startsWith('Bearer ') ? req.headers.authorization.slice(7) : (req.query && req.query.token)
     let user = null
-    if(token){ try{ user = verifyAccessToken(token) }catch(e){ /* ignore */ } }
+    if (token) { try { user = verifyAccessToken(token) } catch (e) { /* ignore */ } }
 
     const { requisito_id, nc_id, accion_id, evidencia_id, contenido, referencia_type, referencia_id, metadata } = req.body || {}
-    if(!contenido || (!nc_id && !requisito_id)) return res.status(400).json({ error: 'missing_fields' })
+    if (!contenido || (!nc_id && !requisito_id)) return res.status(400).json({ error: 'missing_fields' })
 
     // resolve author name and role (role may be present in token payload)
     let autor_nombre = null, autor_rol = null, autor_id = null
-    if(user && user.id){
+    if (user && user.id) {
       autor_id = user.id
-      try{
+      try {
         const [rows] = await pool.execute('SELECT nombre, role_id FROM USUARIOS WHERE id = ?', [user.id])
-        if(rows && rows[0]){
+        if (rows && rows[0]) {
           autor_nombre = rows[0].nombre || null
-          if(rows[0].role_id){
+          if (rows[0].role_id) {
             const [r] = await pool.execute('SELECT nombre FROM ROLES WHERE id = ?', [rows[0].role_id])
-            if(r && r[0] && r[0].nombre) autor_rol = r[0].nombre
+            if (r && r[0] && r[0].nombre) autor_rol = r[0].nombre
           }
         }
-      }catch(e){ console.error('resolve author name error', e) }
+      } catch (e) { console.error('resolve author name error', e) }
     }
 
     // merge author info into metadata to avoid depending on schema changes
     const meta = metadata && typeof metadata === 'object' ? { ...metadata } : (metadata ? JSON.parse(metadata) : {})
-    if(autor_id || autor_nombre || autor_rol){
+    if (autor_id || autor_nombre || autor_rol) {
       meta.author = { id: autor_id || null, nombre: autor_nombre || null, rol: autor_rol || null }
     }
 
@@ -54,10 +62,15 @@ async function postMessage(req, res){
     const insertedId = result.insertId
     const [rows] = await pool.execute('SELECT * FROM CHAT_MESSAGES WHERE id = ?', [insertedId])
     const msg = rows && rows[0] ? rows[0] : null
+    if (msg && msg.metadata && typeof msg.metadata === 'string') {
+      try {
+        msg.metadata = JSON.parse(msg.metadata)
+      } catch (_) { }
+    }
     // broadcast to SSE clients
-    try{ sendEvent('chat:new', msg) }catch(e){ console.error('sse broadcast error', e) }
+    try { sendEvent('chat:new', msg) } catch (e) { console.error('sse broadcast error', e) }
     res.status(201).json(msg)
-  }catch(e){ console.error('postMessage error', e); res.status(500).json({ error: 'internal' }) }
+  } catch (e) { console.error('postMessage error', e); res.status(500).json({ error: 'internal' }) }
 }
 
 module.exports = { getMessages, postMessage }

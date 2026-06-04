@@ -334,5 +334,8 @@ CREATE INDEX idx_eval_req_workspace ON EVALUACION_REQUISITO(workspace_id);
 CREATE INDEX idx_nc_eval ON AUDITORIA_NC(evaluacion_requisito_id);
 CREATE INDEX idx_notif_user_read ON NOTIFICACIONES(usuario_id, read_flag);
 CREATE INDEX idx_procesos_requisito ON PROCESOS(requisito_base_id);
+CREATE INDEX idx_chat_nc_created ON CHAT_MESSAGES(nc_id, created_at);
+CREATE INDEX idx_chat_req_created ON CHAT_MESSAGES(requisito_id, created_at);
 
 -- Fin del script
+

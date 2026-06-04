@@ -387,6 +387,10 @@ export default function NCView(){
     }
   }
 
+  // What does this component do? It saves the NC with only the fields
+  // that are intentionally set, to avoid overwriting existing values
+  // in the NC with empty strings. It also handles setting the verification
+  // or closing date when the flow state changes to 'Verificación' or 'Cerrada'.
   const saveNC = async () => {
     try{
       // Only include fields that are intentionally set to avoid sending empty strings
@@ -433,6 +437,9 @@ export default function NCView(){
               >{acceptState || '—'}</button>
               {acceptOpen && isResponsable && (
                 <div className="absolute right-0 mt-2 w-40 bg-white border rounded shadow z-50">
+                  <div className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400 border-b bg-slate-50 rounded-t">
+                    Estado de aceptación
+                  </div>
                   <button onClick={()=>{ setAcceptState('Acepto'); setAcceptOpen(false) }} className="block w-full text-left px-3 py-2 hover:bg-slate-100">Acepto</button>
                   <button onClick={()=>{ setAcceptState('Parcial'); setAcceptOpen(false) }} className="block w-full text-left px-3 py-2 hover:bg-slate-100">Parcial</button>
                   <button onClick={()=>{ setAcceptState('No Acepto'); setAcceptOpen(false) }} className="block w-full text-left px-3 py-2 hover:bg-slate-100">No Acepto</button>
@@ -449,6 +456,9 @@ export default function NCView(){
               >{flowState || '—'}</button>
               {flowOpen && (isResponsable || isEvaluador) && (
                 <div className="absolute right-0 mt-2 w-44 bg-white border rounded shadow z-50">
+                  <div className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400 border-b bg-slate-50 rounded-t">
+                    Estado de progreso
+                  </div>
                   {isEvaluador && (
                     <>
                       <button onClick={()=>{ setFlowState('Abierta'); setFlowOpen(false) }} className="block w-full text-left px-3 py-2 hover:bg-slate-100">Abierta</button>

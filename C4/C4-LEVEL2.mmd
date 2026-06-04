@@ -1,0 +1,26 @@
+C4Container
+    title Container Diagram - ISO 9001 Gap Manager
+
+    Person(admin, "Administrador")
+    Person(evaluador, "Evaluador")
+    Person(responsable, "Responsable SGC")
+    Person(operativo, "Operativo")
+
+    System_Boundary(system, "ISO 9001 Gap Manager") {
+        Container(frontend, "Frontend SPA", "React 18 + Vite", "Interfaz de usuario: Login, Lobby por rol, Gestión de requisitos, NCs, Acciones, Evidencias, Chat")
+        Container(backend, "Backend API", "Node.js + Express", "API REST + SSE: Autenticación JWT, CRUD entidades, Lógica de negocio, Notificaciones programadas, Chat en tiempo real")
+        ContainerDb(db, "Base de Datos", "MySQL 8.0", "Esquema ISO 9001: ISOs, Cláusulas, Requisitos, Workspaces, Usuarios, Evaluaciones, NCs, Acciones, Evidencias, Procesos, Chat, Notificaciones")
+    }
+
+    System_Ext(gdrive, "Google Drive", "Almacenamiento de archivos (evidencias)")
+    System_Ext(email, "Servicio de Email", "Notificaciones asíncronas")
+
+    Rel(admin, frontend, "Usa", "HTTPS")
+    Rel(evaluador, frontend, "Usa", "HTTPS")
+    Rel(responsable, frontend, "Usa", "HTTPS")
+    Rel(operativo, frontend, "Usa", "HTTPS")
+
+    Rel(frontend, backend, "Llamadas API REST + SSE", "HTTPS/JSON + EventSource")
+    Rel(backend, db, "Consultas/Comandos SQL", "TCP 3306 / mysql2")
+    Rel(backend, gdrive, "Sube/descarga/busca archivos", "Google Drive API v3 / OAuth2")
+    Rel(backend, email, "Envía emails", "SMTP / API")

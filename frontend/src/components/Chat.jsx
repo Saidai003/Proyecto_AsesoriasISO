@@ -42,25 +42,36 @@ export default function Chat({ requisitoId, evaluacionId, evidences = [], ncList
   }, [requisitoId])
 
   useEffect(() => {
-    if(!accessToken) return
-    const tokenParam = encodeURIComponent(accessToken)
-    const url = `/api/chat/stream?token=${tokenParam}`
+    if(!accessToken || !requisitoId) return
+    
+    // Conectarse SOLO al canal de este requisito (habitación o room)
+    const url = `/api/chat/stream?token=${encodeURIComponent(accessToken)}&requisito_id=${requisitoId}`
     const es = new EventSource(url)
     esRef.current = es
+
     es.addEventListener('chat:new', (e) => {
-      try{
-        const d = JSON.parse(e.data)
-        if(!d) return
-        if((d.requisito_id && Number(d.requisito_id) === Number(requisitoId)) || !d.requisito_id){
-          if(d.id && seenIds.current.has(Number(d.id))) return
-          try{
-            if(d.metadata && typeof d.metadata === 'string') d.metadata = JSON.parse(d.metadata)
-          }catch(_){ }
-          if(d.id) seenIds.current.add(Number(d.id))
-          setMessages(prev => [...prev, d])
+      try {
+        const nuevoMensaje = JSON.parse(e.data)
+        if(!nuevoMensaje) return
+
+        // Escudo anti-duplicados por seguridad
+        if(nuevoMensaje.id && seenIds.current.has(Number(nuevoMensaje.id))) return
+        if(nuevoMensaje.id) seenIds.current.add(Number(nuevoMensaje.id))
+
+        // Si por alguna razón la metadata sigue siendo string, la parseamos; si no, viene limpia
+        if(nuevoMensaje.metadata && typeof nuevoMensaje.metadata === 'string') {
+          try {
+            nuevoMensaje.metadata = JSON.parse(nuevoMensaje.metadata)
+          } catch (_) {}
         }
-      }catch(err){ console.error('parse chat event', err) }
+
+        // Directo al estado ya que la segmentación se hace en el backend
+        setMessages(prev => [...prev, nuevoMensaje])
+      } catch (err) {
+        console.error('parse chat event error', err)
+      }
     })
+
     es.onerror = (err) => { console.error('sse error', err) }
     return () => { try{ es.close() }catch(_){ } }
   }, [accessToken, requisitoId])
