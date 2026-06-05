@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useRef } from 'react'
+import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
 import Layout from '../components/Layout'
 import NavBarISO from '../components/NavBarISO'
@@ -11,6 +11,7 @@ import { getRoleLower, hasRole } from '../lib/userUtils'
 import { statusColor, shadeColor, validationColor, flowColor } from '../lib/ncHelpers'
 import EditableEstado from '../components/EditableEstado'
 import CreateRootAction from '../components/CreateRootAction'
+import Notificaciones from '../components/Notificaciones'
 
 const KANBAN_STATES = ['Pendiente', 'En_Progreso', 'Eficaz', 'No_Eficaz']
 
@@ -420,7 +421,7 @@ export default function NCView(){
   if(!nc) return <div className="p-4">Cargando NC...</div>
 
   return (
-    <Layout title={`NC #${nc.id}`} sidebar={<NavBarISO/>}>
+    <Layout title={`NC #${nc.id}`} sidebar={<NavBarISO/>} headerRight={<Notificaciones />}>
       <div className="bg-white rounded-xl p-6 shadow-sm">
         <div className="flex items-start justify-between gap-4">
           <div>

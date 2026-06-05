@@ -63,11 +63,12 @@ async function downloadEvidence(req, res){
         return
       }catch(err){
         console.error('drive download error', err)
-        const m = String(err && err.message || '').toLowerCase()
-        if(m.includes('no_saved_token') || m.includes('no access') || m.includes('refresh token')){
-          try{ const authUrl = require('../services/driveService').generateAuthUrl(); return res.status(503).json({ error: 'drive_not_authorized', authUrl }) }catch(_){ }
+        const errMsg = err && err.message ? err.message : String(err)
+        const lower = errMsg.toLowerCase()
+        if(lower.includes('no_saved_token') || lower.includes('no access') || lower.includes('refresh token')){
+          try{ const authUrl = require('../services/driveService').generateAuthUrl(); return res.status(503).json({ error: errMsg, authUrl }) }catch(_){ }
         }
-        return res.status(500).json({ error: 'drive_download_failed' })
+        return res.status(500).json({ error: errMsg })
       }
     }
     // Only Drive-hosted files are supported now
@@ -228,15 +229,16 @@ async function createEvidence(req, res){
           throw new Error('drive_upload_failed')
         }
       }catch(err){
-        console.error('drive upload failed', err)
-        const m = String(err && err.message || '').toLowerCase()
-        if(m.includes('no_saved_token') || m.includes('no access') || m.includes('refresh token')){
+        console.error('drive upload error', err)
+        const m = String(err && err.message || '')
+        const lower = m.toLowerCase()
+        if(lower.includes('no_saved_token') || lower.includes('no access') || lower.includes('refresh token')){
           try{
             const authUrl = require('../services/driveService').generateAuthUrl()
-            return res.status(503).json({ error: 'drive_not_authorized', authUrl })
+            return res.status(503).json({ error: m, authUrl })
           }catch(_){ }
         }
-        return res.status(500).json({ error: 'drive_upload_failed' })
+        return res.status(500).json({ error: m })
       }
     } else {
       return res.status(400).json({ error: 'file_required' })

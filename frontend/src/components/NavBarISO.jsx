@@ -4,7 +4,6 @@ import { useAuth } from '../AuthContext'
 import useISO from '../hooks/useISO'
 import { hasRole } from '../lib/userUtils'
 import fetchWithAuth from '../lib/api'
-import { showToast } from '../lib/toast'
 
 function ClauseItem({ clause, requisitos, onToggle, requisitosWithNC, notifCountsByReq }){
   const [open, setOpen] = useState(false)
@@ -209,10 +208,9 @@ export default function NavBarISO(){
           }
         }
         if(mounted) setNotifCountsByReq(counts)
-        // show toasts for new notifications (by id) but persist shown ids
+        // persist seen ids so the dropdown becomes the primary notification surface
         const newOnes = list.filter(n => !shownIds.has(n.id))
         for(const n of newOnes){
-          showToast({ title: 'Notificación', message: n.mensaje, type: 'info' })
           try{ shownIds.add(n.id) }catch(_){ }
         }
         try{ sessionStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(shownIds))) }catch(_){ }

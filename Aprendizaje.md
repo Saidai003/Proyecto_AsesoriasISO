@@ -207,3 +207,7 @@ const verContenido = (req, res) => {
 // Implementación en la ruta
 router.get('/cine', esAdulto, verContenido);
 ```
+
+## Modelo C4
+
+Quizas esto esta un poco fuera de tema, pero si deseas aprender acerca del modelamiento C4 de Simon Brown, revisa esta pagina web oficial: [text](https://c4model.com/)
