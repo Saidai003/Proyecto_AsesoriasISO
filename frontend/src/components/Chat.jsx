@@ -44,14 +44,18 @@ export default function Chat({ requisitoId, evaluacionId, evidences = [], ncList
   useEffect(() => {
     if(!accessToken || !requisitoId) return
     
-    // Conectarse SOLO al canal de este requisito (habitación o room)
-    const url = `/api/chat/stream?token=${encodeURIComponent(accessToken)}&requisito_id=${requisitoId}`
-    const es = new EventSource(url)
-    esRef.current = es
+    // Conectarse SOLO al canal de este requisito via WebSocket
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+    const host = window.location.host
+    const wsUrl = `${protocol}//${host}/ws?token=${encodeURIComponent(accessToken)}&requisito_id=${requisitoId}`
+    const ws = new window.WebSocket(wsUrl)
+    esRef.current = ws
 
-    es.addEventListener('chat:new', (e) => {
+    ws.onmessage = (event) => {
       try {
-        const nuevoMensaje = JSON.parse(e.data)
+        const parsed = JSON.parse(event.data)
+        if(!parsed || parsed.event !== 'chat:new') return
+        const nuevoMensaje = parsed.data
         if(!nuevoMensaje) return
 
         // Escudo anti-duplicados por seguridad
@@ -68,12 +72,12 @@ export default function Chat({ requisitoId, evaluacionId, evidences = [], ncList
         // Directo al estado ya que la segmentación se hace en el backend
         setMessages(prev => [...prev, nuevoMensaje])
       } catch (err) {
-        console.error('parse chat event error', err)
+        console.error('parse chat ws event error', err)
       }
-    })
+    }
 
-    es.onerror = (err) => { console.error('sse error', err) }
-    return () => { try{ es.close() }catch(_){ } }
+    ws.onerror = (err) => { console.error('ws error', err) }
+    return () => { try{ ws.close() }catch(_){ } }
   }, [accessToken, requisitoId])
 
   useEffect(() => {

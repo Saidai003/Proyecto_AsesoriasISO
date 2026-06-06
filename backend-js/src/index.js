@@ -100,15 +100,21 @@ app.get('/', (req, res) => {
     res.send('Hello, World!');
 })
 
-// Start server
-app.listen(PORT, '0.0.0.0', () => {
+// Start server using http.createServer so the WebSocket upgrade handler works
+const http = require('http');
+const server = http.createServer(app);
+const { init: initWs } = require('./services/ws');
+initWs(server);
+
+server.listen(PORT, '0.0.0.0', () => {
     console.log(`Server listening on port ${PORT}`);
 });
 
 // Basic graceful shutdown
 process.on('SIGINT', () => {
     console.log('Shutting down server...');
+    server.close();
     process.exit();
 });
 
-module.exports = app;
+module.exports = app;
