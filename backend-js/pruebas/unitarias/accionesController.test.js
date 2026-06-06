@@ -17,11 +17,11 @@ describe('accionesController (unit)', ()=>{
 
   test('updateAction success updates and returns updated row', async ()=>{
     const actionRow = [{ id: 20, estado_accion: 'Pendiente', auditoria_nc_id: 3 }];
-    pool.execute.mockResolvedValueOnce([actionRow]); // select action
-    pool.execute.mockResolvedValueOnce(); // update
-    pool.execute.mockResolvedValueOnce(); // insert hist
-    pool.execute.mockResolvedValueOnce([[]]); // responsables select
-    pool.execute.mockResolvedValueOnce([[{ id:20, estado_accion:'En_Progreso' }]]); // final select
+    pool.execute.mockResolvedValueOnce([actionRow]); // 1. select action
+    pool.execute.mockResolvedValueOnce(); // 2. insert hist
+    pool.execute.mockResolvedValueOnce([[]]); // 3. select responsables
+    pool.execute.mockResolvedValueOnce(); // 4. update
+    pool.execute.mockResolvedValueOnce([[{ id:20, estado_accion:'En_Progreso' }]]); // 5. final select
 
     const req = { params: { id: '20' }, body: { estado_accion: 'En_Progreso' }, user: { id: 2 } };
     const res = mockRes();

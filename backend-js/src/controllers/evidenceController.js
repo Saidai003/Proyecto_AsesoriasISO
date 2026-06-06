@@ -1,4 +1,5 @@
 const { pool } = require('../db')
+const path = require('path')
 
 async function listByRequisito(req, res){
   const requisitoId = Number(req.params.id) || 0;
@@ -311,6 +312,21 @@ async function updateEvidence(req, res){
       if(matches){
         const mime = matches[1]
         const b64 = matches[2]
+        // Validate that the new file's extension matches the existing evidence's extension
+        const existingName = existing.nombre_archivo || ''
+        const existingExt = path.extname(existingName).toLowerCase()
+        // Determine extension from MIME type or provided nombre_archivo
+        let newExt = ''
+        if(payload.nombre_archivo){
+          newExt = path.extname(payload.nombre_archivo).toLowerCase()
+        } else if(mime){
+          const mimeExt = mime.split('/')
+          if(mimeExt[1]) newExt = '.' + mimeExt[1].toLowerCase()
+        }
+        if(existingExt && newExt && existingExt !== newExt){
+          return res.status(400).json({ error: 'extension_mismatch', detail: `Existing extension ${existingExt} does not match new ${newExt}` })
+        }
+
         const buf = Buffer.from(b64, 'base64')
 
         try{
