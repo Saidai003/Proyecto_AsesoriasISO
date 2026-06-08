@@ -56,6 +56,7 @@ const evaluacionesRouter = require('./routes/evaluaciones');
 const driveRouter = require('./routes/drive');
 const accionesRouter = require('./routes/acciones');
 const chatRouter = require('./routes/chat');
+const dashboardsRouter = require('./routes/dashboards');
 
 // app.use here is where we mount the routers to specific paths. 
 // For example, all routes defined in authRouter will be prefixed 
@@ -80,6 +81,7 @@ app.use('/api/notifications', notificationsRouter);
 app.use('/api/evaluaciones', evaluacionesRouter);
 app.use('/api/acciones', accionesRouter);
 app.use('/api/chat', chatRouter);
+app.use('/api/dashboards', dashboardsRouter);
 
 // debug route removed
 
@@ -117,4 +119,4 @@ process.on('SIGINT', () => {
     process.exit();
 });
 
-module.exports = app;
+module.exports = app;

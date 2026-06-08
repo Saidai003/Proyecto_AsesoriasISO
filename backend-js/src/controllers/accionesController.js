@@ -17,12 +17,17 @@ async function updateAction(req, res){
     const editableFields = ['accion','contenido_comentario','acciones_futuras_propuestas','requiere_nueva_nc']
     const updates = []
     const params = []
+    const changeDetails = []
     for(const f of editableFields){
       if(Object.prototype.hasOwnProperty.call(payload, f)){
+        const newValue = f === 'requiere_nueva_nc' ? (payload[f] ? 1 : 0) : payload[f]
+        const oldValue = action[f]
+        const same = String(oldValue) === String(newValue)
         updates.push(`${f} = ?`)
-        // coerce boolean-ish for requiere_nueva_nc
-        if(f === 'requiere_nueva_nc') params.push(payload[f] ? 1 : 0)
-        else params.push(payload[f])
+        params.push(newValue)
+        if(!same){
+          changeDetails.push(`${f}: "${oldValue === null || oldValue === undefined ? '' : oldValue}" → "${newValue === null || newValue === undefined ? '' : newValue}"`)
+        }
       }
     }
 
@@ -67,6 +72,12 @@ async function updateAction(req, res){
       try{
         await pool.execute(sql, sqlParams)
       }catch(e){ console.error('update accion execute error', e, sql, sqlParams) }
+    }
+
+    if(changeDetails.length){
+      try{
+        await pool.execute('INSERT INTO ACCIONES_CORRECTIVAS_HIST (accion_id, estado_anterior, estado_nuevo, usuario_id, comentario, fecha_snapshot) VALUES (?, ?, ?, ?, ?, NOW())', [id, null, null, user.id || null, `Campos modificados: ${changeDetails.join('; ')}`])
+      }catch(e){ console.error('insert accion field-change hist error', e) }
     }
 
     const [updated] = await pool.execute('SELECT * FROM ACCIONES_CORRECTIVAS WHERE id = ?', [id])

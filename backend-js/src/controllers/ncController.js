@@ -49,7 +49,16 @@ async function createNC(req, res){
 async function deleteNC(req, res){
   try{
     const id = req.params.id;
+    const workspaceId = req.user.workspace_id || null;
     if(!id) return res.status(400).json({ error: 'id required' });
+
+    // Validate Ownership (IDOR Fix)
+    const [check] = await pool.execute(
+      `SELECT a.id FROM AUDITORIA_NC a JOIN EVALUACION_REQUISITO er ON a.evaluacion_requisito_id = er.id WHERE a.id = ? AND er.workspace_id = ?`,
+      [id, workspaceId]
+    );
+    if (!check || check.length === 0) return res.status(404).json({ error: 'not_found' });
+
     await pool.execute('DELETE FROM AUDITORIA_NC WHERE id = ?', [id]);
     // clean pivot if exists
     await pool.execute('DELETE FROM AUDITORIA_NC_RESPONSABLES WHERE auditoria_nc_id = ?', [id]);
@@ -66,50 +75,45 @@ async function updateNC(req, res){
     const id = Number(req.params.id)
     if(!id) return res.status(400).json({ error: 'id required' })
     const user = req.user
+    const workspaceId = user.workspace_id || null;
     const role = user && user.role ? user.role : ''
     const isAdmin = role === 'Admin'
     const payload = req.body || {}
-    console.log('updateNC called id:', id, 'user:', user && user.id, 'role:', role, 'payload:', payload)
-    console.log('updateNC beginning processing...')
-    const [rows] = await pool.execute('SELECT * FROM AUDITORIA_NC WHERE id = ?', [id])
+
+    // Validate Ownership & Fetch NC (IDOR Fix)
+    const [rows] = await pool.execute(
+      `SELECT a.* FROM AUDITORIA_NC a JOIN EVALUACION_REQUISITO er ON a.evaluacion_requisito_id = er.id WHERE a.id = ? AND er.workspace_id = ?`, 
+      [id, workspaceId]
+    )
     if(!rows || rows.length===0) return res.status(404).json({ error: 'not_found' })
     const nc = rows[0]
 
     const updates = []
     const params = []
 
-    // validation state change (APPROVAL) - allowed for Evaluador and Responsable for some cases
+    // validation state change (APPROVAL)
     if(Object.prototype.hasOwnProperty.call(payload, 'estado_validacion')){
-      // only evaluador can set validation? allow both but record
       updates.push('estado_validacion = ?'); params.push(payload.estado_validacion)
-      // insert notification to evaluator or responsables
     }
 
     // flow state change
     if(Object.prototype.hasOwnProperty.call(payload, 'estado_flujo')){
       let newFlow = payload.estado_flujo
-      // if no actual change, skip flow validation (avoid rejecting unchanged value)
       const current = nc.estado_flujo
-      if(newFlow === current){
-        // no-op: do not attempt to validate/change
-      }else{
+      if(newFlow !== current){
         // enforce role rules
         if(current === 'Verificación' || current === 'Cerrada'){
-          console.log('updateNC forbidden: current is final state', current)
           return res.status(403).json({ error: 'no_se_puede_cambiar_desde_estado_final', message: 'No se puede cambiar la NC porque está en un estado final.' })
         }
         if(role === 'Responsable SGC' || isAdmin){
-          // responsable can only move to Análisis or Ejecución from Abierta
-          if(current !== 'Abierta'){ console.log('updateNC forbidden: responsable current != Abierta', 'current:', current); return res.status(403).json({ error: 'forbidden' }) }
-          if(!['Análisis','Ejecución'].includes(newFlow)){ console.log('updateNC invalid_target_state for responsable', 'newFlow:', newFlow); return res.status(400).json({ error: 'invalid_target_state' }) }
+          if(current !== 'Abierta'){ return res.status(403).json({ error: 'forbidden' }) }
+          if(!['Análisis','Ejecución'].includes(newFlow)){ return res.status(400).json({ error: 'invalid_target_state' }) }
         }else if(role === 'Evaluador' || isAdmin){
-          // evaluator can set to Abierta, Verificación, Cerrada
-          if(!['Abierta','Verificación','Cerrada'].includes(newFlow)){ console.log('updateNC invalid_target_state for evaluador', 'newFlow:', newFlow); return res.status(400).json({ error: 'invalid_target_state' }) }
+          if(!['Abierta','Verificación','Cerrada'].includes(newFlow)){ return res.status(400).json({ error: 'invalid_target_state' }) }
         }else{
           return res.status(403).json({ error: 'forbidden' })
         }
-        // If moving to Verificación, require fecha_verificacion_eficacia in payload and validate
-        // normalize and validate newFlow against allowed enum values to avoid encoding/truncation issues
+
         try{
           if(typeof newFlow === 'string'){
             const strip = (s) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
@@ -127,21 +131,16 @@ async function updateNC(req, res){
           const ts = new Date(fecha).getTime()
           if(Number.isNaN(ts)) return res.status(400).json({ error: 'invalid_fecha_verificacion' })
           if(ts <= Date.now()) return res.status(400).json({ error: 'fecha_verificacion_must_be_future' })
-            // debug: log newFlow type/length/encoding
-            try{ console.log('updateNC newFlow:', JSON.stringify(newFlow), 'type:', typeof newFlow, 'len:', newFlow && newFlow.length) }catch(e){}
-            updates.push('estado_flujo = ?'); params.push(newFlow)
-          // store only the DATE part (YYYY-MM-DD) because columna es DATE
+          
+          updates.push('estado_flujo = ?'); params.push(newFlow)
           const dateOnly = new Date(ts).toISOString().slice(0,10)
           updates.push('fecha_verificacion_eficacia = ?'); params.push(dateOnly)
-          // schedule a notification for the evaluator when the date arrives
+          
           try{
-            // insert scheduled notification for evaluator (a.evaluador_id)
             const evaluatorId = nc.evaluador_id
-            console.log('scheduling notification for nc:', id, 'evaluatorId:', evaluatorId, 'trigger_ts:', new Date(ts).toISOString())
             if(evaluatorId){
               const schedSql = 'INSERT INTO SCHEDULED_NOTIFICATIONS (nc_id, usuario_id, trigger_at, created_at, sent_flag) VALUES (?, ?, ?, NOW(), 0)'
               const schedParams = [id, evaluatorId, new Date(ts)]
-              console.log('scheduling SQL:', schedSql, 'params:', schedParams)
               await pool.execute(schedSql, schedParams)
             }
           }catch(e){ console.error('schedule notification error', e) }
@@ -151,22 +150,16 @@ async function updateNC(req, res){
       }
     }
 
-    if(updates.length===0){ console.log('updateNC nothing_to_update, payload keys:', Object.keys(payload)); return res.status(400).json({ error: 'nothing_to_update' }) }
+    if(updates.length===0){ return res.status(400).json({ error: 'nothing_to_update' }) }
     params.push(id)
     const sql = `UPDATE AUDITORIA_NC SET ${updates.join(', ')}, ultima_edicion_por = ?, fecha_ultima_edicion = NOW() WHERE id = ?`
     const sqlParams = [ ...(params.slice(0,-1)), user.id, params[params.length-1] ]
-      try{
-        console.log('updateNC SQL:', sql)
-        console.log('updateNC params full:', params, 'sqlParams:', sqlParams)
-        sqlParams.forEach((p,i)=>{
-          try{ console.log('param['+i+'] ('+ (p===null? 'null': typeof p) +'):', JSON.stringify(p)) }catch(e){}
-        })
-        await pool.execute(sql, sqlParams)
-      }catch(ex){
-        console.error('updateNC execute error', ex, 'sql:', sql, 'sqlParams:', sqlParams)
-        // rethrow to outer catch for consistent handling
-        throw ex
-      }
+    try{
+      await pool.execute(sql, sqlParams)
+    }catch(ex){
+      console.error('updateNC execute error', ex)
+      throw ex
+    }
 
     // insert history
     try{
@@ -191,7 +184,16 @@ async function updateNC(req, res){
 async function listActions(req, res){
   try{
     const id = Number(req.params.id)
+    const workspaceId = req.user.workspace_id || null;
     if(!id) return res.status(400).json({ error: 'id required' })
+
+    // Validate Ownership (IDOR Fix)
+    const [check] = await pool.execute(
+      `SELECT a.id FROM AUDITORIA_NC a JOIN EVALUACION_REQUISITO er ON a.evaluacion_requisito_id = er.id WHERE a.id = ? AND er.workspace_id = ?`,
+      [id, workspaceId]
+    );
+    if (!check || check.length === 0) return res.status(404).json({ error: 'not_found' });
+
     const [rows] = await pool.execute('SELECT * FROM ACCIONES_CORRECTIVAS WHERE auditoria_nc_id = ? ORDER BY fecha_accion ASC', [id])
     return res.json(rows)
   }catch(err){ console.error('listActions error', err); return res.status(500).json({ error: 'internal_error' }) }
@@ -201,7 +203,16 @@ async function createAction(req, res){
   try{
     const id = Number(req.params.id)
     const user = req.user
+    const workspaceId = user.workspace_id || null;
     if(!id) return res.status(400).json({ error: 'id required' })
+
+    // Validate Ownership (IDOR Fix)
+    const [check] = await pool.execute(
+      `SELECT a.id FROM AUDITORIA_NC a JOIN EVALUACION_REQUISITO er ON a.evaluacion_requisito_id = er.id WHERE a.id = ? AND er.workspace_id = ?`,
+      [id, workspaceId]
+    );
+    if (!check || check.length === 0) return res.status(404).json({ error: 'not_found' });
+
     const payload = req.body || {}
     const accion_previa_id = payload.accion_previa_id || null
     const accion = payload.accion || ''
@@ -212,19 +223,17 @@ async function createAction(req, res){
 
     const [result] = await pool.execute('INSERT INTO ACCIONES_CORRECTIVAS (auditoria_nc_id, accion_previa_id, autor_id, tipo_autor, nc, accion, contenido_comentario, estado_accion, acciones_futuras_propuestas, requiere_nueva_nc, fecha_accion) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())', [id, accion_previa_id, user.id, user.role || 'Responsable SGC', `NC #${id}`, accion, contenido_comentario, estado_accion, acciones_futuras_propuestas, requiere_nueva_nc])
     const insertId = result.insertId
-    // insert history record for creation
+    
     try{
       await pool.execute('INSERT INTO ACCIONES_CORRECTIVAS_HIST (accion_id, estado_anterior, estado_nuevo, usuario_id, comentario, fecha_snapshot) VALUES (?, ?, ?, ?, ?, NOW())', [insertId, null, estado_accion, user.id || null, contenido_comentario || null])
     }catch(e){ console.error('insert accion hist error on create', e) }
 
-    // notify responsables and evaluator
     try{
       const [resps] = await pool.execute('SELECT usuario_id FROM AUDITORIA_NC_RESPONSABLES WHERE auditoria_nc_id = ?', [id])
       const msg = `Nueva acción correctiva para NC #${id}: ${accion}`
       for(const r of (resps||[])){
         await pool.execute('INSERT INTO NOTIFICACIONES (usuario_id, tipo, mensaje, link) VALUES (?, ?, ?, ?)', [r.usuario_id, 'ACCION_NC', msg, `/nc/${id}`])
       }
-      // also notify evaluator assigned to the NC (if any)
       try{
         const [ncRows] = await pool.execute('SELECT evaluador_id FROM AUDITORIA_NC WHERE id = ?', [id])
         if(ncRows && ncRows.length && ncRows[0].evaluador_id){
@@ -242,9 +251,18 @@ async function createAction(req, res){
 async function listByEvaluacion(req, res){
   try{
     const evaluacionId = req.params.id;
+    const workspaceId = req.user.workspace_id || null;
     if(!evaluacionId) return res.status(400).json({ error: 'id required' });
-    const [rows] = await pool.execute('SELECT id, evaluador_id, estado_flujo, estado_validacion, fecha_verificacion_eficacia, comentario_nc, fecha_ultima_edicion, titulo, descripcion FROM AUDITORIA_NC WHERE evaluacion_requisito_id = ?', [evaluacionId]);
-    // attach responsables for each nc (if pivot table exists)
+
+    // Ensure evaluation belongs to workspace via JOIN (IDOR Fix)
+    const [rows] = await pool.execute(
+      `SELECT a.id, a.evaluador_id, a.estado_flujo, a.estado_validacion, a.fecha_verificacion_eficacia, a.comentario_nc, a.fecha_ultima_edicion, a.titulo, a.descripcion 
+       FROM AUDITORIA_NC a 
+       JOIN EVALUACION_REQUISITO er ON a.evaluacion_requisito_id = er.id 
+       WHERE a.evaluacion_requisito_id = ? AND er.workspace_id = ?`, 
+      [evaluacionId, workspaceId]
+    );
+
     try{
       for(const r of (rows||[])){
         const [respRows] = await pool.execute(
@@ -255,7 +273,6 @@ async function listByEvaluacion(req, res){
       }
     }catch(e){
       console.error('attach responsables error', e)
-      // continue without responsables
       for(const r of (rows||[])) r.responsables = []
     }
     return res.json(rows);
@@ -268,14 +285,16 @@ async function listByEvaluacion(req, res){
 async function getNC(req, res){
   try{
     const id = Number(req.params.id)
+    const workspaceId = req.user.workspace_id || null;
     if(!id) return res.status(400).json({ error: 'id required' })
-    // include evaluacion_requisito_id and join to EVALUACION_REQUISITO to expose requisito_base_id
+
+    // Changed to INNER JOIN and added workspace_id check (IDOR Fix)
     const [rows] = await pool.execute(
       `SELECT a.*, er.requisito_base_id
        FROM AUDITORIA_NC a
-       LEFT JOIN EVALUACION_REQUISITO er ON a.evaluacion_requisito_id = er.id
-       WHERE a.id = ?`,
-      [id]
+       JOIN EVALUACION_REQUISITO er ON a.evaluacion_requisito_id = er.id
+       WHERE a.id = ? AND er.workspace_id = ?`,
+      [id, workspaceId]
     )
     if(!rows || rows.length===0) return res.status(404).json({ error: 'not_found' })
     const nc = rows[0]
@@ -292,4 +311,24 @@ async function getNC(req, res){
   }catch(err){ console.error('getNC error', err); return res.status(500).json({ error: 'internal_error' }) }
 }
 
-module.exports = { createNC, deleteNC, listByEvaluacion, updateNC, listActions, createAction, getNC };
+async function getNCHistory(req, res){
+  try{
+    const id = Number(req.params.id)
+    const workspaceId = req.user.workspace_id || null
+    if(!id) return res.status(400).json({ error: 'id required' })
+
+    const [rows] = await pool.execute(
+      `SELECT h.id, h.nc_id, h.estado_flujo, h.estado_validacion, h.comentario, h.fecha_snapshot, u.nombre as usuario_nombre
+       FROM AUDITORIA_NC_HIST h
+       LEFT JOIN USUARIOS u ON u.id = h.ultima_edicion_por
+       WHERE h.nc_id = ? AND EXISTS (
+         SELECT 1 FROM AUDITORIA_NC a JOIN EVALUACION_REQUISITO er ON a.evaluacion_requisito_id = er.id WHERE a.id = ? AND er.workspace_id = ?
+       )
+       ORDER BY h.fecha_snapshot DESC`,
+      [id, id, workspaceId]
+    )
+    return res.json(rows)
+  }catch(err){ console.error('getNCHistory error', err); return res.status(500).json({ error: 'internal_error' }) }
+}
+
+module.exports = { createNC, deleteNC, listByEvaluacion, updateNC, listActions, createAction, getNC, getNCHistory };

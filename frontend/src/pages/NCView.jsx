@@ -41,25 +41,28 @@ export default function NCView(){
       }catch(e){ console.error('load actions error', e) }
 
       // load minimal NC info if endpoint exists (best-effort)
-      try{
+// load minimal NC info if endpoint exists (best-effort)
+      try {
         const r = await fetchWithAuth(`/api/nc/${id}`)
-        if(r.ok){
+        if (r.ok) {
           const data = await r.json()
           setNc(data)
           setAcceptState(data.estado_validacion)
           setFlowState(data.estado_flujo)
-        }else{
-          // fallback placeholder if NC single endpoint not available
-          const data = { id, estado_flujo: flowState || 'Abierta', estado_validacion: acceptState || 'Parcial', comentario_nc: '—' }
-          setNc(data)
-          setAcceptState(data.estado_validacion)
-          setFlowState(data.estado_flujo)
+        } else if (r.status === 404 || r.status === 403) {
+          // Si el backend nos bloquea por seguridad o la NC no existe
+          showToast({ title: 'Acceso Denegado', message: 'La NC no existe o no tienes permisos para verla.', type: 'error' })
+          setNc(null) 
+        } else {
+          // Si ocurre cualquier otro error HTTP (ej. 500)
+          showToast({ title: 'Error', message: 'No se pudo cargar la información de la NC.', type: 'error' })
+          setNc(null)
         }
-      }catch(e){
-        const data = { id, estado_flujo: flowState || 'Abierta', estado_validacion: acceptState || 'Parcial', comentario_nc: '—' }
-        setNc(data)
-        setAcceptState(data.estado_validacion)
-        setFlowState(data.estado_flujo)
+      } catch(e) {
+        // AQUÍ REEMPLAZAMOS EL CATCH QUE MENCIONASTE
+        console.error('Error de conexión o red al cargar NC:', e)
+        showToast({ title: 'Error', message: 'Error de red al intentar cargar la NC.', type: 'error' })
+        setNc(null)
       }
     }
     load()
@@ -114,6 +117,9 @@ export default function NCView(){
   const [historyOpen, setHistoryOpen] = useState(false)
   const [historyItems, setHistoryItems] = useState([])
   const [historyLoading, setHistoryLoading] = useState(false)
+  const [ncHistoryOpen, setNcHistoryOpen] = useState(false)
+  const [ncHistoryItems, setNcHistoryItems] = useState([])
+  const [ncHistoryLoading, setNcHistoryLoading] = useState(false)
   const [draggingActionId, setDraggingActionId] = useState(null)
   const [dropState, setDropState] = useState('')
   const [savingActionId, setSavingActionId] = useState(null)
@@ -168,6 +174,21 @@ export default function NCView(){
       }
     }catch(e){ console.error('loadHistory error', e); setHistoryItems([]) }
     setHistoryLoading(false)
+  }
+
+  const loadNCHistory = async (ncId) => {
+    setNcHistoryLoading(true)
+    try{
+      const res = await fetchWithAuth(`/api/nc/${ncId}/hist`)
+      if(res.ok){
+        const json = await res.json()
+        setNcHistoryItems(json || [])
+      }else{
+        console.error('failed to load nc history', res.status)
+        setNcHistoryItems([])
+      }
+    }catch(e){ console.error('loadNCHistory error', e); setNcHistoryItems([]) }
+    setNcHistoryLoading(false)
   }
 
   // Confirm dialog state for deletions
@@ -483,7 +504,10 @@ export default function NCView(){
                 <button onClick={() => setViewMode('eficacia')} className={`px-3 py-1 rounded text-sm ${viewMode==='eficacia' ? 'bg-blue-600 text-white' : 'bg-white text-slate-700'}`}>Ver Eficacia</button>
                 <button onClick={() => setViewMode('progreso')} className={`px-3 py-1 rounded text-sm ${viewMode==='progreso' ? 'bg-blue-600 text-white' : 'bg-white text-slate-700'}`}>Ver Progreso</button>
               </div>
-              <button onClick={() => { setHistoryOpen(true); loadHistoryForNC(id); }} className="px-3 py-1 border rounded text-sm">Historial</button>
+              <div className="flex gap-2">
+                <button onClick={() => { setHistoryOpen(true); loadHistoryForNC(id); }} className="px-3 py-1 border rounded text-sm">Historial acciones</button>
+                <button onClick={() => { setNcHistoryOpen(true); loadNCHistory(id); }} className="px-3 py-1 border rounded text-sm">Historial NC</button>
+              </div>
             </div>
           </div>
           {/* Create root action button + form */}
@@ -493,7 +517,7 @@ export default function NCView(){
           <div className="mb-3 text-xs text-slate-500">
             Arrastra una tarjeta a otra columna para cambiar su estado. Las acciones conservan sus funciones de edición, creación de hijas e historial.
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 mt-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:[grid-template-columns:repeat(4,minmax(16rem,1fr))] gap-2 mt-3">
             {KANBAN_STATES.filter(s => {
               if(viewMode === 'all') return true
               if(viewMode === 'eficacia') return ['Eficaz','No_Eficaz'].includes(s)
@@ -560,6 +584,36 @@ export default function NCView(){
                       <div className="text-sm mt-1">{h.estado_anterior} → <strong>{h.estado_nuevo}</strong></div>
                       {h.comentario ? <div className="mt-1 text-sm text-slate-700">{h.comentario}</div> : null}
                       <div className="mt-1 text-xs text-slate-400">Acción: {h.accion || h.accion_id} — NC: {h.nc}</div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+      {ncHistoryOpen && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-start justify-center p-6">
+          <div className="bg-white rounded-lg w-full max-w-3xl p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="font-semibold">Historial de NC #{nc.id}</h4>
+              <div>
+                <button onClick={()=>setNcHistoryOpen(false)} className="px-2 py-1 border rounded">Cerrar</button>
+              </div>
+            </div>
+            <div className="h-64 overflow-auto border rounded p-2 bg-slate-50">
+              {ncHistoryLoading ? (
+                <div>Cargando...</div>
+              ) : ncHistoryItems.length === 0 ? (
+                <div className="text-sm text-slate-500">No hay registros de historial de NC.</div>
+              ) : (
+                <ul className="space-y-2">
+                  {ncHistoryItems.map(h => (
+                    <li key={h.id} className="p-2 border rounded bg-white">
+                      <div className="text-sm"><strong>{h.usuario_nombre || 'Sistema'}</strong> — <span className="text-slate-500 text-xs">{new Date(h.fecha_snapshot).toLocaleString()}</span></div>
+                      <div className="mt-1 text-sm text-slate-700">Flujo: <strong>{h.estado_flujo || 'N/A'}</strong></div>
+                      <div className="mt-1 text-sm text-slate-700">Validación: <strong>{h.estado_validacion || 'N/A'}</strong></div>
+                      {h.comentario ? <div className="mt-1 text-sm text-slate-700">{h.comentario}</div> : null}
                     </li>
                   ))}
                 </ul>

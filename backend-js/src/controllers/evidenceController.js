@@ -81,7 +81,6 @@ async function downloadEvidence(req, res){
 }
 
 const fs = require('fs').promises
-const path = require('path')
 const driveService = require('../services/driveService')
 
 // Permission helpers for updateEvidence
@@ -247,8 +246,8 @@ async function createEvidence(req, res){
 
     const [result] = await pool.query('INSERT INTO EVIDENCIAS (evaluacion_requisito_id, usuario_carga_id, ev_id, nombre_archivo, url_archivo, tipo_formato, drive_file_id) VALUES (?,?,?,?,?,?,?)', [evaluacion_requisito_id, usuario_carga_id, ev_id, nombre_archivo, url_archivo, tipo_formato, drive_file_id])
     const insertId = result.insertId // get the ID of the inserted row
-    // log upload
-    await pool.query('INSERT INTO EVIDENCIAS_LOG (evidencia_id, usuario_id, ev_id, tipo_accion, nombre_archivo) VALUES (?,?,?,?,?)', [insertId, usuario_carga_id, ev_id, 'UPLOAD', nombre_archivo])
+    // log upload with detail so history shows who cargó y qué archivo
+    await pool.query('INSERT INTO EVIDENCIAS_LOG (evidencia_id, usuario_id, ev_id, tipo_accion, nombre_archivo, detalle) VALUES (?,?,?,?,?,?)', [insertId, usuario_carga_id, ev_id, 'UPLOAD', nombre_archivo, `Evidencia cargada: ${nombre_archivo}`])
     const [rows] = await pool.query('SELECT * FROM EVIDENCIAS WHERE id = ?', [insertId])
     return res.status(201).json(rows[0])
   }catch(err){
@@ -388,21 +387,49 @@ async function updateEvidence(req, res){
       }
     }
 
-    if(Object.prototype.hasOwnProperty.call(payload, 'comentario_evidencia')){ fields.push('comentario_evidencia = ?'); values.push(payload.comentario_evidencia); willLog.push({ type: 'UPDATE', detail: 'comentario_evidencia' }) }
-    if(Object.prototype.hasOwnProperty.call(payload, 'estado_validacion_archivo')){ fields.push('estado_validacion_archivo = ?'); values.push(payload.estado_validacion_archivo); willLog.push({ type: 'APPROVAL', detail: payload.estado_validacion_archivo }) }
-
-    if(fileAction){ willLog.push({ type: fileAction, detail: payload.nombre_archivo || existing.nombre_archivo || '' }) }
+    const changeDetails = []
+    const isReplace = fileAction === 'REPLACE'
+    if(Object.prototype.hasOwnProperty.call(payload, 'nombre_archivo') && payload.nombre_archivo !== existing.nombre_archivo){
+      fields.push('nombre_archivo = ?'); values.push(payload.nombre_archivo)
+      if(!isReplace){
+        changeDetails.push(`Nombre: "${existing.nombre_archivo || ''}" → "${payload.nombre_archivo}"`)
+      }
+    }
+    if(Object.prototype.hasOwnProperty.call(payload, 'comentario_evidencia')){
+      fields.push('comentario_evidencia = ?'); values.push(payload.comentario_evidencia)
+      if(payload.comentario_evidencia !== existing.comentario_evidencia){
+        changeDetails.push(`Comentario: "${existing.comentario_evidencia || ''}" → "${payload.comentario_evidencia}"`)
+      }
+    }
+    if(Object.prototype.hasOwnProperty.call(payload, 'estado_validacion_archivo')){
+      fields.push('estado_validacion_archivo = ?'); values.push(payload.estado_validacion_archivo)
+      if(payload.estado_validacion_archivo !== existing.estado_validacion_archivo){
+        changeDetails.push(`Aprobación: ${existing.estado_validacion_archivo || 'N/A'} → ${payload.estado_validacion_archivo}`)
+      }
+    }
+    if(fileAction){
+      if(fileAction === 'REPLACE'){
+        const oldName = existing.nombre_archivo || ''
+        const newName = payload.nombre_archivo || existing.nombre_archivo || ''
+        if(oldName && newName && oldName !== newName){
+          changeDetails.push(`Archivo: ${oldName} → ${newName}`)
+        } else {
+          changeDetails.push(`Archivo reemplazado: ${newName}`)
+        }
+      } else {
+        changeDetails.push(`Archivo ${fileAction.toLowerCase()}${payload.nombre_archivo ? `: ${payload.nombre_archivo}` : ''}`)
+      }
+    }
 
     if(fields.length===0) return res.status(400).json({ error: 'nothing_to_update' })
     values.push(id)
     await pool.query(`UPDATE EVIDENCIAS SET ${fields.join(', ')} WHERE id = ?`, values)
 
-    // insert logs for actions
+    // insert a summarized log entry with details of what changed
     try{
-      for(const l of willLog){
-        // older DB schemas may not have 'detalle' column; insert minimal set
-        await pool.query('INSERT INTO EVIDENCIAS_LOG (evidencia_id, usuario_id, ev_id, tipo_accion, nombre_archivo) VALUES (?,?,?,?,?)', [id, uid, existing.ev_id || null, l.type, existing.nombre_archivo || ''])
-      }
+      const detail = changeDetails.filter(Boolean).join('\n') || `Actualización de evidencia ${existing.nombre_archivo || ''}`
+      const actionType = fileAction || (Object.prototype.hasOwnProperty.call(payload, 'estado_validacion_archivo') ? 'APPROVAL' : 'UPDATE')
+      await pool.query('INSERT INTO EVIDENCIAS_LOG (evidencia_id, usuario_id, ev_id, tipo_accion, nombre_archivo, detalle) VALUES (?,?,?,?,?,?)', [id, uid, existing.ev_id || null, actionType, existing.nombre_archivo || '', detail])
     }catch(err){ console.error('failed to insert evidencias log on update', err) }
 
     const [updated] = await pool.query('SELECT * FROM EVIDENCIAS WHERE id = ?', [id])
@@ -428,7 +455,7 @@ async function deleteEvidence(req, res){
     }
     // Insert delete log before removing the evidence row so FK constraints do not fail
     try{
-      await pool.query('INSERT INTO EVIDENCIAS_LOG (evidencia_id, usuario_id, ev_id, tipo_accion, nombre_archivo) VALUES (?,?,?,?,?)', [id, uid, existing.ev_id || null, 'DELETE', existing.nombre_archivo || ''])
+      await pool.query('INSERT INTO EVIDENCIAS_LOG (evidencia_id, usuario_id, ev_id, tipo_accion, nombre_archivo, detalle) VALUES (?,?,?,?,?,?)', [id, uid, existing.ev_id || null, 'DELETE', existing.nombre_archivo || '', `Evidencia eliminada: ${existing.nombre_archivo || ''}`])
     }catch(err){ console.error('failed to insert evidencias log on delete', err) }
     // delete DB row
     await pool.query('DELETE FROM EVIDENCIAS WHERE id = ?', [id])

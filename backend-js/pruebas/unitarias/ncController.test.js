@@ -30,8 +30,9 @@ describe('ncController (unit)', ()=>{
     expect(res.json).toHaveBeenCalledWith({ id: 11 });
   });
 
-  test('deleteNC missing id returns 400', async ()=>{
-    const req = { params: { } };
+ test('deleteNC missing id returns 400', async ()=>{
+    // Se debe inyectar el usuario simulado para evitar un TypeError
+    const req = { user: { id: 2, workspace_id: 1 }, params: { } };
     const res = mockRes();
     await deleteNC(req, res);
     expect(res.status).toHaveBeenCalledWith(400);
