@@ -173,7 +173,7 @@ export default function RequirementView(){
                     className="w-full px-3 py-2 border rounded text-sm mb-2"
                   />
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-40 overflow-auto border rounded p-2">
-                    {(!responsables || responsables.length) === 0 ? (
+                    {(!responsables || responsables.length === 0) ? (
                       <div className="text-xs text-slate-500">No hay responsables disponibles.</div>
                     ) : (() => {
                       const q = (responsableQuery || '').toLowerCase().trim()

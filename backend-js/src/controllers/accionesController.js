@@ -137,7 +137,70 @@ async function getActionHistory(req, res){
   }catch(err){ console.error('getActionHistory error', err); return res.status(500).json({ error: 'internal_error' }) }
 }
 
-module.exports = { updateAction, getActionHistory }
+async function deleteAction(req, res){
+  try{
+    const id = Number(req.params.id)
+    if(!id) return res.status(400).json({ error: 'id required' })
+    const user = req.user
+    const workspaceId = user?.workspace_id || null
+
+    const [rows] = await pool.execute(
+      `SELECT ac.* FROM ACCIONES_CORRECTIVAS ac
+       JOIN AUDITORIA_NC a ON ac.auditoria_nc_id = a.id
+       JOIN EVALUACION_REQUISITO er ON a.evaluacion_requisito_id = er.id
+       WHERE ac.id = ? AND er.workspace_id = ?`,
+      [id, workspaceId]
+    )
+    if(!rows || !rows.length) return res.status(404).json({ error: 'not_found' })
+    
+    // rows would look like this:
+    // [
+    //   {
+    //     id: 1,
+    //     auditoria_nc_id: 1,
+    //     accion_previa_id: 1,
+    //     autor_id: 1,
+    //     tipo_autor: 'Evaluador',
+    //     nc: 'NC #1',
+    //     accion: 'Acción 1',
+    //     contenido_comentario: 'Comentario 1',
+    //     estado_accion: 'Pendiente',
+    //     acciones_futuras_propuestas: 'Acciones futuras 1',
+    //     requiere_nueva_nc: 0,
+    //     fecha_accion: '2026-01-01 12:00:00'
+    //   }
+    // ]
+    // and so on...
+    // and since there is just one row, we can access the data like this:
+
+    const ncId = rows[0].auditoria_nc_id
+    const [allRows] = await pool.execute(
+      'SELECT id, accion_previa_id FROM ACCIONES_CORRECTIVAS WHERE auditoria_nc_id = ?',
+      [ncId]
+    )
+    const toDelete = [id]
+    for(let i = 0; i < toDelete.length; i++){
+      const cur = toDelete[i]
+      for(const a of (allRows || [])){
+        if(Number(a.accion_previa_id) === Number(cur) && !toDelete.includes(a.id)) toDelete.push(a.id)
+      }
+    }
+    // Borrar hijos antes que padres. Usamos [...toDelete] (spread) para clonar
+    // antes de .reverse(): los arreglos se pasan por referencia y reverse()
+    // muta in-place; sin copia, toDelete quedaría invertido también.
+    // Ver Aprendizaje.md → «Clonación superficial antes de reverse()».
+    const ordered = [...toDelete].reverse()
+    for(const actionId of ordered){
+      await pool.execute('DELETE FROM ACCIONES_CORRECTIVAS WHERE id = ?', [actionId])
+    }
+    return res.json({ ok: true, deletedIds: toDelete })
+  }catch(err){
+    console.error('deleteAction error', err)
+    return res.status(500).json({ error: 'internal_error' })
+  }
+}
+
+module.exports = { updateAction, getActionHistory, deleteAction }
 
 async function getAccionesByEvaluacion(req, res){
   try{

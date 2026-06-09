@@ -30,10 +30,11 @@ export default function NCView(){
   const [confirmMessage, setConfirmMessage] = useState('')
   const [confirmCallback, setConfirmCallback] = useState(null)
 
-  // ✅ Cargar datos de NC y acciones
+  // Cargar datos de NC y acciones
   useEffect(()=>{
     const load = async ()=>{
       try{
+        // what is 'a'?: it's a response from the fetchWithAuth function
         const a = await fetchWithAuth(`/api/nc/${id}/acciones`)
         if(a.ok){
           const actions = await a.json()
@@ -48,6 +49,13 @@ export default function NCView(){
           setNc(data)
           setAcceptState(data.estado_validacion)
           setFlowState(data.estado_flujo)
+          if(data.fecha_verificacion_eficacia){
+            const d = new Date(data.fecha_verificacion_eficacia)
+            if(!Number.isNaN(d.getTime())){
+              const pad = (n) => String(n).padStart(2, '0')
+              setFechaVerificacion(`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`)
+            }
+          }
         } else if (r.status === 404 || r.status === 403) {
           showToast({ title: 'Acceso Denegado', message: 'La NC no existe o no tienes permisos para verla.', type: 'error' })
           setNc(null) 
@@ -98,7 +106,7 @@ export default function NCView(){
     }
     window.addEventListener('nc:createRoot', handler)
     return ()=> window.removeEventListener('nc:createRoot', handler)
-  },[])
+  },[id])
 
   const [acceptOpen, setAcceptOpen] = useState(false)
   const [flowOpen, setFlowOpen] = useState(false)
@@ -135,21 +143,28 @@ export default function NCView(){
     setNcHistoryLoading(false)
   }
 
-  const performDeleteAction = (targetId) => {
-    setThreads(prev => {
-      const toDelete = [targetId]
-      for(let i=0;i<toDelete.length;i++){
-        const cur = toDelete[i]
-        prev.forEach(t=>{ if(t.accion_previa_id === cur) toDelete.push(t.id) })
+  const performDeleteAction = async (targetId) => {
+    try{
+      const res = await fetchWithAuth(`/api/acciones/${targetId}`, { method: 'DELETE' })
+      if(res.ok){
+        const json = await res.json().catch(()=>({}))
+        const deletedIds = new Set((json.deletedIds || [targetId]).map(Number))
+        setThreads(prev => prev.filter(t => !deletedIds.has(Number(t.id))))
+        showToast({ title: 'Acción eliminada', message: 'La acción y sus sub-acciones fueron eliminadas', type: 'success' })
+      }else{
+        const err = await res.json().catch(()=>null)
+        showToast({ title: 'Error', message: getErrorText(err, 'No se pudo eliminar la acción'), type: 'error' })
       }
-      return prev.filter(t => !toDelete.includes(t.id))
-    })
+    }catch(e){
+      console.error('delete action error', e)
+      showToast({ title: 'Error', message: 'Error al eliminar la acción', type: 'error' })
+    }
   }
 
   const requestDeleteAction = (targetId) => {
     setConfirmTitle('Eliminar acción')
     setConfirmMessage('¿Confirmar eliminación de la acción y sus sub-acciones? Esta acción no se puede deshacer.')
-    setConfirmCallback(()=>async ()=>{ performDeleteAction(targetId) })
+    setConfirmCallback(()=>async ()=>{ await performDeleteAction(targetId) })
     setConfirmOpen(true)
   }
 

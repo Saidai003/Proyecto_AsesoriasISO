@@ -1,9 +1,62 @@
 const { pool } = require('../db')
 const path = require('path')
 
+function resolveWorkspaceId(req){
+  const user = req.user || {}
+  if(user.workspace_id) return Number(user.workspace_id)
+  if(user.role === 'Admin'){
+    const src = { ...(req.query || {}), ...(req.body || {}) }
+    const wid = src.workspace || src.workspace_id
+    const n = wid ? Number(wid) : null
+    if(n && !Number.isNaN(n)) return n
+  }
+  return null
+}
+
+async function getEvidenceInWorkspace(evidenceId, req){
+  const user = req.user || {}
+  const workspaceId = resolveWorkspaceId(req)
+  const isAdmin = user.role === 'Admin'
+
+  if(workspaceId == null && !isAdmin){
+    return { error: 'forbidden', status: 403 }
+  }
+
+  // pool.query devuelve [filas, metadatos]; guardamos solo las filas en una variable clara
+  let queryResult
+  if(workspaceId != null){
+    queryResult = await pool.query(
+      `SELECT e.* FROM EVIDENCIAS e
+       JOIN EVALUACION_REQUISITO er ON e.evaluacion_requisito_id = er.id
+       WHERE e.id = ? AND er.workspace_id = ?`,
+      [evidenceId, workspaceId]
+    )
+  }else{
+    queryResult = await pool.query('SELECT * FROM EVIDENCIAS WHERE id = ?', [evidenceId])
+  }
+
+  const rows = queryResult[0]
+  if(!rows || rows.length === 0){
+    return { error: 'not_found', status: 404 }
+  }
+
+  return { evidence: rows[0] }
+}
+
 async function listByRequisito(req, res){
   const requisitoId = Number(req.params.id) || 0;
   try{
+    const workspaceId = resolveWorkspaceId(req)
+    if(workspaceId == null && req.user?.role !== 'Admin'){
+      return res.status(403).json({ error: 'forbidden' })
+    }
+    if(workspaceId != null){
+      const [check] = await pool.query(
+        'SELECT id FROM EVALUACION_REQUISITO WHERE id = ? AND workspace_id = ?',
+        [requisitoId, workspaceId]
+      )
+      if(!check || !check.length) return res.status(404).json({ error: 'not_found' })
+    }
     const [rows] = await pool.query('SELECT * FROM EVIDENCIAS WHERE evaluacion_requisito_id = ? ORDER BY fecha_carga DESC', [requisitoId])
     // enrich with drive metadata when available
     // What does Promise.all do?
@@ -41,12 +94,12 @@ async function listByRequisito(req, res){
 async function downloadEvidence(req, res){
   const id = Number(req.params.id) || 0
   try{
-    const [rows] = await pool.query('SELECT * FROM EVIDENCIAS WHERE id = ?', [id])
-    if(!rows || rows.length===0) return res.status(404).json({ error: 'not_found' })
-    const ev = rows[0]
+    const lookup = await getEvidenceInWorkspace(id, req)
+    if(lookup.error) return res.status(lookup.status).json({ error: lookup.error })
+    const ev = lookup.evidence
     const role = req.user && req.user.role ? req.user.role : ''
     const uid = req.user && req.user.id ? req.user.id : null
-    // Allow Admin, Evaluador, Responsable SGC, or the original uploader to download
+    // Workspace members (Admin/Evaluador/Responsable) or uploader may download
     if(role !== 'Admin' && role !== 'Evaluador' && role !== 'Responsable SGC' && ev.usuario_carga_id !== uid){
       return res.status(403).json({ error: 'forbidden' })
     }
@@ -96,21 +149,15 @@ function checkEvaluatorRestrictions(role, payload){
 
 function checkStatusChangePermission(role, existing, uid, payload){
   if(!Object.prototype.hasOwnProperty.call(payload, 'estado_validacion_archivo')) return true
-  const isAdmin = role === 'Admin'
-  const isEvaluator = role === 'Evaluador'
-  const isResponsable = role === 'Responsable SGC'
-  const isOwner = _toNumber(existing.usuario_carga_id) === _toNumber(uid)
-  if(!isAdmin && !isEvaluator && !isResponsable) return false
-  if(isOwner && !isAdmin && !isEvaluator) return false
-  return true
+  // Only Admin and Evaluador may change approval state
+  return role === 'Admin' || role === 'Evaluador'
 }
 
 function checkGeneralPermission(role, existing, uid){
-  // Admin and Responsable SGC can always modify evidences.
-  // Evaluador may modify only when allowed by checkEvaluatorRestrictions/checkStatusChangePermission
-  // so here we allow Evaluador as well (previous logic required owner equality which prevented
-  // evaluadores from changing approval state when they weren't the uploader).
-  if(role === 'Admin' || role === 'Responsable SGC' || role === 'Evaluador') return true
+  if(role === 'Admin') return true
+  // Evaluador: field-level restrictions in checkEvaluatorRestrictions
+  if(role === 'Evaluador') return true
+  // Responsable and others: only their own uploads
   return _toNumber(existing.usuario_carga_id) === _toNumber(uid)
 }
 
@@ -120,20 +167,23 @@ async function createEvidence(req, res){
     const payload = req.body || {}
     const evaluacion_requisito_id = payload.evaluacion_requisito_id || null
     const usuario_carga_id = req.user && req.user.id ? req.user.id : null
+    const workspaceId = resolveWorkspaceId(req)
+    if(evaluacion_requisito_id && workspaceId != null){
+      const [erCheck] = await pool.query(
+        'SELECT id FROM EVALUACION_REQUISITO WHERE id = ? AND workspace_id = ?',
+        [evaluacion_requisito_id, workspaceId]
+      )
+      if(!erCheck || !erCheck.length) return res.status(403).json({ error: 'forbidden' })
+    }else if(evaluacion_requisito_id && req.user?.role !== 'Admin'){
+      return res.status(403).json({ error: 'forbidden' })
+    }
     const ev_id = payload.ev_id || null
     const nombre_archivo = payload.nombre_archivo || ''
     let url_archivo = payload.url_archivo || ''
     const tipo_formato = payload.tipo_formato || ''
     let drive_file_id = null
 
-    // determine workspace folder name/id
-    let workspaceId = null
-    if(req.user && req.user.workspace_id) workspaceId = req.user.workspace_id
-    else if(req.user && req.user.role === 'Admin'){
-      const q = (req.query && (req.query.workspace || req.query.workspace_id)) || (req.body && req.body.workspace_id)
-      const wid = q ? Number(q) : null
-      if(wid && !Number.isNaN(wid)) workspaceId = wid
-    }
+    // determine workspace folder name/id (workspaceId resolved above)
     let workspaceFolderId = null
     if(workspaceId && process.env.GOOGLE_DRIVE_FOLDER_ID){
       // lookup workspace name
@@ -260,9 +310,9 @@ async function createEvidence(req, res){
 async function updateEvidence(req, res){
   const id = Number(req.params.id) || 0 // id of the evidence
   try{
-    const [rows] = await pool.query('SELECT * FROM EVIDENCIAS WHERE id = ?', [id])
-    if(!rows || rows.length===0) return res.status(404).json({ error: 'not_found' })
-    const existing = rows[0]
+    const lookup = await getEvidenceInWorkspace(id, req)
+    if(lookup.error) return res.status(lookup.status).json({ error: lookup.error })
+    const existing = lookup.evidence
     const role = req.user && req.user.role ? req.user.role : ''
     const uid = req.user && req.user.id ? req.user.id : null
     const payload = req.body || {}
@@ -444,15 +494,13 @@ async function updateEvidence(req, res){
 async function deleteEvidence(req, res){
   const id = Number(req.params.id) || 0
   try{
-    const [rows] = await pool.query('SELECT * FROM EVIDENCIAS WHERE id = ?', [id])
-    if(!rows || rows.length===0) return res.status(404).json({ error: 'not_found' })
-    const existing = rows[0]
+    const lookup = await getEvidenceInWorkspace(id, req)
+    if(lookup.error) return res.status(lookup.status).json({ error: lookup.error })
+    const existing = lookup.evidence
     const role = req.user && req.user.role ? req.user.role : ''
     const uid = req.user && req.user.id ? req.user.id : null
-    // Allow Admin, Responsable SGC, or the original uploader to delete
-    if(role !== 'Admin' && role !== 'Responsable SGC' && existing.usuario_carga_id !== uid){
-      return res.status(403).json({ error: 'forbidden' })
-    }
+    const canDelete = role === 'Admin' || _toNumber(existing.usuario_carga_id) === _toNumber(uid)
+    if(!canDelete) return res.status(403).json({ error: 'forbidden' })
     // Insert delete log before removing the evidence row so FK constraints do not fail
     try{
       await pool.query('INSERT INTO EVIDENCIAS_LOG (evidencia_id, usuario_id, ev_id, tipo_accion, nombre_archivo, detalle) VALUES (?,?,?,?,?,?)', [id, uid, existing.ev_id || null, 'DELETE', existing.nombre_archivo || '', `Evidencia eliminada: ${existing.nombre_archivo || ''}`])
@@ -478,6 +526,8 @@ async function deleteEvidence(req, res){
 async function getEvidenceHistory(req, res){
   const id = Number(req.params.id) || 0
   try{
+    const lookup = await getEvidenceInWorkspace(id, req)
+    if(lookup.error) return res.status(lookup.status).json({ error: lookup.error })
     const [rows] = await pool.query(`SELECT l.*, u.nombre as usuario_nombre, e.estado_validacion_archivo FROM EVIDENCIAS_LOG l LEFT JOIN USUARIOS u ON u.id = l.usuario_id LEFT JOIN EVIDENCIAS e ON e.id = l.evidencia_id WHERE l.evidencia_id = ? ORDER BY l.fecha_accion DESC`, [id])
     // Attempt robust normalization for common mojibake patterns.
     // Strategy: if string contains typical mojibake markers (Ã), try interpreting

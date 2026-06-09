@@ -18,8 +18,10 @@ describe('evidenceController (unit)', ()=>{
 
   test('listByRequisito returns evidencias list', async ()=>{
     const now = new Date().toISOString().slice(0,10);
-    pool.query.mockResolvedValueOnce([[{ id: 1, evaluacion_requisito_id: 5, nombre_archivo: 'f.pdf', fecha_carga: now }]]);
-    const req = { params: { id: '5' } };
+    pool.query
+      .mockResolvedValueOnce([[{ id: 5 }]]) // workspace eval check
+      .mockResolvedValueOnce([[{ id: 1, evaluacion_requisito_id: 5, nombre_archivo: 'f.pdf', fecha_carga: now }]]);
+    const req = { params: { id: '5' }, user: { id: 1, workspace_id: 1 } };
     const res = mockRes();
     await listByRequisito(req, res);
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ evidencias: expect.any(Array) }));
@@ -27,7 +29,7 @@ describe('evidenceController (unit)', ()=>{
 
   test('downloadEvidence returns 404 if not found', async ()=>{
     pool.query.mockResolvedValueOnce([[]]);
-    const req = { params: { id: '999' }, user: { id: 1 } };
+    const req = { params: { id: '999' }, user: { id: 1, workspace_id: 1 } };
     const res = mockRes();
     await downloadEvidence(req, res);
     expect(res.status).toHaveBeenCalledWith(404);

@@ -208,6 +208,48 @@ const verContenido = (req, res) => {
 router.get('/cine', esAdulto, verContenido);
 ```
 
+## Clonación superficial antes de `reverse()` (`[...array]`)
+
+En `accionesController.js`, al eliminar una acción correctiva y sus descendientes, el código recorre los IDs en orden inverso (hijos primero, padre al final):
+
+```javascript
+const toDelete = [id]
+// ... se agregan IDs de sub-acciones con un bucle ...
+
+const ordered = [...toDelete].reverse()
+for (const actionId of ordered) {
+  await pool.execute('DELETE FROM ACCIONES_CORRECTIVAS WHERE id = ?', [actionId])
+}
+```
+
+### ¿Por qué `[...toDelete]` si `toDelete` ya es un array?
+
+Los corchetes con los tres puntos [...] aplican la **sintaxis spread** para crear una **copia superficial** del arreglo antes de invertirlo.
+
+Si escribieras solo:
+
+```javascript
+const ordered = toDelete.reverse()
+```
+
+estarías mutando **el mismo arreglo** que `toDelete`, porque en JavaScript los arreglos no se copian por valor al asignarlos: se guardan **por referencia** (ambas variables apuntan al mismo objeto en memoria).
+
+### Nota de desarrollo: gestión de memoria y mutación
+
+Al implementar procesos de ordenamiento o inversión sobre estructuras indexadas, conviene recordar que los arreglos en JavaScript se manipulan mediante **referencia de objeto**, no por valor. Variables que comparten el mismo arreglo enlazan al mismo contenedor en el **heap**; por eso métodos **destructivos** como `Array.prototype.reverse()` modifican el arreglo original *in place*.
+
+**Heap:** En Node.js, el heap (o montón) es la región de memoria RAM dedicada a la asignación dinámica de datos estructurados y de gran tamaño. Es el bloque principal gestionado por el motor JavaScript V8 (el núcleo de Node.js) donde se almacenan los elementos cuyo ciclo de vida no depende únicamente de la función
+
+En este flujo, `toDelete` se construye de forma incremental y podría reutilizarse después (por ejemplo, en la respuesta `{ deletedIds: toDelete }`). Invertirlo sin clonar alteraría ese orden y podría producir efectos secundarios difíciles de depurar en la API o en tests.
+
+**Mitigación adoptada:** clonación superficial obligatoria con spread (`[...toDelete]`) antes de llamar a `.reverse()`.
+
+### Referencias
+
+- [MDN — Spread syntax (`...`)](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Spread_syntax)
+- [MDN — `Array.prototype.reverse()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/reverse)
+- [MDN — Copying objects and arrays](https://developer.mozilla.org/en-US/docs/Glossary/Deep_copy#copying_objects_and_arrays)
+
 ## Modelo C4
 
 Quizas esto esta un poco fuera de tema, pero si deseas aprender acerca del modelamiento C4 de Simon Brown, revisa esta pagina web oficial: [text](https://c4model.com/)

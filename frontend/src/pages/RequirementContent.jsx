@@ -453,13 +453,13 @@ export default function RequirementContent({ node, onRequestCreateNc }){
 
   const canDeleteEvidence = (ev) => {
     if(!user) return false
-    if(hasRole(user, 'admin') || hasRole(user, 'responsable')) return true
+    if(hasRole(user, 'admin')) return true
     return user.id === ev.usuario_carga_id
   }
 
   const canUpdateEvidence = (ev) => {
     if(!user) return false
-    if(hasRole(user, 'admin') || hasRole(user, 'responsable')) return true
+    if(hasRole(user, 'admin')) return true
     return user.id === ev.usuario_carga_id
   }
 
@@ -470,7 +470,7 @@ export default function RequirementContent({ node, onRequestCreateNc }){
 
   const canEditComment = (ev) => {
     if(!user) return false
-    if(hasRole(user, 'admin') || hasRole(user, 'responsable')) return true
+    if(hasRole(user, 'admin')) return true
     return user.id === ev.usuario_carga_id
   }
 
