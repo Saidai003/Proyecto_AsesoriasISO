@@ -185,7 +185,8 @@ async function createEvidence(req, res){
 
     // determine workspace folder name/id (workspaceId resolved above)
     let workspaceFolderId = null
-    if(workspaceId && process.env.GOOGLE_DRIVE_FOLDER_ID){
+    const driveRootId = await driveService.getDriveRootFolderId()
+    if(workspaceId && driveRootId){
       // lookup workspace name
       try{
         const [wrows] = await pool.query('SELECT * FROM ESPACIO_TRABAJO WHERE id = ?', [workspaceId])
@@ -194,10 +195,8 @@ async function createEvidence(req, res){
         // workspaceName resolution strategy: prefer nombre_cliente if available, fallback to 'workspace-{id}' pattern
         const workspaceName = (wrows && wrows[0] && (wrows[0].nombre_cliente || `workspace-${workspaceId}`)) || `workspace-${workspaceId}`
         
-        // driveService.ensureFolder will check if a folder with the given name exists under the specified parent
-        // folder (GOOGLE_DRIVE_FOLDER_ID) and return its id, or create it if it doesn't exist. This allows us to organize evidence files 
-        // in subfolders per workspace.
-        workspaceFolderId = await driveService.ensureFolder(process.env.GOOGLE_DRIVE_FOLDER_ID, workspaceName)
+        // Raíz por entorno (Development|Production) → subcarpeta por workspace → requisito
+        workspaceFolderId = await driveService.ensureFolder(driveRootId, workspaceName)
       }catch(err){
         console.error('workspace folder resolution error', err)
         workspaceFolderId = null
@@ -388,10 +387,11 @@ async function updateEvidence(req, res){
             const wid = q ? Number(q) : null
             if(wid && !Number.isNaN(wid)) workspaceIdForDrive = wid
           }
-          if(workspaceIdForDrive){
+          const driveRootId = await driveService.getDriveRootFolderId()
+          if(workspaceIdForDrive && driveRootId){
               const [wrows] = await pool.query('SELECT * FROM ESPACIO_TRABAJO WHERE id = ?', [workspaceIdForDrive])
               const workspaceName = (wrows && wrows[0] && (wrows[0].nombre_cliente || `workspace-${workspaceIdForDrive}`)) || `workspace-${workspaceIdForDrive}`
-              const workspaceFolderId = await driveService.ensureFolder(process.env.GOOGLE_DRIVE_FOLDER_ID, workspaceName)
+              const workspaceFolderId = await driveService.ensureFolder(driveRootId, workspaceName)
             const requisitoName = existing.evaluacion_requisito_id ? String(existing.evaluacion_requisito_id) : (payload.evaluacion_requisito_id ? String(payload.evaluacion_requisito_id) : 'unknown')
             const requisitoFolderId = await driveService.ensureFolder(workspaceFolderId, requisitoName)
             const filename = payload.nombre_archivo || existing.nombre_archivo || `evidence-${Date.now()}`

@@ -15,16 +15,43 @@ Requisitos
 Iniciar la aplicación
 ---------------------
 
-Levantado rápido con Docker Compose:
+**Un solo comando** (primera vez o reinicios posteriores):
 
 ```bash
 docker compose up --build -d
 ```
 
-Importar los seeds (MySQL UTF-8)
---------------------------------
+En el **primer arranque** con volumen de base de datos vacío, MySQL ejecuta automáticamente en este orden:
 
-Si necesitas cargar los archivos `seed` en la base de datos `proyecto_iso`, usa los siguientes comandos (ejecutar desde la raíz del proyecto):
+1. `db/init.sql` — esquema
+2. `seeds/seedISO_utf8.sql` — datos ISO
+3. `seeds/seed_users_workspaces.sql` — workspace y usuarios demo
+
+El backend además ejecuta `scripts/ensureSeed.js` al iniciar: si la tabla `ISOS` ya tiene datos, **no vuelve a aplicar seeds** (idempotente).
+
+Variables de entorno (copia `.env.example` → `.env` en la raíz):
+
+| Variable | Desarrollo | Producción |
+|----------|------------|------------|
+| `NODE_ENV` | `development` | `production` |
+| `JWT_SECRET` | valor de dev | **secreto fuerte** |
+| `DB_PASSWORD` | `change_me` | **cambiar** |
+
+Con `NODE_ENV=production`, las evidencias en Google Drive se guardan bajo la subcarpeta **Production** (en desarrollo, **Development**). Ver `backend-js/GOOGLE_DRIVE_README.md`.
+
+Usuarios demo tras el seed: `responsable@demo.local`, `evaluador@demo.local`, `admin@demo.local` (contraseña `1234`).
+
+Importar seeds manualmente (solo si hace falta)
+-----------------------------------------------
+
+Si la base ya existía sin seeds, el backend los aplica solo en el primer arranque detectado. Para forzar desde cero:
+
+```bash
+docker compose down -v
+docker compose up --build -d
+```
+
+Comandos manuales alternativos (desarrollo):
 
 1) Importar `seedISO_utf8.sql`:
 

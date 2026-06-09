@@ -10,6 +10,30 @@ const TOKEN_PATH = process.env.GOOGLE_DRIVE_TOKEN_PATH ? path.resolve(process.en
 
 const SCOPES = ['https://www.googleapis.com/auth/drive.file']
 
+// Carpeta intermedia bajo GOOGLE_DRIVE_FOLDER_ID: Development | Production
+let cachedDriveRootFolderId = null
+
+function getDriveEnvironmentFolderName(){
+  if(process.env.GOOGLE_DRIVE_ENV_FOLDER) return process.env.GOOGLE_DRIVE_ENV_FOLDER
+  return process.env.NODE_ENV === 'production' ? 'Production' : 'Development'
+}
+
+/**
+ * Devuelve la carpeta raíz de evidencias para el entorno actual.
+ * Estructura en Drive: GOOGLE_DRIVE_FOLDER_ID → Development|Production → workspace → requisito
+ */
+async function getDriveRootFolderId(){
+  const parentId = process.env.GOOGLE_DRIVE_FOLDER_ID
+  if(!parentId) return null
+
+  if(cachedDriveRootFolderId) return cachedDriveRootFolderId
+
+  const envFolderName = getDriveEnvironmentFolderName()
+  cachedDriveRootFolderId = await ensureFolder(parentId, envFolderName)
+  console.log(`driveService: usando carpeta de entorno "${envFolderName}" (${cachedDriveRootFolderId})`)
+  return cachedDriveRootFolderId
+}
+
 function createOAuth2Client(){
   const clientId = process.env.GOOGLE_CLIENT_ID
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET
@@ -67,8 +91,9 @@ async function uploadBuffer({ buffer, mimeType, name, parents }){
   let parentIds = undefined
   if(parents){
     parentIds = Array.isArray(parents) ? parents : [parents]
-  }else if(process.env.GOOGLE_DRIVE_FOLDER_ID){
-    parentIds = [process.env.GOOGLE_DRIVE_FOLDER_ID]
+  }else{
+    const rootId = await getDriveRootFolderId()
+    if(rootId) parentIds = [rootId]
   }
 
   const client = createOAuth2Client()
@@ -169,4 +194,17 @@ async function downloadFile(fileId){
   return { stream: res.data, mimeType: meta.data.mimeType, name: meta.data.name }
 }
 
-module.exports = { generateAuthUrl, getTokenFromCode, uploadBuffer, hasSavedToken, ensureFolder, findFileInFolder, deleteFile, updateFile, getFileMeta, downloadFile }
+module.exports = {
+  generateAuthUrl,
+  getTokenFromCode,
+  uploadBuffer,
+  hasSavedToken,
+  getDriveEnvironmentFolderName,
+  getDriveRootFolderId,
+  ensureFolder,
+  findFileInFolder,
+  deleteFile,
+  updateFile,
+  getFileMeta,
+  downloadFile
+}

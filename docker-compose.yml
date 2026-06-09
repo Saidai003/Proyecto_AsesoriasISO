@@ -3,15 +3,18 @@ services:
     image: mysql:8.0
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
       MYSQL_DATABASE: proyecto_iso
       MYSQL_USER: proyecto_user
-      MYSQL_PASSWORD: change_me
+      MYSQL_PASSWORD: ${DB_PASSWORD:-change_me}
     ports:
       - "3306:3306"
     volumes:
       - db_data:/var/lib/mysql
-      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      # Orden alfabético: esquema primero, luego seeds (solo en el primer arranque con volumen vacío)
+      - ./db/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+      - ./seeds/seedISO_utf8.sql:/docker-entrypoint-initdb.d/02-seed-iso.sql:ro
+      - ./seeds/seed_users_workspaces.sql:/docker-entrypoint-initdb.d/03-seed-users.sql:ro
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 10s
@@ -22,24 +25,27 @@ services:
   backend-js:
     build: ./backend-js
     environment:
-      - NODE_ENV=development
+      - NODE_ENV=${NODE_ENV:-development}
       - DB_HOST=mysql
       - DB_USER=proyecto_user
-      - DB_PASSWORD=change_me
+      - DB_PASSWORD=${DB_PASSWORD:-change_me}
       - DB_NAME=proyecto_iso
       - PORT=3000
-      - JWT_SECRET=dev_jwt_secret
-      - SEED_SECRET=dev_seed_secret
+      - JWT_SECRET=${JWT_SECRET:-dev_jwt_secret}
+      - SEED_SECRET=${SEED_SECRET:-dev_seed_secret}
       - GOOGLE_DRIVE_TOKEN_PATH=/app/.env.drive_token
+      - SEEDS_DIR=/app/seeds
     env_file:
       - backend-js/.env
     ports:
       - "3000:3000"
     depends_on:
-      - mysql
+      mysql:
+        condition: service_healthy
     volumes:
       - ./backend-js/.credentials:/app/.credentials
       - ./backend-js:/app
+      - ./seeds:/app/seeds:ro
       - ./.env.drive_token:/app/.env.drive_token
 
   # Optional backend-py service example
@@ -50,6 +56,7 @@ services:
     command: npm run dev -- --host 0.0.0.0
     environment:
       - VITE_BACKEND_URL=http://backend-js:3000
+      - NODE_ENV=${NODE_ENV:-development}
     ports:
       - "5173:5173"
     depends_on:

@@ -1,5 +1,5 @@
 ﻿-- Data-only seed for ISO 9001 (inserts only, avoids schema/constraints)
-SET NAMES utf8mb4;
+/*!40101 SET NAMES utf8mb4 */;
 
 INSERT INTO ISOS (nombre, descripcion)
 VALUES ('ISO 9001:2015', 'Sistemas de gestión de la calidad — Requisitos');

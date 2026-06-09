@@ -78,7 +78,21 @@ Si quieres que los archivos subidos se guarden en una carpeta específica de tu 
 GOOGLE_DRIVE_FOLDER_ID=1EarK3UR6Obn_vQCFlMK-bsXZQe8TGYd6
 ```
 
-El servicio usará `GOOGLE_DRIVE_FOLDER_ID` como carpeta raíz donde crear subcarpetas por cada `workspace` y subir los archivos ahí. También puedes pasar `parents` como parámetro al llamar a la función de subida desde tu propio código.
+Estructura de carpetas por entorno (`NODE_ENV`):
+
+```
+GOOGLE_DRIVE_FOLDER_ID/          ← carpeta compartida configurada en .env
+├── Development/                 ← NODE_ENV=development (por defecto)
+│   └── {workspace}/
+│       └── {evaluacion_requisito_id}/
+│           └── archivos...
+└── Production/                  ← NODE_ENV=production
+    └── ...
+```
+
+El nombre de la subcarpeta de entorno se puede sobreescribir con `GOOGLE_DRIVE_ENV_FOLDER` en `backend-js/.env`.
+
+También puedes pasar `parents` como parámetro al llamar a la función de subida desde tu propio código.
 
 Notas
 - Los tokens se guardan en `backend-js/.credentials/drive_token.json`. No versionar este archivo.

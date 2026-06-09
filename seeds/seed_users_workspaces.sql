@@ -1,9 +1,11 @@
 -- Seed: workspaces and users (test accounts)
 /*!40101 SET NAMES utf8mb4 */;
 
--- Create a default workspace
-INSERT INTO ESPACIO_TRABAJO (nombre_cliente) VALUES ('Demo Workspace');
-SELECT LAST_INSERT_ID() INTO @WORKSPACE_DEMO_ID;
+-- Create a default workspace (idempotente)
+INSERT INTO ESPACIO_TRABAJO (nombre_cliente)
+SELECT 'Demo Workspace'
+WHERE NOT EXISTS (SELECT 1 FROM ESPACIO_TRABAJO WHERE nombre_cliente = 'Demo Workspace');
+SELECT id INTO @WORKSPACE_DEMO_ID FROM ESPACIO_TRABAJO WHERE nombre_cliente = 'Demo Workspace' LIMIT 1;
 
 -- Ensure roles exist
 INSERT INTO ROLES (nombre) VALUES ('Admin') ON DUPLICATE KEY UPDATE nombre=VALUES(nombre);
