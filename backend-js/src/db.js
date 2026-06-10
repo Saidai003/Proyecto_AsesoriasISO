@@ -9,8 +9,12 @@ const pool = mysql.createPool({
   database: process.env.DB_NAME || 'proyecto_iso',
   waitForConnections: true,
   connectionLimit: 10,
-  // ensure proper UTF-8 handling including emojis and tildes
-  charset: 'utf8mb4'
+  charset: 'utf8mb4',
+  // CONFIGURACIÓN SEGURA SIN ARCHIVOS LOCALES:
+  ssl: process.env.DB_SSL_CA ? {
+    ca: process.env.DB_SSL_CA,
+    rejectUnauthorized: true
+  } : false
 });
 
 async function testConnection() {
