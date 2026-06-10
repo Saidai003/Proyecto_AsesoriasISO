@@ -11,10 +11,9 @@ services:
       - "3306:3306"
     volumes:
       - db_data:/var/lib/mysql
-      # Orden alfabético: esquema primero, luego seeds (solo en el primer arranque con volumen vacío)
       - ./db/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
-      - ./seeds/seedISO_utf8.sql:/docker-entrypoint-initdb.d/02-seed-iso.sql:ro
-      - ./seeds/seed_users_workspaces.sql:/docker-entrypoint-initdb.d/03-seed-users.sql:ro
+      - ./backend-js/seeds/seedISO_utf8.sql:/docker-entrypoint-initdb.d/02-seed-iso.sql:ro
+      - ./backend-js/seeds/seed_users_workspaces.sql:/docker-entrypoint-initdb.d/03-seed-users.sql:ro
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 10s
@@ -23,9 +22,7 @@ services:
 
   # Optional backend-js service example
   backend-js:
-    build:
-      context: .                  # <-- Ahora Docker mira la raíz del proyecto al compilar
-      dockerfile: backend-js/Dockerfile  # <-- Le decimos dónde quedó el Dockerfile
+    build: ./backend-js
     environment:
       - NODE_ENV=${NODE_ENV:-development}
       - DB_HOST=mysql
@@ -47,7 +44,7 @@ services:
     volumes:
       - ./backend-js/.credentials:/app/.credentials
       - ./backend-js:/app
-      - ./seeds:/app/seeds:ro
+      - ./backend-js/seeds:/app/seeds:ro
       - ./.env.drive_token:/app/.env.drive_token
 
   # Optional backend-py service example
