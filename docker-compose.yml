@@ -23,7 +23,9 @@ services:
 
   # Optional backend-js service example
   backend-js:
-    build: ./backend-js
+    build:
+      context: .                  # <-- Ahora Docker mira la raíz del proyecto al compilar
+      dockerfile: backend-js/Dockerfile  # <-- Le decimos dónde quedó el Dockerfile
     environment:
       - NODE_ENV=${NODE_ENV:-development}
       - DB_HOST=mysql
