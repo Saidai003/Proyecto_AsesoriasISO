@@ -1,0 +1,42 @@
+C4Component
+    title Component Diagram - Frontend SPA (React 18 + Vite)
+
+    Container_Boundary(frontend, "Frontend SPA") {
+        Component(app, "App Router", "React Router v6", "Rutas principales, redirecciones, layout público/protegido")
+        Component(authctx, "AuthContext", "React Context + Hooks", "Estado global autenticación: user, token, login, logout, refresh, roles")
+        Component(protected, "Protected Route", "HOC/Wrapper", "Guarda rutas por autenticación y rol (Admin, Evaluador, Operativo)")
+        Component(layout, "Layout + NavBar", "Componentes UI", "Shell principal, navegación lateral, header, responsive")
+        
+        Component(login, "Login Page", "React Hook Form", "Formulario login, validación, llamada /auth/login, redirección")
+        Component(activate, "Activate Account", "React Hook Form", "Activación cuenta vía token, establecimiento contraseña")
+        Component(lobby, "Lobby Pages", "Vistas por rol", "LobbyAdmin (gestión), LobbyEvaluador (evaluaciones), LobbyOperativo (mis tareas)")
+        Component(usersmgr, "Users Manager", "Admin only", "CRUD usuarios, invitaciones, roles, workspaces")
+        Component(workspacesmgr, "Workspaces Manager", "Admin only", "CRUD workspaces, asignación usuarios")
+        Component(reqview, "Requirement View", "Evaluador/Operativo", "Árbol ISO, evaluación requisitos, evidencias, chat, NCs")
+        Component(ncview, "NC View", "Evaluador/Responsable", "Detalle NC, flujo estados, acciones correctivas, chat, verificación eficacia")
+        Component(chat, "Chat Component", "Reutilizable", "Chat contextual por requisito/NC/acción/evidencia, SSE, edición")
+        Component(notif, "Notificaciones", "Toast + Panel", "Polling/SSE notificaciones, toast global, panel lateral")
+        Component(upload, "Upload Area", "Drag & Drop", "Subida archivos a Google Drive vía backend, validación, progreso")
+        Component(api, "API Client", "Fetch wrapper", "Interceptores auth, manejo errores, refresh token automático, baseURL")
+        Component(hooks, "Custom Hooks", "useISO, useUsers, useWorkspaces", "Lógica de negocio encapsulada, caching, mutaciones")
+    }
+
+    Person(user, "Usuario (cualquier rol)")
+    Container(backend, "Backend API", "Node.js + Express")
+
+    Rel(user, app, "Navega")
+    Rel(app, authctx, "Provee contexto")
+    Rel(app, protected, "Envuelve rutas privadas")
+    Rel(app, layout, "Renderiza shell")
+    Rel(layout, notif, "Incluye toast/panel")
+    Rel(login, authctx, "Login -> setUser")
+    Rel(activate, authctx, "Activa cuenta")
+    Rel(lobby, authctx, "Lee user/role")
+    Rel(usersmgr, api, "CRUD usuarios")
+    Rel(workspacesmgr, api, "CRUD workspaces")
+    Rel(reqview, api, "Evaluaciones, evidencias, chat, NCs")
+    Rel(ncview, api, "NCs, acciones, chat, verificación")
+    Rel(chat, api, "Mensajes + SSE")
+    Rel(notif, api, "Polling/SSE notificaciones")
+    Rel(upload, api, "POST /api/evidencias (multipart)")
+    Rel(api, backend, "HTTP/JSON + SSE", "HTTPS")

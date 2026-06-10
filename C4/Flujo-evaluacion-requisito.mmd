@@ -1,0 +1,36 @@
+flowchart TD
+    subgraph "Workspace (Cliente)"
+        R[Requisito Base\nISO 9001] --> ER[Evaluación Requisito\nworkspace_id + requisito_base_id]
+        ER -->|estado: No cumple| NC[AUDITORIA_NC\nNo Conformidad]
+        NC -->|Creada por Evaluador| AC1[ACCIÓN_CORRECTIVA #1\nTipo: Corrección Inmediata\nAutor: Evaluador]
+        AC1 -->|Responsable SGC ejecuta| AC2[ACCIÓN_CORRECTIVA #2\nTipo: Acción Correctiva\nAutor: Responsable SGC]
+        AC2 -->|Si no eficaz| AC3[ACCIÓN_CORRECTIVA #3\nTipo: Acción Preventiva\nAutor: Responsable SGC]
+        AC3 -->|Verifica Evaluador| VE[Verificación Eficacia\nAcepto / Parcial / No Acepto]
+        VE -->|No Acepto| NC
+        VE -->|Acepto| NC_CLOSE[NC Cerrada]
+    end
+
+    subgraph "Evidencias"
+        E1[Evidencia 1\nSubida por Operativo] --> ER
+        E2[Evidencia 2\nSubida por Responsable] --> AC2
+        E3[Evidencia 3\nVerificación] --> VE
+    end
+
+    subgraph "Chat Colaborativo"
+        C1[Chat Requisito] --> ER
+        C2[Chat NC] --> NC
+        C3[Chat Acción] --> AC2
+    end
+
+    subgraph "Historial / Auditoría"
+        H1[EVALUACION_REQUISITO_HIST] --> ER
+        H2[AUDITORIA_NC_HIST] --> NC
+        H3[ACCIONES_CORRECTIVAS_HIST] --> AC1 & AC2 & AC3
+        H4[EVIDENCIAS_LOG] --> E1 & E2 & E3
+    end
+
+    style NC fill:#ffebee,stroke:#c62828
+    style AC1 fill:#fff3e0,stroke:#ef6c00
+    style AC2 fill:#e8f5e9,stroke:#2e7d32
+    style AC3 fill:#e3f2fd,stroke:#1565c0
+    style VE fill:#fce4ec,stroke:#c2185b

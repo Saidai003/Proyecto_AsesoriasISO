@@ -1,0 +1,13 @@
+erDiagram
+    ISOS ||--o{ CLAUSULAS : "tiene"
+    CLAUSULAS ||--o{ REQUISITOS_BASE : "contiene"
+    REQUISITOS_BASE ||--o{ REQUISITOS_BASE : "padre/hijo (jerárquico)"
+    REQUISITOS_BASE ||--o{ PROCESOS : "tiene procesos"
+    PROCESOS ||--o{ METODOS_CONTROLES : "tiene métodos"
+    
+    ESPACIO_TRABAJO ||--o{ USUARIOS : "contiene"
+    ROLES ||--o{ USUARIOS : "asigna"
+    
+    ESPACIO_TRABAJO ||--o{ EVALUACION_REQUISITO : "evalúa en"
+    REQUISITOS_BASE ||--o{ EVALUACION_REQUISITO : "se evalúa"
+    USUARIOS

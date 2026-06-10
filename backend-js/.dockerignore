@@ -1,0 +1,14 @@
+node_modules
+npm-debug.log*
+dist
+build
+.git
+.gitignore
+.env
+.env.*
+.env.drive_token
+.credentials
+uploads
+*.log
+.DS_Store
+.vscode
