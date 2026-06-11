@@ -7,7 +7,8 @@ const fs = require('fs')
 const path = require('path')
 const mysql = require('mysql2/promise')
 
-const SEEDS_DIR = process.env.SEEDS_DIR || path.resolve(__dirname, '../../seeds')
+// Ahora busca la carpeta seeds dentro del propio backend-js
+const SEEDS_DIR = process.env.SEEDS_DIR || path.resolve(__dirname, '../seeds')
 const SEED_FILES = ['init.sql', 'seedISO_utf8.sql', 'seed_users_workspaces.sql']
 
 async function createConnection(){
