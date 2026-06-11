@@ -41,7 +41,6 @@ CREATE TABLE IF NOT EXISTS CLAUSULAS (
     titulo VARCHAR(255),
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_clausulas_iso FOREIGN KEY (iso_id) REFERENCES ISOS(id) ON DELETE SET NULL,
-    -- El índice ahora está protegido aquí adentro:
     INDEX idx_clausulas_iso (iso_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -72,7 +71,6 @@ CREATE TABLE IF NOT EXISTS REQUISITOS_BASE (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_req_clausula FOREIGN KEY (clausula_id) REFERENCES CLAUSULAS(id) ON DELETE CASCADE,
     CONSTRAINT fk_req_padre FOREIGN KEY (requisito_padre_id) REFERENCES REQUISITOS_BASE(id) ON DELETE SET NULL,
-    -- El índice ahora está protegido aquí adentro:
     INDEX idx_req_clausula (clausula_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -108,7 +106,6 @@ CREATE TABLE IF NOT EXISTS NOTIFICACIONES (
     read_flag TINYINT(1) DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_notif_usuario FOREIGN KEY (usuario_id) REFERENCES USUARIOS(id) ON DELETE CASCADE,
-    -- El índice ahora está protegido aquí adentro:
     INDEX idx_notif_user_read (usuario_id, read_flag)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -138,7 +135,6 @@ CREATE TABLE IF NOT EXISTS PROCESOS (
     fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP,
     creado_por INT,
     CONSTRAINT fk_procesos_requisito FOREIGN KEY (requisito_base_id) REFERENCES REQUISITOS_BASE(id) ON DELETE CASCADE,
-    -- Los índices ahora están protegidos aquí adentro:
     INDEX idx_procesos_req (requisito_base_id),
     INDEX idx_procesos_requisito (requisito_base_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -153,7 +149,6 @@ CREATE TABLE IF NOT EXISTS EVALUACION_REQUISITO (
     CONSTRAINT fk_eval_req_base FOREIGN KEY (requisito_base_id) REFERENCES REQUISITOS_BASE(id) ON DELETE CASCADE,
     CONSTRAINT fk_eval_req_workspace FOREIGN KEY (workspace_id) REFERENCES ESPACIO_TRABAJO(id) ON DELETE CASCADE,
     CONSTRAINT fk_eval_req_ultima_edicion FOREIGN KEY (ultima_edicion_por) REFERENCES USUARIOS(id) ON DELETE SET NULL,
-    -- El índice ahora está protegido aquí adentro:
     INDEX idx_eval_req_workspace (workspace_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -216,7 +211,6 @@ CREATE TABLE IF NOT EXISTS AUDITORIA_NC (
     CONSTRAINT fk_auditoria_evaluador FOREIGN KEY (evaluador_id) REFERENCES USUARIOS(id) ON DELETE SET NULL,
     CONSTRAINT fk_auditoria_evaluado FOREIGN KEY (evaluado_id) REFERENCES USUARIOS(id) ON DELETE SET NULL,
     CONSTRAINT fk_auditoria_ultima_edicion FOREIGN KEY (ultima_edicion_por) REFERENCES USUARIOS(id) ON DELETE SET NULL,
-    -- El índice ahora está protegido aquí adentro:
     INDEX idx_nc_eval (evaluacion_requisito_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -268,7 +262,7 @@ CREATE TABLE IF NOT EXISTS EVIDENCIAS_LOG (
     detalle TEXT,
     fecha_accion DATETIME DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_evidlog_evid FOREIGN KEY (evidencia_id) REFERENCES EVIDENCIAS(id) ON DELETE CASCADE,
-    CONSTRAINT fk_evidlog_usuario KEY (usuario_id) REFERENCES USUARIOS(id) ON DELETE SET NULL,
+    CONSTRAINT fk_evidlog_usuario FOREIGN KEY (usuario_id) REFERENCES USUARIOS(id) ON DELETE SET NULL,
     CONSTRAINT fk_evidlog_ev FOREIGN KEY (ev_id) REFERENCES USUARIOS(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -315,7 +309,6 @@ CREATE TABLE IF NOT EXISTS CHAT_MESSAGES (
     CONSTRAINT fk_chat_autor FOREIGN KEY (autor_id) REFERENCES USUARIOS(id) ON DELETE SET NULL,
     CONSTRAINT fk_chat_nc FOREIGN KEY (nc_id) REFERENCES AUDITORIA_NC(id) ON DELETE CASCADE,
     CONSTRAINT fk_chat_evidencia FOREIGN KEY (evidencia_id) REFERENCES EVIDENCIAS(id) ON DELETE CASCADE,
-    -- Los índices ahora están protegidos aquí adentro:
     INDEX idx_chat_nc_created (nc_id, created_at),
     INDEX idx_chat_req_created (requisito_id, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
