@@ -43,13 +43,26 @@ function createOAuth2Client(){
 }
 
 async function loadSavedToken(oAuth2Client){
+  // 1. PRIORIDAD NUBE: Intentar cargar desde la variable de entorno
+  if (process.env.GOOGLE_DRIVE_TOKEN) {
+    try {
+      const tokens = JSON.parse(process.env.GOOGLE_DRIVE_TOKEN)
+      oAuth2Client.setCredentials(tokens)
+      console.log('driveService: loaded token from GOOGLE_DRIVE_TOKEN environment variable')
+      return true
+    } catch (error) {
+      console.error('driveService: failed to parse GOOGLE_DRIVE_TOKEN environment variable', error)
+    }
+  }
+
+  // 2. FALLBACK LOCAL: Intentar cargar desde el archivo
   try{
     const content = await fs.readFile(TOKEN_PATH, 'utf8')
     oAuth2Client.setCredentials(JSON.parse(content))
     console.log('driveService: loaded saved token from', TOKEN_PATH)
     return true
   }catch(_){
-    console.log('driveService: no saved token at', TOKEN_PATH)
+    console.log('driveService: no saved token at', TOKEN_PATH, 'and no environment variable found')
     return false
   }
 }
@@ -79,6 +92,10 @@ async function getTokenFromCode(code){
 }
 
 async function hasSavedToken(){
+  // 1. PRIORIDAD NUBE
+  if (process.env.GOOGLE_DRIVE_TOKEN) return true;
+
+  // 2. FALLBACK LOCAL
   try{
     await fs.access(TOKEN_PATH)
     return true
@@ -119,7 +136,6 @@ async function uploadBuffer({ buffer, mimeType, name, parents }){
   })
 
   const fileId = res.data.id
-    // Removed public 'anyone' permission to ensure files are not viewable by link
 
   const meta = await drive.files.get({ fileId, fields: 'id, webViewLink, webContentLink' })
   return { id: fileId, webViewLink: meta.data.webViewLink, webContentLink: meta.data.webContentLink }
