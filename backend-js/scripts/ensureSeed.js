@@ -39,7 +39,13 @@ async function applySeedFile(connection, filename){
     console.warn(`[ensureSeed] Archivo no encontrado, se omite: ${filePath}`)
     return
   }
-  const sql = fs.readFileSync(filePath, 'utf8')
+  
+  // 1. Leemos el archivo
+  let sql = fs.readFileSync(filePath, 'utf8')
+  
+  // 2. MAGIA: Eliminamos el BOM invisible si es que existe
+  sql = sql.replace(/^\uFEFF/, '') 
+  
   console.log(`[ensureSeed] Ejecutando ${filename}...`)
   await connection.query(sql)
 }
