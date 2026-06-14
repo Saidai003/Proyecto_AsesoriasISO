@@ -212,7 +212,8 @@ export default function NCView(){
             <p className="text-sm text-slate-600 mt-1">{nc.comentario_nc}</p>
           </div>
           <div className="flex flex-col gap-3 items-end">
-            <div className="relative flex flex-col items-end" ref={acceptRef}>
+            <div className="relative flex items-center gap-2" ref={acceptRef}>
+              <span className="text-xs font-medium text-slate-600 whitespace-nowrap">Estado de aprobación</span>
               <button
                 onClick={()=>{ if(isResponsable){ setAcceptOpen(o=>!o); setFlowOpen(false) } }}
                 className={`px-4 py-2 rounded text-white text-sm font-semibold ${validationColor(acceptState)} ${!isResponsable ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer'}`}
@@ -228,7 +229,8 @@ export default function NCView(){
               )}
             </div>
 
-            <div className="relative flex flex-col items-end" ref={flowRef}>
+            <div className="relative flex items-center gap-2" ref={flowRef}>
+              <span className="text-xs font-medium text-slate-600 whitespace-nowrap">Estado de proceso</span>
               <button
                 onClick={()=>{ if(isResponsable || isEvaluador){ setFlowOpen(o=>!o); setAcceptOpen(false) } }}
                 className={`px-4 py-2 rounded text-white text-sm font-semibold ${flowColor(flowState)} ${ (isResponsable || isEvaluador) ? 'border-transparent hover:border-black hover:shadow-sm cursor-pointer' : 'opacity-70 cursor-not-allowed'}`}

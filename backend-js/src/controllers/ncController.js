@@ -102,17 +102,13 @@ async function updateNC(req, res){
       const current = nc.estado_flujo
       if(newFlow !== current){
         // enforce role rules
-        if(current === 'Verificación' || current === 'Cerrada'){
-          return res.status(403).json({ error: 'no_se_puede_cambiar_desde_estado_final', message: 'No se puede cambiar la NC porque está en un estado final.' })
-        }
         if(role === 'Responsable SGC' || isAdmin){
           if(current !== 'Abierta'){ return res.status(403).json({ error: 'forbidden' }) }
           if(!['Análisis','Ejecución'].includes(newFlow)){ return res.status(400).json({ error: 'invalid_target_state' }) }
         }else if(role === 'Evaluador' || isAdmin){
           if(!['Abierta','Verificación','Cerrada'].includes(newFlow)){ return res.status(400).json({ error: 'invalid_target_state' }) }
         }else{
-          return res.status(403).json({ error: 'forbidden' })
-        }
+          return res.status(403).json({ error: 'forbidden' }) }
 
         try{
           if(typeof newFlow === 'string'){
