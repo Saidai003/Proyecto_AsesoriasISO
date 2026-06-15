@@ -15,9 +15,9 @@ SELECT id INTO @ROLE_ADMIN_ID FROM ROLES WHERE nombre='Admin' LIMIT 1;
 SELECT id INTO @ROLE_EVAL_ID FROM ROLES WHERE nombre='Evaluador' LIMIT 1;
 SELECT id INTO @ROLE_RESP_ID FROM ROLES WHERE nombre='Responsable SGC' LIMIT 1;
 
--- Password hash for '1234' (generated with bcrypt)
--- Regenerated inside container with: node -e "console.log(require('bcryptjs').hashSync('1234',10))"
-SET @HASH = '$2a$10$dpVTb/jYE4jIk2SM936jB.SabUYp4JMPY1rjMmd4dz/tTXcVELM/i';
+-- Password hash for 'Password123!' (generated with bcrypt)
+-- Regenerated inside container with: node -e "console.log(require('bcryptjs').hashSync('Password123!',10))"
+SET @HASH = '$2a$10$0fCyG0RW44LBr89cL9sVvOFghxcGVoUKu6PvAVpoSqaefr44M87m.';
 
 -- Insert users (no duplicate by email)
 INSERT INTO USUARIOS (workspace_id, role_id, nombre, email, password_hash, estado_invitacion)

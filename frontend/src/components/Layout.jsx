@@ -1,10 +1,11 @@
 import React from 'react'
 import { useAuth } from '../AuthContext'
-import { useLocation, NavLink } from 'react-router-dom'
+import { useLocation, useNavigate, NavLink } from 'react-router-dom'
 
 export default function Layout({ title, subtitle, sidebar, headerRight, children }){
   const { user } = useAuth()
   const location = useLocation()
+  const navigate = useNavigate()
 
   // If an admin is on the main /lobby route, normally show the simple admin
   // navigation (Dashboard / Workspaces / Users) instead of any workspace
@@ -45,7 +46,15 @@ export default function Layout({ title, subtitle, sidebar, headerRight, children
         <header className="w-full h-16 sticky top-0 z-40 bg-white/80 backdrop-blur-md flex justify-end items-center px-8 shadow-sm">
           <div className="flex items-center gap-4">
             {headerRight}
-            <div className="flex items-center gap-3 cursor-pointer">
+            <button
+              type="button"
+              onClick={() => navigate('/settings')}
+              className="inline-flex items-center justify-center rounded-full p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900 transition"
+              title="Ajustes"
+            >
+              <span className="material-symbols-outlined text-lg">settings</span>
+            </button>
+            <div className="flex items-center gap-3">
               <div className="text-right hidden sm:block mr-4">
                 <p className="text-xs font-bold text-blue-900">{user?.nombre || 'Invitado'}</p>
                 <p className="text-[10px] text-slate-500 font-medium">{user?.role || ''}</p>

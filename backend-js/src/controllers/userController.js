@@ -58,6 +58,35 @@ async function updateUser(req, res){
   }
 }
 
+async function updateUserPassword(req, res){
+  try{
+    const id = Number(req.params.id);
+    if(!id) return res.status(400).json({ error: 'id_required' });
+    if(!req.user || Number(req.user.id) !== id) return res.status(403).json({ error: 'forbidden' });
+
+    const { currentPassword, password } = req.body;
+    if(!password || typeof password !== 'string' || !password.trim()) {
+      return res.status(400).json({ error: 'password_required' });
+    }
+    if(!currentPassword || typeof currentPassword !== 'string') {
+      return res.status(400).json({ error: 'current_password_required' });
+    }
+
+    const [rows] = await pool.execute('SELECT password_hash FROM USUARIOS WHERE id = ?', [id]);
+    if(!rows.length) return res.status(404).json({ error: 'not_found' });
+
+    const validPassword = await bcrypt.compare(currentPassword, rows[0].password_hash);
+    if(!validPassword) return res.status(401).json({ error: 'invalid_current_password' });
+
+    const newHash = await bcrypt.hash(password, 10);
+    await pool.execute('UPDATE USUARIOS SET password_hash = ? WHERE id = ?', [newHash, id]);
+    return res.json({ ok: true });
+  }catch(err){
+    console.error('updateUserPassword error', err);
+    return res.status(500).json({ error: 'internal_error' });
+  }
+}
+
 async function deleteUser(req, res){
   try{
     const id = req.params.id;
@@ -120,4 +149,4 @@ async function assignUserToWorkspace(req, res){
   }
 }
 
-module.exports = { createUser, updateUser, deleteUser, getUser, listUsers, assignUserToWorkspace, listResponsables };
+module.exports = { createUser, updateUser, updateUserPassword, deleteUser, getUser, listUsers, assignUserToWorkspace, listResponsables };

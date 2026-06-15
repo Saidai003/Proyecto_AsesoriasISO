@@ -1,6 +1,9 @@
 #!/bin/sh
 set -e
 
+# Entrypoint script normalizado para entornos Linux/Alpine
+# y compatible con Railway/local.
+# Este archivo se reescribe para asegurar saltos de línea Unix.
 echo "[entrypoint] Esperando base de datos..."
 tries=0
 max=60

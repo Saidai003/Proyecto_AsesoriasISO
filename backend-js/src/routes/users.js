@@ -1,7 +1,7 @@
 const Router = require('express').Router;
 const router = Router();
 const { requireAuth, requireRole } = require('../middleware/auth');
-const { createUser, listUsers, getUser, updateUser, deleteUser, assignUserToWorkspace, listResponsables } = require('../controllers/userController');
+const { createUser, listUsers, getUser, updateUser, deleteUser, assignUserToWorkspace, listResponsables, updateUserPassword } = require('../controllers/userController');
 
 // create user (admin-only)
 router.post('/', requireAuth, requireRole('Admin'), createUser);
@@ -11,6 +11,8 @@ router.get('/', requireAuth, requireRole('Admin'), listUsers);
 router.get('/responsables', requireAuth, listResponsables);
 // get single user
 router.get('/:id', requireAuth, requireRole('Admin'), getUser);
+// change own password
+router.put('/:id/password', requireAuth, updateUserPassword);
 // update user
 router.put('/:id', requireAuth, requireRole('Admin'), updateUser);
 // delete user

@@ -44,6 +44,7 @@ services:
     volumes:
       - ./backend-js/.credentials:/app/.credentials
       - ./backend-js:/app
+      - backend-js-node-modules:/app/node_modules
       - ./backend-js/seeds:/app/seeds:ro
       - ./.env.drive_token:/app/.env.drive_token
 
@@ -63,3 +64,4 @@ services:
 
 volumes:
   db_data:
+  backend-js-node-modules:
