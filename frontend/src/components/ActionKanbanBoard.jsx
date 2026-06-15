@@ -11,7 +11,8 @@ const KANBAN_STATES = ['Pendiente', 'En_Progreso', 'Eficaz', 'No_Eficaz']
 
 const formatKanbanState = (state) => {
   if (state === 'En_Progreso') return 'En progreso'
-  if (state === 'No_Eficaz') return 'No eficaz'
+  if (state === 'Eficaz') return 'Implementada / Cumplida'
+  if (state === 'No_Eficaz') return 'Requiere Ajuste'
   return state || 'Sin estado'
 }
 

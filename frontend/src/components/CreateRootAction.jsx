@@ -22,7 +22,7 @@ export default function CreateRootAction(){
   return (
     <div>
       {!open ? (
-        <button onClick={()=>setOpen(true)} className="px-3 py-1 bg-[#00236f] text-white rounded">Crear acción correctiva</button>
+        <button onClick={()=>setOpen(true)} className="px-3 py-1 bg-[#00236f] text-white rounded">Asignar Nueva Acción / Tarea</button>
       ) : (
         <div className="p-3 border rounded bg-white">
           <div className="mb-2 text-sm text-yellow-800 bg-yellow-100 p-2 rounded">Nota: una vez creada, la acción correctiva no podrá ser editada salvo por su <strong>estado</strong>. Asegúrate de completar la información correctamente.</div>

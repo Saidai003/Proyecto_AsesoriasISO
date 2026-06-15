@@ -208,8 +208,8 @@ export default function NCView(){
       <div className="bg-white rounded-xl p-6 shadow-sm">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h2 className="text-lg font-semibold">No Conformidad #{nc.id}</h2>
-            <p className="text-sm text-slate-600 mt-1">{nc.comentario_nc}</p>
+            <h2 className="text-lg font-semibold">Brecha #{nc.id}</h2>
+            <p className="text-sm text-slate-600 mt-1">{nc.comentario_nc || 'Descripción de la Brecha / Falta de la Norma'}</p>
           </div>
           <div className="flex flex-col gap-3 items-end">
             <div className="relative flex items-center gap-2" ref={acceptRef}>
@@ -269,10 +269,10 @@ export default function NCView(){
 
         <div className="mt-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold">Hilos de acciones correctivas</h3>
+            <h3 className="font-semibold">Plan de Implementación (Acciones Correctivas)</h3>
             <div className="flex gap-2">
               <button onClick={() => { setHistoryOpen(true); loadHistoryForNC(id); }} className="px-3 py-1 border rounded text-sm">Historial acciones</button>
-              <button onClick={() => { setNcHistoryOpen(true); loadNCHistory(id); }} className="px-3 py-1 border rounded text-sm">Historial NC</button>
+              <button onClick={() => { setNcHistoryOpen(true); loadNCHistory(id); }} className="px-3 py-1 border rounded text-sm">Historial de la Brecha</button>
             </div>
           </div>
           
@@ -323,7 +323,7 @@ export default function NCView(){
         <div className="fixed inset-0 bg-black/40 z-50 flex items-start justify-center p-6">
           <div className="bg-white rounded-lg w-full max-w-3xl p-4">
             <div className="flex items-center justify-between mb-3">
-              <h4 className="font-semibold">Historial de NC #{nc.id}</h4>
+              <h4 className="font-semibold">Historial de la Brecha #{nc.id}</h4>
               <button onClick={()=>setNcHistoryOpen(false)} className="px-2 py-1 border rounded">Cerrar</button>
             </div>
             <div className="h-64 overflow-auto border rounded p-2 bg-slate-50">

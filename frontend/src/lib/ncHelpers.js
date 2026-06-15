@@ -3,8 +3,8 @@ export function statusColor(status){
   switch(status){
     case 'Pendiente': return 'bg-yellow-100 text-yellow-800'
     case 'En_Progreso': return 'bg-blue-600 text-white'
-    case 'Eficaz': return 'bg-green-100 text-green-800'
-    case 'No_Eficaz': return 'bg-red-100 text-red-800'
+    case 'Eficaz': return 'bg-emerald-100 text-emerald-800'
+    case 'No_Eficaz': return 'bg-orange-100 text-orange-800'
     default: return 'bg-slate-100 text-slate-800'
   }
 }

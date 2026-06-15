@@ -128,7 +128,7 @@ export default function RequirementView(){
           </div>
           {isEvaluador && (
             <div className="flex items-center gap-2">
-              <button onClick={openNcModal} className="px-4 py-2 rounded bg-red-600 text-white text-sm">Crear NC</button>
+              <button onClick={openNcModal} className="px-4 py-2 rounded bg-red-600 text-white text-sm">Registrar Brecha de Cumplimiento</button>
             </div>
           )}
         </div>
@@ -150,7 +150,7 @@ export default function RequirementView(){
         <div className="fixed inset-0 bg-black/40 z-[9999] flex items-center justify-center p-6 overflow-auto">
           <div className="bg-white rounded-lg w-full max-w-2xl p-4 max-h-[90vh] overflow-auto">
             <div className="flex items-center justify-between mb-3">
-              <h4 className="font-semibold">Crear No Conformidad</h4>
+              <h4 className="font-semibold">Registrar Brecha de Cumplimiento</h4>
               <button onClick={()=>setNcModalOpen(false)} className="px-2 py-1 border rounded">Cerrar</button>
             </div>
             <div className="space-y-3">

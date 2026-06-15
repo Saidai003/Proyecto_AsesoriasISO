@@ -685,9 +685,9 @@ export default function RequirementContent({ node, onRequestCreateNc }){
 
         <div className="mt-4 p-3 border rounded bg-white">
           <div className="flex items-center justify-between gap-2">
-            <h5 className="text-sm font-medium">No conformidades</h5>
+            <h5 className="text-sm font-medium">Brechas Detectadas en el GAP Analysis</h5>
             {onRequestCreateNc && (
-              <button onClick={onRequestCreateNc} className="px-3 py-1 border rounded text-xs">Crear NC</button>
+              <button onClick={onRequestCreateNc} className="px-3 py-1 border rounded text-xs">Registrar Brecha de Cumplimiento</button>
             )}
           </div>
           <div className="mt-2">
@@ -750,7 +750,7 @@ export default function RequirementContent({ node, onRequestCreateNc }){
                 </table>
               </div>
             ) : (
-              <div className="text-sm text-slate-500">No hay NCs asociadas.</div>
+              <div className="text-sm text-slate-500">No hay brechas asociadas.</div>
             )}
           </div>
         </div>
