@@ -156,6 +156,7 @@ CREATE TABLE IF NOT EXISTS AUDITORIA_NC_HIST (
 	estado_flujo VARCHAR(50),
 	estado_validacion ENUM('Acepto','Parcial','No Acepto'),
 	fecha_verificacion_eficacia DATE,
+	comentario TEXT,
 	evaluador_id INT,
 	evaluado_id INT,
 	ultima_edicion_por INT,

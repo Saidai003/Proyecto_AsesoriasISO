@@ -41,6 +41,9 @@ export default function RequirementContent({ node, onRequestCreateNc }){
   const [evidenceHistoryLogs, setEvidenceHistoryLogs] = useState([])
   const [evidenceHistoryTarget, setEvidenceHistoryTarget] = useState(null)
   const [evidenceNotifs, setEvidenceNotifs] = useState({})
+  const [ncGlobalHistoryOpen, setNcGlobalHistoryOpen] = useState(false)
+  const [ncGlobalHistoryLogs, setNcGlobalHistoryLogs] = useState([])
+  const [ncGlobalHistoryLoading, setNcGlobalHistoryLoading] = useState(false)
 
   // keep ref in sync for cleanup on unmount
   useEffect(()=>{ blobUrlsRef.current = blobUrls },[blobUrls])
@@ -367,6 +370,30 @@ export default function RequirementContent({ node, onRequestCreateNc }){
     }
   }
 
+  const openNcGlobalHistoryModal = async ()=>{
+    if(!evaluacionId){
+      setNcGlobalHistoryLogs([])
+      setNcGlobalHistoryOpen(true)
+      return
+    }
+    setNcGlobalHistoryOpen(true)
+    setNcGlobalHistoryLoading(true)
+    try{
+      const res = await fetchWithAuth(`/api/nc/evaluacion/${evaluacionId}/hist`)
+      if(!res.ok){
+        setNcGlobalHistoryLogs([])
+        return
+      }
+      const json = await res.json()
+      setNcGlobalHistoryLogs(json || [])
+    }catch(e){
+      console.error('load nc global history error', e)
+      setNcGlobalHistoryLogs([])
+    }finally{
+      setNcGlobalHistoryLoading(false)
+    }
+  }
+
   // Listen for external notification events and mark evidence-level badges
   useEffect(()=>{
     const handler = (e) => {
@@ -685,7 +712,10 @@ export default function RequirementContent({ node, onRequestCreateNc }){
 
         <div className="mt-4 p-3 border rounded bg-white">
           <div className="flex items-center justify-between gap-2">
-            <h5 className="text-sm font-medium">Brechas Detectadas en el GAP Analysis</h5>
+            <div className="flex items-center gap-2">
+              <h5 className="text-sm font-medium">Brechas Detectadas en el GAP Analysis</h5>
+              <button onClick={openNcGlobalHistoryModal} className="px-3 py-1 border rounded text-xs">Historial global de brechas</button>
+            </div>
             {onRequestCreateNc && (
               <button onClick={onRequestCreateNc} className="px-3 py-1 border rounded text-xs">Registrar Brecha de Cumplimiento</button>
             )}

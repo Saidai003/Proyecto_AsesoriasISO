@@ -96,6 +96,14 @@ async function updateNC(req, res){
       updates.push('estado_validacion = ?'); params.push(payload.estado_validacion)
     }
 
+    // evaluator comment update
+    if(Object.prototype.hasOwnProperty.call(payload, 'comentario_nc')){
+      if(role !== 'Evaluador' && !isAdmin) {
+        return res.status(403).json({ error: 'forbidden' })
+      }
+      updates.push('comentario_nc = ?'); params.push(payload.comentario_nc)
+    }
+
     // flow state change
     if(Object.prototype.hasOwnProperty.call(payload, 'estado_flujo')){
       let newFlow = payload.estado_flujo
@@ -159,7 +167,12 @@ async function updateNC(req, res){
 
     // insert history
     try{
-      await pool.execute('INSERT INTO AUDITORIA_NC_HIST (nc_id, estado_flujo, estado_validacion, fecha_snapshot, ultima_edicion_por) VALUES (?, ?, ?, NOW(), ?)', [id, payload.estado_flujo || nc.estado_flujo, payload.estado_validacion || nc.estado_validacion, user.id])
+      const historyComentario = Object.prototype.hasOwnProperty.call(payload, 'comentario_nc') ? payload.comentario_nc : null
+      const historyFechaVerificacion = payload.fecha_verificacion_eficacia || nc.fecha_verificacion_eficacia || null
+      await pool.execute(
+        'INSERT INTO AUDITORIA_NC_HIST (nc_id, estado_flujo, estado_validacion, fecha_verificacion_eficacia, comentario, fecha_snapshot, ultima_edicion_por) VALUES (?, ?, ?, ?, ?, NOW(), ?)',
+        [id, payload.estado_flujo || nc.estado_flujo, payload.estado_validacion || nc.estado_validacion, historyFechaVerificacion, historyComentario, user.id]
+      )
     }catch(e){ console.error('insert nc hist error', e) }
 
     // create notification for responsables
@@ -314,7 +327,7 @@ async function getNCHistory(req, res){
     if(!id) return res.status(400).json({ error: 'id required' })
 
     const [rows] = await pool.execute(
-      `SELECT h.id, h.nc_id, h.estado_flujo, h.estado_validacion, h.comentario, h.fecha_snapshot, u.nombre as usuario_nombre
+      `SELECT h.id, h.nc_id, h.estado_flujo, h.estado_validacion, h.fecha_verificacion_eficacia, h.comentario, h.evaluador_id, h.evaluado_id, h.ultima_edicion_por, h.fecha_snapshot, u.nombre as usuario_nombre
        FROM AUDITORIA_NC_HIST h
        LEFT JOIN USUARIOS u ON u.id = h.ultima_edicion_por
        WHERE h.nc_id = ? AND EXISTS (
@@ -327,4 +340,24 @@ async function getNCHistory(req, res){
   }catch(err){ console.error('getNCHistory error', err); return res.status(500).json({ error: 'internal_error' }) }
 }
 
-module.exports = { createNC, deleteNC, listByEvaluacion, updateNC, listActions, createAction, getNC, getNCHistory };
+async function getNCHistoryByEvaluacion(req, res){
+  try{
+    const evaluacionId = Number(req.params.id)
+    const workspaceId = req.user.workspace_id || null
+    if(!evaluacionId) return res.status(400).json({ error: 'id required' })
+
+    const [rows] = await pool.execute(
+      `SELECT h.id, h.nc_id, a.titulo as nc_titulo, h.estado_flujo, h.estado_validacion, h.fecha_verificacion_eficacia, h.comentario, h.ultima_edicion_por, h.fecha_snapshot, u.nombre as usuario_nombre
+       FROM AUDITORIA_NC_HIST h
+       JOIN AUDITORIA_NC a ON h.nc_id = a.id
+       JOIN EVALUACION_REQUISITO er ON a.evaluacion_requisito_id = er.id
+       LEFT JOIN USUARIOS u ON u.id = h.ultima_edicion_por
+       WHERE er.id = ? AND er.workspace_id = ?
+       ORDER BY h.fecha_snapshot DESC`,
+      [evaluacionId, workspaceId]
+    )
+    return res.json(rows)
+  }catch(err){ console.error('getNCHistoryByEvaluacion error', err); return res.status(500).json({ error: 'internal_error' }) }
+}
+
+module.exports = { createNC, deleteNC, listByEvaluacion, updateNC, listActions, createAction, getNC, getNCHistory, getNCHistoryByEvaluacion };
