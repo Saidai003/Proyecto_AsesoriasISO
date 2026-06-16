@@ -8,6 +8,7 @@ import useWorkspaces from '../hooks/useWorkspaces'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { useForm } from 'react-hook-form'
 import { Link, useNavigate } from 'react-router-dom'
+import { showToast } from '../lib/toast'
 
 function SideNav() {
   return (
@@ -41,6 +42,8 @@ export default function UsersManager() {
   React.useEffect(()=>{ loadWorkspaces() }, [loadWorkspaces])
 
   const [q, setQ] = React.useState('')
+  const [showNewPassword, setShowNewPassword] = React.useState(false)
+  const [showEditPassword, setShowEditPassword] = React.useState(false)
   const filteredUsers = React.useMemo(() => {
     if (!q) return users || []
     const s = q.toLowerCase()
@@ -68,7 +71,7 @@ export default function UsersManager() {
     setConfirmPayload(null)
     try{
       await deleteUser(id)
-      setMessage({ type: 'success', text: 'Usuario eliminado' })
+      showToast({ title: 'Usuario eliminado', message: `El usuario ${id} fue eliminado`, type: 'success', ttl: 5000 })
     }catch(err){ setMessage({ type: 'error', text: err.error || 'Error eliminando' }) }
   }
 
@@ -90,12 +93,14 @@ export default function UsersManager() {
 
   function startEdit(user){
     setEditingId(user.id)
+    setShowEditPassword(false)
     resetEdit({ nombre: user.nombre || '', email: user.email || '', password: '', workspace_id: user.workspace_id ?? '', role_id: user.role_id ?? '' })
     setMessage(null)
   }
 
   function cancelEdit(){
     setEditingId(null)
+    setShowEditPassword(false)
     resetEdit({ nombre: '', email: '', password: '', workspace_id: '', role_id: '' })
   }
 
@@ -106,7 +111,9 @@ export default function UsersManager() {
       if(data.password && data.password.trim() !== '') payload.password = data.password
       console.log('saveEdit payload', id, payload)
       await updateUser(id, payload)
-      setMessage({ type: 'success', text: 'Usuario actualizado' })
+      setMessage(null)
+      showToast({ title: 'Usuario actualizado', message: 'Cambios guardados', type: 'success', ttl: 5000 })
+      setShowEditPassword(false)
       cancelEdit()
     }catch(err){
       console.error('saveEdit error', err)
@@ -119,10 +126,17 @@ export default function UsersManager() {
     try{
       const payload = { nombre: data.nombre, email: data.email, password: data.password && data.password.trim() !== '' ? data.password : undefined, workspace_id: (data.workspace_id === '' ? null : Number(data.workspace_id)), role_id: (data.role_id === '' ? null : Number(data.role_id)) }
       await createUser(payload)
-      setMessage({ type: 'success', text: 'Usuario creado' })
+      const name = payload.nombre || payload.email || 'Usuario'
+      showToast({ title: 'Usuario creado', message: `${name} agregado correctamente`, type: 'success', ttl: 5000 })
       setNewRow(false)
       resetNew()
-    }catch(err){ setMessage({ type: 'error', text: err.error || err.message || 'Error' }) }
+      setShowNewPassword(false)
+      setMessage(null)
+    }catch(err){
+      const text = err.error || err.message || 'Error creando usuario'
+      showToast({ title: 'Error', message: text, type: 'error', ttl: 6000 })
+      setMessage({ type: 'error', text })
+    }
   }
 
   async function handleAssign(user){
@@ -206,11 +220,13 @@ export default function UsersManager() {
                         {workspaces && workspaces.map(w=> (<option key={w.id} value={w.id}>{w.nombre_cliente || w.id}</option>))}
                       </select>
                     </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex justify-end items-center gap-2">
-                        <input placeholder="Password (opcional)" type="password" {...registerNew('password')} className="px-3 py-2 border rounded" />
+                    <td className="px-6 py-4">
+                      <label className="block text-[11px] text-slate-500 mb-1">Ingrese nueva contraseña aquí:</label>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <input placeholder="Contraseña opcional" type={showNewPassword ? 'text' : 'password'} {...registerNew('password')} className="px-3 py-2 border rounded w-full max-w-[220px]" />
+                        <button type="button" onClick={()=>setShowNewPassword(prev => !prev)} className="text-slate-600 text-sm">{showNewPassword ? 'Ocultar' : 'Mostrar'}</button>
                         <button onClick={handleNewSubmit(createNew)} className="px-4 py-2 bg-blue-600 text-white rounded-lg whitespace-nowrap">Enviar</button>
-                        <button onClick={()=>{ setNewRow(false); resetNew() }} className="px-4 py-2 border rounded-lg whitespace-nowrap">Descartar</button>
+                        <button onClick={()=>{ setNewRow(false); resetNew(); setShowNewPassword(false) }} className="px-4 py-2 border rounded-lg whitespace-nowrap">Descartar</button>
                       </div>
                     </td>
                     <td className="px-6 py-4" />
@@ -258,12 +274,20 @@ export default function UsersManager() {
                       )}
                     </td>
                     <td className="px-6 py-5"><span className="text-xs font-bold text-blue-900">Activo</span></td>
-                    <td className="px-6 py-5 text-right">
-                          {editingId === u.id ? (
-                        <div className="flex flex-wrap justify-end items-center gap-2">
-                          <input placeholder="Nueva contraseña (opcional)" type="password" {...registerEdit('password')} className="px-3 py-2 border rounded max-w-[180px]" />
-                          <button onClick={handleEditSubmit(data=>saveEdit(u.id, data))} className="px-4 py-2 bg-blue-600 text-white rounded-lg">Guardar</button>
-                          <button onClick={cancelEdit} className="px-3 py-1.5 border rounded-lg">Cancelar</button>
+                    <td className="px-6 py-5 text-right align-top">
+                      {editingId === u.id ? (
+                        <div className="flex flex-col items-end gap-3">
+                          <div className="w-full max-w-[320px]">
+                            <label className="block text-[11px] text-slate-500 mb-1">Ingrese nueva contraseña aquí:</label>
+                            <div className="flex items-center gap-2">
+                              <input placeholder="Contraseña opcional" type={showEditPassword ? 'text' : 'password'} {...registerEdit('password')} className="px-3 py-2 border rounded w-full" />
+                              <button type="button" onClick={()=>setShowEditPassword(prev => !prev)} className="text-slate-600 text-sm whitespace-nowrap">{showEditPassword ? 'Ocultar' : 'Mostrar'}</button>
+                            </div>
+                          </div>
+                          <div className="flex flex-wrap justify-end items-center gap-2">
+                            <button onClick={handleEditSubmit(data=>saveEdit(u.id, data))} className="px-4 py-2 bg-blue-600 text-white rounded-lg">Guardar</button>
+                            <button onClick={cancelEdit} className="px-3 py-1.5 border rounded-lg">Cancelar</button>
+                          </div>
                         </div>
                       ) : (
                         <div className="flex justify-end gap-1">

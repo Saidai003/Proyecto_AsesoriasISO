@@ -48,8 +48,8 @@ export default function Toast(){
     // isolated here and other parts of the app only dispatch semantic events.
     const ncHandler = (e) => {
       const detail = e.detail || {}
-      const title = 'No Conformidad creada'
-      const message = detail.nc_id ? `NC #${detail.nc_id} creada` : 'Se creó una No Conformidad'
+      const title = 'Brecha creada'
+      const message = detail.nc_id ? `Brecha #${detail.nc_id} creada` : 'Se creó una brecha'
       // dispatch a 'toast:show' so showHandler will pick it up
       window.dispatchEvent(new CustomEvent('toast:show', { detail: { title, message, type: 'info', ttl: 6000 } }))
     }

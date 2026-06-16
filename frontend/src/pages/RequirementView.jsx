@@ -88,7 +88,7 @@ export default function RequirementView(){
   const createNc = async ()=>{
     if(!node) return
     if(!ncForm.titulo.trim()){
-      window.dispatchEvent(new CustomEvent('toast:show', { detail: { title: 'NC', message: 'El titulo es obligatorio', type: 'warning', ttl: 4000 } }))
+      window.dispatchEvent(new CustomEvent('toast:show', { detail: { title: 'Brecha', message: 'El título es obligatorio', type: 'warning', ttl: 4000 } }))
       return
     }
     try{
@@ -109,7 +109,7 @@ export default function RequirementView(){
         return
       }
       const created = await res.json()
-      window.dispatchEvent(new CustomEvent('toast:show', { detail: { title: 'NC creada', message: `NC #${created.id}`, type: 'success', ttl: 5000 } }))
+      window.dispatchEvent(new CustomEvent('toast:show', { detail: { title: 'Brecha creada', message: `Brecha #${created.id}`, type: 'success', ttl: 5000 } }))
       window.dispatchEvent(new CustomEvent('nc:created', { detail: { requisito_base_id: node.id, nc_id: created.id, responsables: selectedResponsables } }))
       setNcModalOpen(false)
     }catch(e){
