@@ -57,7 +57,7 @@ export default function UsersManager() {
     })
   }, [users, q, workspaces])
 
-  
+  const pendingUsers = React.useMemo(() => (users || []).filter(u => u.estado_invitacion === 'Pendiente'), [users])
 
   const [confirmOpen, setConfirmOpen] = React.useState(false)
   const [confirmPayload, setConfirmPayload] = React.useState(null)
@@ -168,7 +168,7 @@ export default function UsersManager() {
           <div className="mb-4 max-w-md">
             <SearchInput value={q} onChange={e => setQ(e.target.value)} placeholder="Buscar por nombre, email, rol o workspace..." />
           </div>
-          <div className="mb-6 max-w-md">
+          <div className="mb-6 w-full">
                 <div className="flex items-center gap-2">
                   <button className="px-3 py-2 bg-primary text-white rounded-lg">Exportar</button>
                 </div>
@@ -182,8 +182,9 @@ export default function UsersManager() {
               </div>
               <div className="text-[11px] font-bold text-slate-400 uppercase">Mostrando {filteredUsers.length} de {users ? users.length : 0} usuarios</div>
             </div>
-            <table className="w-full text-left border-collapse">
-              <thead>
+            <div style={{ maxHeight: 'calc(100vh - 360px)', overflow: 'auto' }} className="w-full rounded">
+              <table className="w-full text-left border-collapse">
+                <thead style={{ position: 'sticky', top: 0, background: 'white', zIndex: 10 }}>
                   <tr className="bg-surface-container-low/50">
                   <th className="px-6 py-4 text-[10px] font-bold uppercase">Nombre</th>
                   <th className="px-6 py-4 text-[10px] font-bold uppercase">Email</th>
@@ -196,111 +197,143 @@ export default function UsersManager() {
               <tbody className="divide-y">
                 {loading && <tr><td colSpan={6} className="px-6 py-6">Cargando...</td></tr>}
                 {newRow && (
-                  <tr className="bg-surface-container-low">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-primary-fixed flex items-center justify-center text-primary font-bold">+</div>
-                        <div>
-                          <input {...registerNew('nombre')} placeholder="Nombre" className="px-3 py-2 border rounded w-48" />
+                  <>
+                    <tr className="bg-surface-container-low">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-primary-fixed flex items-center justify-center text-primary font-bold">+</div>
+                          <div>
+                              <input {...registerNew('nombre')} placeholder="Nombre" className="px-3 py-2 border rounded w-48 min-w-0" />
+                          </div>
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <input {...registerNew('email')} placeholder="Email" className="px-3 py-2 border rounded w-64" />
-                    </td>
-                    <td className="px-6 py-4">
-                      <select {...registerNew('role_id')} className="px-3 py-1 rounded-full text-[10px] font-black bg-primary-container">
-                        <option value="">Sin rol</option>
-                        {ROLE_OPTIONS.map(r=> (<option key={r.id} value={r.id}>{r.label}</option>))}
-                      </select>
-                    </td>
-                    <td className="px-6 py-4">
-                      <select {...registerNew('workspace_id')} className="px-3 py-2 border rounded">
-                        <option value="">Sin workspace</option>
-                        {workspaces && workspaces.map(w=> (<option key={w.id} value={w.id}>{w.nombre_cliente || w.id}</option>))}
-                      </select>
-                    </td>
-                    <td className="px-6 py-4">
-                      <label className="block text-[11px] text-slate-500 mb-1">Ingrese nueva contraseña aquí:</label>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <input placeholder="Contraseña opcional" type={showNewPassword ? 'text' : 'password'} {...registerNew('password')} className="px-3 py-2 border rounded w-full max-w-[220px]" />
-                        <button type="button" onClick={()=>setShowNewPassword(prev => !prev)} className="text-slate-600 text-sm">{showNewPassword ? 'Ocultar' : 'Mostrar'}</button>
-                        <button onClick={handleNewSubmit(createNew)} className="px-4 py-2 bg-blue-600 text-white rounded-lg whitespace-nowrap">Enviar</button>
-                        <button onClick={()=>{ setNewRow(false); resetNew(); setShowNewPassword(false) }} className="px-4 py-2 border rounded-lg whitespace-nowrap">Descartar</button>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4" />
-                  </tr>
-                )}
-                {!loading && filteredUsers.map(u=> (
-                  <tr key={u.id} className="hover:bg-surface-container-low">
-                    <td className="px-6 py-5">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-primary-fixed flex items-center justify-center text-primary font-bold">{(u.nombre||'').split(' ').map(s=>s[0]).slice(0,2).join('')}</div>
-                        <div>
-                          {editingId === u.id ? (
-                            <input {...registerEdit('nombre')} placeholder="Nombre" className="px-3 py-2 border rounded w-full max-w-[260px]" />
-                          ) : (
-                            <p className="text-sm font-bold text-blue-900">{u.nombre}</p>
-                          )}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-5">
-                      {editingId === u.id ? (
-                        <input {...registerEdit('email')} placeholder="Email" className="px-3 py-2 border rounded w-full max-w-[320px]" />
-                      ) : (
-                        <p className="text-xs text-slate-500">{u.email}</p>
-                      )}
-                    </td>
-                    <td className="px-6 py-5">
-                      {editingId === u.id ? (
-                        <select {...registerEdit('role_id')} className="px-3 py-2 border rounded">
+                      </td>
+                      <td className="px-6 py-4">
+                        <input {...registerNew('email')} placeholder="Email" className="px-3 py-2 border rounded w-64 min-w-0" />
+                      </td>
+                      <td className="px-6 py-4">
+                        <select {...registerNew('role_id')} className="px-3 py-1 rounded-full text-[10px] font-black bg-primary-container">
                           <option value="">Sin rol</option>
                           {ROLE_OPTIONS.map(r=> (<option key={r.id} value={r.id}>{r.label}</option>))}
                         </select>
-                      ) : (
-                        <span className="px-3 py-1 rounded-full text-[10px] font-black bg-primary-container">{(ROLE_OPTIONS.find(ro=>ro.id === u.role_id) || { label: (typeof u.role_id === 'string' ? u.role_id : 'User') }).label}</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-5">
-                      {editingId === u.id ? (
-                        <select {...registerEdit('workspace_id')} className="px-3 py-2 border rounded">
+                      </td>
+                      <td className="px-6 py-4">
+                        <select {...registerNew('workspace_id')} className="px-3 py-2 border rounded">
                           <option value="">Sin workspace</option>
                           {workspaces && workspaces.map(w=> (<option key={w.id} value={w.id}>{w.nombre_cliente || w.id}</option>))}
                         </select>
-                      ) : (
-                        <p className="text-sm font-medium">{(workspaces && workspaces.find(w=>w.id === u.workspace_id) ? workspaces.find(w=>w.id === u.workspace_id).nombre_cliente : (u.workspace_id || '-'))}</p>
-                      )}
-                    </td>
-                    <td className="px-6 py-5"><span className="text-xs font-bold text-blue-900">Activo</span></td>
-                    <td className="px-6 py-5 text-right align-top">
-                      {editingId === u.id ? (
-                        <div className="flex flex-col items-end gap-3">
-                          <div className="w-full max-w-[320px]">
-                            <label className="block text-[11px] text-slate-500 mb-1">Ingrese nueva contraseña aquí:</label>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="px-3 py-1 rounded-full text-[10px] font-bold bg-yellow-100 text-yellow-800">Pendiente</span>
+                      </td>
+                      <td className="px-6 py-4" />
+                    </tr>
+                    <tr className="bg-slate-50">
+                      <td colSpan={6} className="px-6 py-4">
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                          <div className="flex-1 min-w-[260px]">
+                            <label className="block text-[11px] text-slate-500 mb-1">Contraseña opcional</label>
                             <div className="flex items-center gap-2">
-                              <input placeholder="Contraseña opcional" type={showEditPassword ? 'text' : 'password'} {...registerEdit('password')} className="px-3 py-2 border rounded w-full" />
-                              <button type="button" onClick={()=>setShowEditPassword(prev => !prev)} className="text-slate-600 text-sm whitespace-nowrap">{showEditPassword ? 'Ocultar' : 'Mostrar'}</button>
+                              <input placeholder="Contraseña opcional" type={showNewPassword ? 'text' : 'password'} {...registerNew('password')} className="px-3 py-2 border rounded w-full max-w-[320px] min-w-0" />
+                              <button type="button" onClick={()=>setShowNewPassword(prev => !prev)} className="text-slate-600 text-sm whitespace-nowrap">{showNewPassword ? 'Ocultar' : 'Mostrar'}</button>
                             </div>
                           </div>
-                          <div className="flex flex-wrap justify-end items-center gap-2">
-                            <button onClick={handleEditSubmit(data=>saveEdit(u.id, data))} className="px-4 py-2 bg-blue-600 text-white rounded-lg">Guardar</button>
-                            <button onClick={cancelEdit} className="px-3 py-1.5 border rounded-lg">Cancelar</button>
+                          <div className="flex flex-wrap gap-2 justify-end">
+                            <button onClick={handleNewSubmit(createNew)} className="px-4 py-2 bg-blue-600 text-white rounded-lg">Guardar</button>
+                            <button onClick={()=>{ setNewRow(false); resetNew(); setShowNewPassword(false) }} className="px-4 py-2 border rounded-lg">Descartar</button>
                           </div>
                         </div>
-                      ) : (
+                      </td>
+                    </tr>
+                  </>
+                )}
+                {!loading && filteredUsers.map(u=> (
+                  editingId === u.id ? (
+                    <React.Fragment key={u.id}>
+                      <tr className="hover:bg-surface-container-low">
+                        <td className="px-6 py-5">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-primary-fixed flex items-center justify-center text-primary font-bold">{(u.nombre||'').split(' ').map(s=>s[0]).slice(0,2).join('')}</div>
+                            <div>
+                              <input {...registerEdit('nombre')} placeholder="Nombre" className="px-3 py-2 border rounded w-full max-w-[260px] min-w-0" />
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-5">
+                          <input {...registerEdit('email')} placeholder="Email" className="px-3 py-2 border rounded w-full max-w-[320px] min-w-0" />
+                        </td>
+                        <td className="px-6 py-5">
+                          <select {...registerEdit('role_id')} className="px-3 py-2 border rounded">
+                            <option value="">Sin rol</option>
+                            {ROLE_OPTIONS.map(r=> (<option key={r.id} value={r.id}>{r.label}</option>))}
+                          </select>
+                        </td>
+                        <td className="px-6 py-5">
+                          <select {...registerEdit('workspace_id')} className="px-3 py-2 border rounded">
+                            <option value="">Sin workspace</option>
+                            {workspaces && workspaces.map(w=> (<option key={w.id} value={w.id}>{w.nombre_cliente || w.id}</option>))}
+                          </select>
+                        </td>
+                        <td className="px-6 py-5">
+                          <span className={`px-3 py-1 rounded-full text-[10px] font-bold ${u.estado_invitacion === 'Pendiente' ? 'bg-yellow-100 text-yellow-800' : 'bg-emerald-100 text-emerald-800'}`}>
+                            {u.estado_invitacion === 'Pendiente' ? 'Pendiente' : 'Activo'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-5" />
+                      </tr>
+                      <tr className="bg-slate-50">
+                        <td colSpan={6} className="px-6 py-4">
+                          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                            <div className="flex-1 min-w-[260px]">
+                              <label className="block text-[11px] text-slate-500 mb-1">Nueva contraseña</label>
+                              <div className="flex items-center gap-2">
+                                <input placeholder="Contraseña opcional" type={showEditPassword ? 'text' : 'password'} {...registerEdit('password')} className="px-3 py-2 border rounded w-full max-w-[320px] min-w-0" />
+                                <button type="button" onClick={()=>setShowEditPassword(prev => !prev)} className="text-slate-600 text-sm whitespace-nowrap">{showEditPassword ? 'Ocultar' : 'Mostrar'}</button>
+                              </div>
+                            </div>
+                            <div className="flex flex-wrap gap-2 justify-end">
+                              <button onClick={handleEditSubmit(data=>saveEdit(u.id, data))} className="px-4 py-2 bg-blue-600 text-white rounded-lg">Guardar</button>
+                              <button onClick={cancelEdit} className="px-4 py-2 border rounded-lg">Cancelar</button>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    </React.Fragment>
+                  ) : (
+                    <tr key={u.id} className="hover:bg-surface-container-low">
+                      <td className="px-6 py-5">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-primary-fixed flex items-center justify-center text-primary font-bold">{(u.nombre||'').split(' ').map(s=>s[0]).slice(0,2).join('')}</div>
+                          <div>
+                            <p className="text-sm font-bold text-blue-900">{u.nombre}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-5">
+                        <p className="text-xs text-slate-500">{u.email}</p>
+                      </td>
+                      <td className="px-6 py-5">
+                        <span className="px-3 py-1 rounded-full text-[10px] font-black bg-primary-container">{(ROLE_OPTIONS.find(ro=>ro.id === u.role_id) || { label: (typeof u.role_id === 'string' ? u.role_id : 'User') }).label}</span>
+                      </td>
+                      <td className="px-6 py-5">
+                        <p className="text-sm font-medium">{(workspaces && workspaces.find(w=>w.id === u.workspace_id) ? workspaces.find(w=>w.id === u.workspace_id).nombre_cliente : (u.workspace_id || '-'))}</p>
+                      </td>
+                      <td className="px-6 py-5">
+                        <span className={`px-3 py-1 rounded-full text-[10px] font-bold ${u.estado_invitacion === 'Pendiente' ? 'bg-yellow-100 text-yellow-800' : 'bg-emerald-100 text-emerald-800'}`}>
+                          {u.estado_invitacion === 'Pendiente' ? 'Pendiente' : 'Activo'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-5 text-right align-top">
                         <div className="flex justify-end gap-1">
                           <button onClick={()=>startEdit(u)} className="p-2">Editar</button>
-                          {/* Asignar removed: assignment via editing user workspace is supported */}
                           <button onClick={()=>handleDeleteRequest(u.id)} className="px-3 py-1.5 bg-red-600 text-white rounded-lg">Eliminar</button>
                         </div>
-                      )}
-                    </td>
-                  </tr>
+                      </td>
+                    </tr>
+                  )
                 ))}
               </tbody>
-            </table>
+              </table>
+            </div>
             <div className="px-8 py-6 bg-surface-container-low/30 flex justify-between items-center">
               <p className="text-xs font-medium text-slate-500">Página 1 de 15</p>
               <div className="flex gap-2"><button className="px-4 py-2 bg-white text-slate-400 rounded-lg">Anterior</button><button className="px-4 py-2 bg-white text-primary rounded-lg">Siguiente</button></div>
