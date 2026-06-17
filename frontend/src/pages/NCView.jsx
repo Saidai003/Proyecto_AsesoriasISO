@@ -186,7 +186,9 @@ export default function NCView(){
       const body = {}
       if(typeof flowState === 'string' && flowState.trim() !== '') body.estado_flujo = flowState
       if(canEditComment){
-        body.comentario_nc = commentText
+        const trimmedComment = String(commentText || '').trimStart().trimEnd()
+        body.comentario_nc = trimmedComment
+        setCommentText(trimmedComment)
       }
       if(flowState === 'Verificación'){
         if(!fechaVerificacion) return showToast({ title: 'Error', message: 'Debe elegir fecha y hora de verificación', type: 'error' })
@@ -202,7 +204,7 @@ export default function NCView(){
         setNc(updated)
         showToast({ title: 'NC actualizada', message: 'Cambios guardados', type: 'success' })
         const commentChanged = canEditComment && updated.comentario_nc !== nc.comentario_nc
-        if(commentChanged && body.comentario_nc && body.comentario_nc.trim() !== ''){
+        if(commentChanged && body.comentario_nc && body.comentario_nc.trimStart().trimEnd() !== ''){
           try{
             const requisitoId = nc?.requisito_base_id || updated.requisito_base_id || null
             await fetchWithAuth('/api/chat', {

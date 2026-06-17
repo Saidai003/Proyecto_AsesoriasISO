@@ -19,6 +19,7 @@ export default function RequirementView(){
   const [responsables, setResponsables] = useState([])
   const [selectedResponsables, setSelectedResponsables] = useState([])
   const [responsableQuery, setResponsableQuery] = useState('')
+  const [requirementStatus, setRequirementStatus] = useState({ label: 'No Aplica', className: 'bg-slate-100 text-slate-700' })
 
   const isEvaluador = hasRole(user, 'evaluador')
 
@@ -125,6 +126,11 @@ export default function RequirementView(){
           <div>
             <div className="text-xs uppercase tracking-widest text-slate-400">Requisito</div>
             <h3 className="text-lg font-semibold text-slate-800">{node ? (node.descripcion_normativa || '—') : 'Cargando requisito...'}</h3>
+            <div className="mt-2">
+              <span className={`${requirementStatus.className} px-3 py-1 rounded-full text-sm font-semibold whitespace-nowrap`}>
+                Estado requisito: {requirementStatus.label}
+              </span>
+            </div>
           </div>
           {isEvaluador && (
             <div className="flex items-center gap-2">
@@ -141,7 +147,7 @@ export default function RequirementView(){
         )}
         {node && (
           <div className="mt-4">
-            <RequirementContent node={node} onRequestCreateNc={isEvaluador ? openNcModal : null} />
+            <RequirementContent node={node} onRequestCreateNc={isEvaluador ? openNcModal : null} onStatusChange={setRequirementStatus} />
           </div>
         )}
       </div>

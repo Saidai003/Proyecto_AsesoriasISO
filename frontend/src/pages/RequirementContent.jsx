@@ -8,7 +8,7 @@ import EvidenceHistoryModal from '../components/EvidenceHistoryModal'
 import { hasRole } from '../lib/userUtils'
 import UploadArea from '../components/UploadArea'
 
-export default function RequirementContent({ node, onRequestCreateNc }){
+export default function RequirementContent({ node, onRequestCreateNc, onStatusChange }){
   const navigate = useNavigate()
   const { user } = useAuth()
   const [evidences, setEvidences] = useState([])
@@ -478,6 +478,21 @@ export default function RequirementContent({ node, onRequestCreateNc }){
     return 'bg-slate-100 text-slate-700'
   }
 
+  const requirementStatus = React.useMemo(() => {
+    if(!ncList || ncList.length === 0) {
+      return { label: 'No Aplica', className: 'bg-slate-100 text-slate-700' }
+    }
+    const total = ncList.length
+    const closed = ncList.filter(nc => nc.estado_flujo === 'Cerrada').length
+    if(closed === total) return { label: 'Cumple', className: 'bg-emerald-600 text-white' }
+    if(closed === 0) return { label: 'No Cumple', className: 'bg-red-600 text-white' }
+    return { label: 'Cumple Parcialmente', className: 'bg-amber-500 text-white' }
+  }, [ncList])
+
+  React.useEffect(() => {
+    if(onStatusChange) onStatusChange(requirementStatus)
+  }, [onStatusChange, requirementStatus])
+
   const canDeleteEvidence = (ev) => {
     if(!user) return false
     if(hasRole(user, 'admin')) return true
@@ -711,11 +726,13 @@ export default function RequirementContent({ node, onRequestCreateNc }){
         </div>
 
         <div className="mt-4 p-3 border rounded bg-white">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div className="flex flex-wrap items-center gap-2">
               <h5 className="text-sm font-medium">Brechas Detectadas en el GAP Analysis</h5>
               <button onClick={openNcGlobalHistoryModal} className="px-3 py-1 border rounded text-xs">Historial global de brechas</button>
             </div>
+          </div>
+          <div className="mt-2 flex items-center justify-between gap-2">
             {onRequestCreateNc && (
               <button onClick={onRequestCreateNc} className="px-3 py-1 border rounded text-xs">Registrar Brecha de Cumplimiento</button>
             )}
