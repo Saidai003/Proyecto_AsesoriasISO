@@ -347,7 +347,7 @@ async function getNCHistoryByEvaluacion(req, res){
     if(!evaluacionId) return res.status(400).json({ error: 'id required' })
 
     const [rows] = await pool.execute(
-      `SELECT h.id, h.nc_id, a.titulo as nc_titulo, h.estado_flujo, h.estado_validacion, h.fecha_verificacion_eficacia, h.comentario, h.ultima_edicion_por, h.fecha_snapshot, u.nombre as usuario_nombre
+      `SELECT h.id, h.nc_id, a.titulo as nc_titulo, h.estado_flujo, h.estado_validacion, h.fecha_verificacion_eficacia, h.ultima_edicion_por, h.fecha_snapshot, u.nombre as usuario_nombre
        FROM AUDITORIA_NC_HIST h
        JOIN AUDITORIA_NC a ON h.nc_id = a.id
        JOIN EVALUACION_REQUISITO er ON a.evaluacion_requisito_id = er.id

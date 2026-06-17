@@ -44,6 +44,13 @@ export default function RequirementContent({ node, onRequestCreateNc, onStatusCh
   const [ncGlobalHistoryOpen, setNcGlobalHistoryOpen] = useState(false)
   const [ncGlobalHistoryLogs, setNcGlobalHistoryLogs] = useState([])
   const [ncGlobalHistoryLoading, setNcGlobalHistoryLoading] = useState(false)
+  const [ncGlobalHistoryPage, setNcGlobalHistoryPage] = useState(1)
+  const [ncGlobalHistoryPageSize] = useState(10)
+  const [ncGlobalHistorySearch, setNcGlobalHistorySearch] = useState('')
+  const [ncGlobalHistoryFilterFlowState, setNcGlobalHistoryFilterFlowState] = useState('')
+  const [ncGlobalHistoryFilterValidationState, setNcGlobalHistoryFilterValidationState] = useState('')
+  const [ncGlobalHistoryFilterFrom, setNcGlobalHistoryFilterFrom] = useState('')
+  const [ncGlobalHistoryFilterTo, setNcGlobalHistoryFilterTo] = useState('')
 
   // keep ref in sync for cleanup on unmount
   useEffect(()=>{ blobUrlsRef.current = blobUrls },[blobUrls])
@@ -319,6 +326,30 @@ export default function RequirementContent({ node, onRequestCreateNc, onStatusCh
   const historyTotal = filteredHistory.length
   const historyTotalPages = Math.max(1, Math.ceil(historyTotal / historyPageSize))
   const historyPageItems = filteredHistory.slice((historyPage-1)*historyPageSize, historyPage*historyPageSize)
+
+  const filteredNcGlobalHistory = useMemo(() => {
+    const query = (ncGlobalHistorySearch || '').toLowerCase().trim()
+    return (ncGlobalHistoryLogs || []).filter(log => {
+      let ok = true
+      if(ncGlobalHistoryFilterFlowState) ok = ok && (log.estado_flujo || '') === ncGlobalHistoryFilterFlowState
+      if(ncGlobalHistoryFilterValidationState) ok = ok && (log.estado_validacion || '') === ncGlobalHistoryFilterValidationState
+      if(ncGlobalHistoryFilterFrom){ const d = new Date(log.fecha_snapshot).toISOString().slice(0,10); ok = ok && d >= ncGlobalHistoryFilterFrom }
+      if(ncGlobalHistoryFilterTo){ const d = new Date(log.fecha_snapshot).toISOString().slice(0,10); ok = ok && d <= ncGlobalHistoryFilterTo }
+      if(query){
+        const haystack = [log.nc_titulo, log.estado_flujo, log.estado_validacion, log.usuario_nombre].filter(Boolean).join(' ').toLowerCase()
+        ok = ok && haystack.includes(query)
+      }
+      return ok
+    })
+  },[ncGlobalHistoryLogs, ncGlobalHistoryFilterFlowState, ncGlobalHistoryFilterValidationState, ncGlobalHistoryFilterFrom, ncGlobalHistoryFilterTo, ncGlobalHistorySearch])
+
+  useEffect(()=>{
+    setNcGlobalHistoryPage(1)
+  },[ncGlobalHistoryFilterFlowState, ncGlobalHistoryFilterValidationState, ncGlobalHistoryFilterFrom, ncGlobalHistoryFilterTo, ncGlobalHistorySearch, ncGlobalHistoryLogs])
+
+  const ncGlobalHistoryTotal = filteredNcGlobalHistory.length
+  const ncGlobalHistoryTotalPages = Math.max(1, Math.ceil(ncGlobalHistoryTotal / ncGlobalHistoryPageSize))
+  const ncGlobalHistoryPageItems = filteredNcGlobalHistory.slice((ncGlobalHistoryPage-1)*ncGlobalHistoryPageSize, ncGlobalHistoryPage*ncGlobalHistoryPageSize)
 
   const computeSrc = (url) => {
     if(!url) return null
@@ -943,6 +974,80 @@ export default function RequirementContent({ node, onRequestCreateNc, onStatusCh
       />
 
       <input ref={updateFileRef} type="file" onChange={onUpdateFileChosen} className="hidden" />
+
+      {ncGlobalHistoryOpen && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-6">
+          <div className="bg-white rounded-lg w-full max-w-6xl p-4 h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="font-semibold">Historial global de brechas</h4>
+              <button onClick={()=>setNcGlobalHistoryOpen(false)} className="px-2 py-1 border rounded">Cerrar</button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-6 gap-2 mb-3">
+              <input value={ncGlobalHistorySearch} onChange={(e)=>setNcGlobalHistorySearch(e.target.value)} placeholder="Buscar (título, estado, usuario)" className="px-3 py-2 border rounded text-sm md:col-span-2" />
+              <select value={ncGlobalHistoryFilterFlowState} onChange={(e)=>setNcGlobalHistoryFilterFlowState(e.target.value)} className="px-3 py-2 border rounded text-sm">
+                <option value="">Estado flujo: todos</option>
+                <option value="Abierta">Abierta</option>
+                <option value="Verificación">Verificación</option>
+                <option value="Cerrada">Cerrada</option>
+              </select>
+              <select value={ncGlobalHistoryFilterValidationState} onChange={(e)=>setNcGlobalHistoryFilterValidationState(e.target.value)} className="px-3 py-2 border rounded text-sm">
+                <option value="">Validación: todos</option>
+                <option value="Acepto">Acepto</option>
+                <option value="Parcial">Parcial</option>
+                <option value="No Acepto">No Acepto</option>
+              </select>
+              <div className="flex gap-1">
+                <input type="date" value={ncGlobalHistoryFilterFrom} onChange={(e)=>setNcGlobalHistoryFilterFrom(e.target.value)} className="px-2 py-1 border rounded text-xs flex-1" placeholder="Desde" title="Desde" />
+                <input type="date" value={ncGlobalHistoryFilterTo} onChange={(e)=>setNcGlobalHistoryFilterTo(e.target.value)} className="px-2 py-1 border rounded text-xs flex-1" placeholder="Hasta" title="Hasta" />
+              </div>
+            </div>
+            <div className="flex-1 overflow-auto border rounded p-2 bg-slate-50">
+              {ncGlobalHistoryLoading ? (
+                <div>Cargando historial...</div>
+              ) : ncGlobalHistoryPageItems.length === 0 && ncGlobalHistoryLogs.length === 0 ? (
+                <div className="text-sm text-slate-500">No hay historial de brechas.</div>
+              ) : ncGlobalHistoryPageItems.length === 0 ? (
+                <div className="text-sm text-slate-500">No hay resultados que coincidan con los filtros.</div>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-xs text-slate-600 bg-slate-100 sticky top-0">
+                      <th className="p-2 text-left">ID</th>
+                      <th className="p-2 text-left">Título</th>
+                      <th className="p-2 text-left">Estado flujo</th>
+                      <th className="p-2 text-left">Validación</th>
+                      <th className="p-2 text-left">Fecha veredicto</th>
+                      <th className="p-2 text-left">Fecha snapshot</th>
+                      <th className="p-2 text-left">Editado por</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {ncGlobalHistoryPageItems.map(log => (
+                      <tr key={`${log.id}-${log.fecha_snapshot}`} className="border-b text-xs hover:bg-slate-100">
+                        <td className="p-2">#{log.nc_id}</td>
+                        <td className="p-2 truncate" title={log.nc_titulo}>{log.nc_titulo || '-'}</td>
+                        <td className="p-2">{log.estado_flujo || '-'}</td>
+                        <td className="p-2">{log.estado_validacion || '-'}</td>
+                        <td className="p-2 text-xs">{log.fecha_verificacion_eficacia ? new Date(log.fecha_verificacion_eficacia).toLocaleDateString() : '-'}</td>
+                        <td className="p-2 text-xs">{log.fecha_snapshot ? new Date(log.fecha_snapshot).toLocaleString() : '-'}</td>
+                        <td className="p-2">{log.usuario_nombre || '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+            <div className="mt-3 flex items-center justify-between">
+              <div className="text-xs text-slate-500">{ncGlobalHistoryTotal} registros</div>
+              <div className="flex items-center gap-2">
+                <button disabled={ncGlobalHistoryPage <= 1} onClick={()=>setNcGlobalHistoryPage(p => Math.max(1, p-1))} className="px-2 py-1 border rounded text-xs disabled:opacity-50">Anterior</button>
+                <div className="text-xs">{ncGlobalHistoryPage} / {ncGlobalHistoryTotalPages}</div>
+                <button disabled={ncGlobalHistoryPage >= ncGlobalHistoryTotalPages} onClick={()=>setNcGlobalHistoryPage(p => Math.min(ncGlobalHistoryTotalPages, p+1))} className="px-2 py-1 border rounded text-xs disabled:opacity-50">Siguiente</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <ConfirmDialog
         open={confirmOpen}
