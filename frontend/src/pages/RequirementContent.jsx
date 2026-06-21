@@ -51,6 +51,22 @@ export default function RequirementContent({ node, onRequestCreateNc, onStatusCh
   const [ncGlobalHistoryFilterValidationState, setNcGlobalHistoryFilterValidationState] = useState('')
   const [ncGlobalHistoryFilterFrom, setNcGlobalHistoryFilterFrom] = useState('')
   const [ncGlobalHistoryFilterTo, setNcGlobalHistoryFilterTo] = useState('')
+  
+  // --- ESTADOS PARA FILTROS AVANZADOS DE BRECHAS ---
+  const [ncFilterText, setNcFilterText] = useState('')
+  const [ncFilterFlujo, setNcFilterFlujo] = useState('')
+  const [ncFilterValidacion, setNcFilterValidacion] = useState('')
+  const [ncFilterStartDate, setNcFilterStartDate] = useState('')
+  const [ncFilterEndDate, setNcFilterEndDate] = useState('')
+
+  // Extracción dinámica de estados únicos
+  const uniqueFlujos = React.useMemo(() => {
+    return [...new Set(ncList.map(nc => nc.estado_flujo).filter(Boolean))]
+  }, [ncList])
+
+  const uniqueValidaciones = React.useMemo(() => {
+    return [...new Set(ncList.map(nc => nc.estado_validacion).filter(Boolean))]
+  }, [ncList])
 
   // keep ref in sync for cleanup on unmount
   useEffect(()=>{ blobUrlsRef.current = blobUrls },[blobUrls])
@@ -756,49 +772,163 @@ export default function RequirementContent({ node, onRequestCreateNc, onStatusCh
           </div>
         </div>
 
-        <div className="mt-4 p-3 border rounded bg-white">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        {/* --- INICIO DEL CONTENEDOR DE BRECHAS CON FILTROS AVANZADOS --- */}
+        <div className="mt-4 p-4 border rounded-xl bg-white shadow-sm border-slate-200">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between border-b border-slate-100 pb-3">
             <div className="flex flex-wrap items-center gap-2">
-              <h5 className="text-sm font-medium">Brechas Detectadas en el GAP Analysis</h5>
-              <button onClick={openNcGlobalHistoryModal} className="px-3 py-1 border rounded text-xs">Historial global de brechas</button>
+              <h5 className="text-sm font-semibold text-slate-800">Brechas Detectadas en el GAP Analysis</h5>
+              <button onClick={openNcGlobalHistoryModal} className="px-2.5 py-1 border rounded-md text-xs hover:bg-slate-50 transition-colors text-slate-600">Historial global de brechas</button>
             </div>
-          </div>
-          <div className="mt-2 flex items-center justify-between gap-2">
             {onRequestCreateNc && (
-              <button onClick={onRequestCreateNc} className="px-3 py-1 border rounded text-xs">Registrar Brecha de Cumplimiento</button>
+              <button onClick={onRequestCreateNc} className="px-3 py-1.5 border border-transparent rounded-md text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-sm self-start md:self-auto">
+                + Registrar Brecha de Cumplimiento
+              </button>
             )}
           </div>
-          <div className="mt-2">
+          
+          {/* BARRA DE FILTROS AVANZADOS */}
+          <div className="mt-4 p-3 bg-slate-50 border border-slate-100 rounded-lg flex flex-wrap items-end gap-3 text-xs">
+            
+            {/* Búsqueda por texto */}
+            <div className="flex flex-col gap-1 flex-1 min-w-[200px]">
+              <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Buscar por Texto</label>
+              <input 
+                type="text" 
+                placeholder="🔍 Título o descripción..." 
+                value={ncFilterText} 
+                onChange={(e) => setNcFilterText(e.target.value)}
+                className="px-2.5 py-1.5 border border-slate-200 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 transition-shadow"
+              />
+            </div>
+
+            {/* Filtro Estado Flujo */}
+            <div className="flex flex-col gap-1 w-36">
+              <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Estado Flujo</label>
+              <select 
+                value={ncFilterFlujo} 
+                onChange={(e) => setNcFilterFlujo(e.target.value)}
+                className="px-2 py-1.5 border border-slate-200 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+              >
+                <option value="">Todos</option>
+                {uniqueFlujos.map(st => <option key={st} value={st}>{st}</option>)}
+              </select>
+            </div>
+
+            {/* Filtro Estado Validación */}
+            <div className="flex flex-col gap-1 w-36">
+              <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Validación</label>
+              <select 
+                value={ncFilterValidacion} 
+                onChange={(e) => setNcFilterValidacion(e.target.value)}
+                className="px-2 py-1.5 border border-slate-200 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+              >
+                <option value="">Todas</option>
+                {uniqueValidaciones.map(st => <option key={st} value={st}>{st}</option>)}
+              </select>
+            </div>
+
+            {/* Rango de Fechas: Desde */}
+            <div className="flex flex-col gap-1 w-36">
+              <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Desde (Veredicto)</label>
+              <input 
+                type="date" 
+                value={ncFilterStartDate} 
+                onChange={(e) => setNcFilterStartDate(e.target.value)}
+                className="px-2 py-1 border border-slate-200 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+            </div>
+
+            {/* Rango de Fechas: Hasta */}
+            <div className="flex flex-col gap-1 w-36">
+              <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Hasta (Veredicto)</label>
+              <input 
+                type="date" 
+                value={ncFilterEndDate} 
+                onChange={(e) => setNcFilterEndDate(e.target.value)}
+                className="px-2 py-1 border border-slate-200 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+            </div>
+
+            {/* Botón para resetear filtros */}
+            {(ncFilterText || ncFilterFlujo || ncFilterValidacion || ncFilterStartDate || ncFilterEndDate) && (
+              <button 
+                onClick={() => {
+                  setNcFilterText('');
+                  setNcFilterFlujo('');
+                  setNcFilterValidacion('');
+                  setNcFilterStartDate('');
+                  setNcFilterEndDate('');
+                }}
+                className="px-3 py-1.5 border border-slate-200 text-slate-600 rounded-md bg-white hover:bg-slate-100 font-medium transition-colors"
+              >
+                Limpiar
+              </button>
+            )}
+          </div>
+
+          {/* TABLA DE BRECHAS FILTRADA */}
+          <div className="mt-4">
             {ncList && ncList.length > 0 ? (
-              <div className="overflow-auto">
-                <table className="w-full text-sm table-fixed">
-                  <thead>
+              <div className="overflow-x-auto border border-slate-100 rounded-lg">
+                <table className="w-full text-sm table-fixed min-w-[800px]">
+                  <thead className="bg-slate-50 border-b border-slate-100">
                     <tr className="text-xs text-slate-500 text-left">
-                      <th className="p-2 w-10">ID</th>
-                      <th className="p-2 w-36">Título</th>
-                      <th className="p-2 w-28">Estado flujo</th>
-                      <th className="p-2 w-28">Estado validación</th>
-                      <th className="p-2 w-36">Fecha veredicto</th>
-                      <th className="p-2 w-36">Fecha última edición</th>
-                      <th className="p-2 w-24">Acciones</th>
+                      <th className="p-2.5 w-12 font-medium">ID</th>
+                      <th className="p-2.5 w-48 font-medium">Título</th>
+                      <th className="p-2.5 w-28 font-medium">Estado flujo</th>
+                      <th className="p-2.5 w-28 font-medium">Estado validación</th>
+                      <th className="p-2.5 w-32 font-medium">Fecha veredicto</th>
+                      <th className="p-2.5 w-32 font-medium">Fecha última edición</th>
+                      <th className="p-2.5 w-40 font-medium">Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {ncList.map(nc => (
-                      <tr id={`nc-${nc.id}`} ref={el => { try{ ncRowRefs.current[nc.id] = el }catch(_){} }} key={nc.id} className="border-b bg-slate-50 text-left">
-                        <td className="p-2">{nc.id}</td>
-                        <td className="p-2 font-medium">{nc.titulo || '-'}</td>
-                        <td className="p-2">
+                    {ncList
+                      /* SÚPER FILTRO COMBINADO EN TIEMPO REAL */
+                      .filter(nc => {
+                        const matchesText = !ncFilterText || 
+                          (nc.titulo || '').toLowerCase().includes(ncFilterText.toLowerCase()) || 
+                          (nc.descripcion || '').toLowerCase().includes(ncFilterText.toLowerCase());
+                        
+                        const matchesFlujo = !ncFilterFlujo || nc.estado_flujo === ncFilterFlujo;
+                        
+                        const matchesValidacion = !ncFilterValidacion || nc.estado_validacion === ncFilterValidacion;
+                        
+                        let matchesDate = true;
+                        if (ncFilterStartDate || ncFilterEndDate) {
+                          const dStr = nc.fecha_verificacion_eficacia;
+                          if (dStr) {
+                            const ncTime = new Date(dStr).getTime();
+                            if (ncFilterStartDate) {
+                              const startTime = new Date(ncFilterStartDate + 'T00:00:00').getTime();
+                              if (ncTime < startTime) matchesDate = false;
+                            }
+                            if (ncFilterEndDate) {
+                              const endTime = new Date(ncFilterEndDate + 'T23:59:59').getTime();
+                              if (ncTime > endTime) matchesDate = false;
+                            }
+                          } else {
+                            matchesDate = false; // Ocultar si se filtra por fecha pero la NC no tiene fecha asignada
+                          }
+                        }
+
+                        return matchesText && matchesFlujo && matchesValidacion && matchesDate;
+                      })
+                      .map(nc => (
+                      <tr id={`nc-${nc.id}`} ref={el => { try{ ncRowRefs.current[nc.id] = el }catch(_){} }} key={nc.id} className="border-b border-slate-100 bg-white text-left hover:bg-slate-50/80 transition-colors">
+                        <td className="p-2.5 text-slate-500">#{nc.id}</td>
+                        <td className="p-2.5 font-medium text-slate-700 truncate" title={nc.titulo}>{nc.titulo || '-'}</td>
+                        <td className="p-2.5">
                           {nc.estado_flujo ? (
-                            <span className={`${renderNcBadge(nc.estado_flujo)} px-2 py-0.5 rounded text-[12px]`}>{nc.estado_flujo}</span>
+                            <span className={`${renderNcBadge(nc.estado_flujo)} px-2 py-0.5 rounded text-[11px] font-medium`}>{nc.estado_flujo}</span>
                           ) : '-'}
                         </td>
-                        <td className="p-2">
+                        <td className="p-2.5">
                           {nc.estado_validacion ? (
-                            <span className={`${renderNcBadge(nc.estado_validacion)} px-2 py-0.5 rounded text-[12px]`}>{nc.estado_validacion}</span>
+                            <span className={`${renderNcBadge(nc.estado_validacion)} px-2 py-0.5 rounded text-[11px] font-medium`}>{nc.estado_validacion}</span>
                           ) : '-'}
                         </td>
-                        <td className="p-2">
+                        <td className="p-2.5 text-xs text-slate-600">
                           {(() => {
                             const d = nc.fecha_verificacion_eficacia
                             if(!d) return '-' 
@@ -815,11 +945,35 @@ export default function RequirementContent({ node, onRequestCreateNc, onStatusCh
                             }catch(_){ return formatDate(d) }
                           })()}
                         </td>
-                        <td className="p-2">{formatDate(nc.fecha_ultima_edicion)}</td>
-                        <td className="p-2">
-                          <div className="flex items-center gap-2 justify-start">
-                            <button onClick={()=>{ navigate(`/nc/${nc.id}`) }} className="px-2 py-1 border rounded text-xs">Ver</button>
-                            <button onClick={()=>{ setRespModalList(nc.responsables || []); setRespModalOpen(true) }} className="px-2 py-1 border rounded text-xs">Responsables</button>
+                        <td className="p-2.5 text-xs text-slate-500">{formatDate(nc.fecha_ultima_edicion)}</td>
+                        <td className="p-2.5">
+                          <div className="flex items-center gap-1.5 justify-start flex-wrap">
+                            <button onClick={()=>{ navigate(`/nc/${nc.id}`) }} className="px-2 py-1 border border-slate-200 rounded text-xs bg-white hover:bg-slate-50 text-slate-600 transition-colors">Ver</button>
+                            <button onClick={()=>{ setRespModalList(nc.responsables || []); setRespModalOpen(true) }} className="px-2 py-1 border border-slate-200 rounded text-xs bg-white hover:bg-slate-50 text-slate-600 transition-colors">Responsables</button>
+                            
+                            {hasRole(user, 'evaluador') && (
+                              <button 
+                                onClick={async () => {
+                                  if (!window.confirm('¿Está seguro de que desea eliminar esta brecha? Esta acción no se puede deshacer.')) return;
+                                  try {
+                                    const res = await fetchWithAuth(`/api/nc/${nc.id}`, { method: 'DELETE' });
+                                    if (res.ok) {
+                                      setNcList(prev => prev.filter(item => item.id !== nc.id));
+                                      window.dispatchEvent(new CustomEvent('toast:show', { detail: { title: 'Eliminada', message: 'Brecha eliminada correctamente.', type: 'success', ttl: 3000 } }));
+                                    } else {
+                                      const err = await res.json().catch(()=>({}));
+                                      window.dispatchEvent(new CustomEvent('toast:show', { detail: { title: 'Error', message: err.error || 'No se pudo eliminar.', type: 'error', ttl: 5000 } }));
+                                    }
+                                  } catch (e) {
+                                    console.error('Error al eliminar brecha:', e);
+                                  }
+                                }}
+                                className="px-2 py-1 border border-red-200 text-red-600 rounded text-xs bg-white hover:bg-red-50 hover:border-red-300 transition-colors"
+                                title="Eliminar brecha"
+                              >
+                                Borrar
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -828,10 +982,11 @@ export default function RequirementContent({ node, onRequestCreateNc, onStatusCh
                 </table>
               </div>
             ) : (
-              <div className="text-sm text-slate-500">No hay brechas asociadas.</div>
+              <div className="text-sm text-slate-500 py-6 text-center border border-dashed rounded-lg bg-slate-50">No hay brechas registradas en este requisito.</div>
             )}
           </div>
         </div>
+        {/* --- FIN DEL CONTENEDOR DE BRECHAS --- */}
 
         <Chat requisitoId={node && node.id} evaluacionId={evaluacionId} evidences={evidences} ncList={ncList} />
       </div>

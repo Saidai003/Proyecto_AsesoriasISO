@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import Layout from '../../components/Layout'
 import NavBarISO from '../../components/NavBarISO'
 import { useAuth } from '../../AuthContext'
+import DashboardEvaluator from '../DashboardEvaluator'
 
 export default function LobbyEvaluator(){
   const { token } = useAuth()
@@ -42,6 +43,11 @@ export default function LobbyEvaluator(){
         <div className="bg-white p-6 rounded-xl">Promedio de Resolución<br/><strong className="text-3xl">{kpis.promedio_resolucion}</strong></div>
         <div className="bg-white p-6 rounded-xl">Eficiencia de Proceso<br/><strong className="text-3xl">{kpis.eficiencia_proceso}</strong></div>
         <div className="bg-white p-6 rounded-xl">Satisfacción (CSAT)<br/><strong className="text-3xl">{kpis.csat}</strong></div>
+      </section>
+
+      {/* Gráficos de araña (radar) para evaluador y responsable */}
+      <section className="mt-6">
+        <DashboardEvaluator />
       </section>
 
       <section className="bg-white rounded-xl shadow-sm overflow-hidden mt-6">

@@ -371,7 +371,7 @@ export function AuthProvider({ children }){
   const setActingWorkspace = (ws) => setActingWorkspaceState(ws ? String(ws) : null)
 
   return (
-    <AuthContext.Provider value={{ accessToken, user, login, logout, initializing, actingWorkspace, setActingWorkspace }}>
+    <AuthContext.Provider value={{ accessToken, token: accessToken, user, login, logout, initializing, actingWorkspace, setActingWorkspace }}>
       {children}
     </AuthContext.Provider>
   )

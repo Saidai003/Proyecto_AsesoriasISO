@@ -9,6 +9,8 @@ import Protected from './components/Protected'
 import RequirementView from './pages/RequirementView'
 import NCView from './pages/NCView'
 import Settings from './pages/Settings'
+import DashboardEvaluator from './pages/DashboardEvaluator'
+import DashboardResponsible from './pages/DashboardResponsible'
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import Toast from './components/Toast'
 
@@ -24,6 +26,8 @@ export default function App(){
         <Route path="/lobby" element={<Protected><Lobby/></Protected>} />
         <Route path="/requisitos/:id" element={<Protected><RequirementView/></Protected>} />
         <Route path="/nc/:id" element={<Protected><NCView/></Protected>} />
+        <Route path="/dashboard" element={<Protected><DashboardEvaluator/></Protected>} />
+        <Route path="/dashboard/responsible" element={<Protected><DashboardResponsible/></Protected>} />
         <Route path="/settings" element={<Protected allowNoWorkspace><Settings/></Protected>} />
         <Route path="/" element={<Navigate to="/lobby" replace/>} />
         <Route path="/users" element={<Protected role="Admin"><UsersManager/></Protected>} />

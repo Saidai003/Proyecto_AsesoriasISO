@@ -1,20 +1,21 @@
 const express = require('express');
 const router = express.Router();
-
-// Ajusta la ruta de importación de tu auth según corresponda 
-// (basado en nc.js parece ser '../middleware/auth' o '../auth' según index.js)
-const { requireAuth, requireRoles } = require('../middleware/auth'); 
+const { requireAuth, requireRoles } = require('../middleware/auth');
 const dashboardController = require('../controllers/dashboardController');
 
+// Proteger todas las rutas de dashboards con autenticación
+router.use(requireAuth);
+
 // GET /api/dashboards/admin
-router.get('/admin', requireAuth, requireRoles('Admin'), dashboardController.getAdminDashboard);
+router.get('/admin', requireRoles('Admin'), dashboardController.getAdminDashboard);
 
 // GET /api/dashboards/evaluator
-// Permitimos a Evaluador, pero también a Admin por si quiere ver esta vista
-router.get('/evaluator', requireAuth, requireRoles('Evaluador', 'Admin'), dashboardController.getEvaluatorDashboard);
+router.get('/evaluator', requireRoles('Evaluador', 'Admin'), dashboardController.getEvaluatorDashboard);
+
+// GET /api/dashboards/responsible
+router.get('/responsible', requireRoles('Responsable SGC', 'Admin'), dashboardController.getResponsibleDashboard);
 
 // GET /api/dashboards/operative
-// Permitimos roles operativos, Responsable SGC, y Admin
-router.get('/operative', requireAuth, requireRoles('Responsable SGC', 'Admin'), dashboardController.getOperativeDashboard);
+router.get('/operative', requireRoles('Operativo', 'Responsable SGC', 'Evaluador', 'Admin'), dashboardController.getOperativeDashboard);
 
 module.exports = router;

@@ -233,7 +233,7 @@ export default function NCView(){
   if(!nc) return <div className="p-4">Cargando NC...</div>
 
   return (
-    <Layout title={`NC #${nc.id}`} sidebar={<NavBarISO/>}>
+    <Layout title={nc.titulo} sidebar={<NavBarISO/>}>
       <div className="bg-white rounded-xl p-6 shadow-sm">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -336,7 +336,7 @@ export default function NCView(){
         <div className="fixed inset-0 bg-black/40 z-50 flex items-start justify-center p-6">
           <div className="bg-white rounded-lg w-full max-w-3xl p-4">
             <div className="flex items-center justify-between mb-3">
-              <h4 className="font-semibold">Historial de acciones - NC #{nc.id}</h4>
+              <h4 className="font-semibold">Historial de acciones - {nc.titulo}</h4>
               <button onClick={()=>setHistoryOpen(false)} className="px-2 py-1 border rounded">Cerrar</button>
             </div>
             <div className="h-64 overflow-auto border rounded p-2 bg-slate-50">
