@@ -78,7 +78,7 @@ async function buildComplianceDashboard(workspaceId) {
       er.id              as evaluacion_id,
       er.estado_cumplimiento as estado,
       r.id               as requisito_id,
-      r.codigo_requisito as codigo,
+      CONCAT(c.numero_clausula, '.', r.id) as codigo,
       r.descripcion_normativa as descripcion,
       c.numero_clausula  as clausula
     FROM EVALUACION_REQUISITO er
@@ -111,11 +111,11 @@ async function buildComplianceDashboard(workspaceId) {
 
   // --- 3. KPIs de procesos (NC) ---
   const [resolucionRows] = await pool.execute(`
-    SELECT AVG(DATEDIFF(nc.fecha_ultima_edicion, ach.fecha_creacion)) as promedio_dias
+    SELECT AVG(DATEDIFF(nc.fecha_ultima_edicion, ach.fecha_accion)) as promedio_dias
     FROM AUDITORIA_NC nc
     JOIN EVALUACION_REQUISITO er ON nc.evaluacion_requisito_id = er.id
     LEFT JOIN (
-      SELECT auditoria_nc_id, MIN(fecha_creacion) as fecha_creacion
+      SELECT auditoria_nc_id, MIN(fecha_accion) as fecha_accion
       FROM ACCIONES_CORRECTIVAS
       GROUP BY auditoria_nc_id
     ) ach ON ach.auditoria_nc_id = nc.id
@@ -153,13 +153,13 @@ async function buildComplianceDashboard(workspaceId) {
 
   async function kpisPorClausula(numClausula) {
     const [resRows] = await pool.execute(`
-      SELECT AVG(DATEDIFF(nc.fecha_ultima_edicion, ach.fecha_creacion)) as promedio_dias
+      SELECT AVG(DATEDIFF(nc.fecha_ultima_edicion, ach.fecha_accion)) as promedio_dias
       FROM AUDITORIA_NC nc
       JOIN EVALUACION_REQUISITO er ON nc.evaluacion_requisito_id = er.id
       JOIN REQUISITOS_BASE r ON er.requisito_base_id = r.id
       JOIN CLAUSULAS c ON r.clausula_id = c.id
       LEFT JOIN (
-        SELECT auditoria_nc_id, MIN(fecha_creacion) as fecha_creacion
+        SELECT auditoria_nc_id, MIN(fecha_accion) as fecha_accion
         FROM ACCIONES_CORRECTIVAS
         GROUP BY auditoria_nc_id
       ) ach ON ach.auditoria_nc_id = nc.id

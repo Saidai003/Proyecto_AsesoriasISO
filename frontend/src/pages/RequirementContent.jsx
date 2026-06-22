@@ -526,15 +526,35 @@ export default function RequirementContent({ node, onRequestCreateNc, onStatusCh
   }
 
   const requirementStatus = React.useMemo(() => {
-    if(!ncList || ncList.length === 0) {
-      return { label: 'No Aplica', className: 'bg-slate-100 text-slate-700' }
+    // --- Variables base ---
+    const totalEvidencias = (evidences || []).length
+    const evidenciasAceptadas = (evidences || []).filter(ev => ev.estado_validacion_archivo === 'Aceptado').length
+    const evidenciasRechazadas = (evidences || []).filter(ev => ev.estado_validacion_archivo === 'Rechazado').length
+
+    const totalBrechas = (ncList || []).length
+    const brechasCerradas = (ncList || []).filter(nc => nc.estado_flujo === 'Cerrada').length
+    const brechasAbiertas = totalBrechas - brechasCerradas
+
+    // --- Lógica de estados (orden de prioridad) ---
+
+    // 1. No Evaluado: sin evidencias y sin brechas
+    if (totalEvidencias === 0 && totalBrechas === 0) {
+      return { label: 'No Evaluado', className: 'bg-slate-100 text-slate-700' }
     }
-    const total = ncList.length
-    const closed = ncList.filter(nc => nc.estado_flujo === 'Cerrada').length
-    if(closed === total) return { label: 'Cumple', className: 'bg-emerald-600 text-white' }
-    if(closed === 0) return { label: 'No Cumple', className: 'bg-red-600 text-white' }
-    return { label: 'Cumple Parcialmente', className: 'bg-amber-500 text-white' }
-  }, [ncList])
+
+    // 2. Cumple: al menos 1 evidencia, TODAS aceptadas, 0 brechas abiertas
+    if (totalEvidencias > 0 && evidenciasAceptadas === totalEvidencias && brechasAbiertas === 0) {
+      return { label: 'Cumple', className: 'bg-green-600 text-white' }
+    }
+
+    // 3. No Cumple: al menos 1 brecha abierta O al menos 1 evidencia rechazada
+    if (brechasAbiertas > 0 || evidenciasRechazadas > 0) {
+      return { label: 'No Cumple', className: 'bg-red-600 text-white' }
+    }
+
+    // 4. En Revisión: hay evidencias pendientes sin brechas abiertas ni rechazos
+    return { label: 'En Revisión', className: 'bg-amber-500 text-white' }
+  }, [ncList, evidences])
 
   React.useEffect(() => {
     if(onStatusChange) onStatusChange(requirementStatus)
@@ -656,10 +676,16 @@ export default function RequirementContent({ node, onRequestCreateNc, onStatusCh
             </select>
           </div>
 
-          <UploadArea evaluacionId={evaluacionId} onUploaded={(newEv)=>{
-            setEvidences(prev => [newEv, ...prev])
-            try{ if(hasRole(user, 'responsable')) window.dispatchEvent(new CustomEvent('notifications:new', { detail: { requisito_base_id: node && node.id ? Number(node.id) : null, evidencia_id: newEv.id } })) }catch(_){ }
-          }} />
+          {isEvaluador && filteredEvidences.length === 0 ? (
+            <div className="border rounded p-3 mb-3 bg-slate-50">
+              <p className="text-sm text-slate-500 text-center">No hay evidencias cargadas para este requisito.</p>
+            </div>
+          ) : !isEvaluador ? (
+            <UploadArea evaluacionId={evaluacionId} onUploaded={(newEv)=>{
+              setEvidences(prev => [newEv, ...prev])
+              try{ if(hasRole(user, 'responsable')) window.dispatchEvent(new CustomEvent('notifications:new', { detail: { requisito_base_id: node && node.id ? Number(node.id) : null, evidencia_id: newEv.id } })) }catch(_){ }
+            }} />
+          ) : null}
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
             {filteredEvidences && filteredEvidences.length>0 ? filteredEvidences.map(ev => {
               const isImage = /\.(jpe?g|png|gif|webp)$/i.test(ev.nombre_archivo || '')
