@@ -4,7 +4,7 @@ import NavBarISO from '../../components/NavBarISO'
 import { useAuth } from '../../AuthContext'
 
 export default function LobbyEvaluator(){
-  const { token } = useAuth()
+  const { accessToken: token } = useAuth()
   
   const [kpis, setKpis] = useState({ promedio_resolucion: '0 días', eficiencia_proceso: '0%', csat: '0 / 5.0' })
   const [porVerificar, setPorVerificar] = useState([])

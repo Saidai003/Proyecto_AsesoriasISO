@@ -24,6 +24,8 @@ services:
   # Optional backend-js service example
   backend-js:
     build: ./backend-js
+    env_file:
+      - backend-js/.env
     environment:
       - NODE_ENV=${NODE_ENV:-development}
       - DB_HOST=mysql
@@ -33,10 +35,11 @@ services:
       - PORT=3000
       - JWT_SECRET=${JWT_SECRET:-dev_jwt_secret}
       - SEED_SECRET=${SEED_SECRET:-dev_seed_secret}
-      - GOOGLE_DRIVE_TOKEN_PATH=/app/.env.drive_token
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - GOOGLE_REDIRECT_URI=${GOOGLE_REDIRECT_URI}
+      - GOOGLE_DRIVE_FOLDER_ID=${GOOGLE_DRIVE_FOLDER_ID}
       - SEEDS_DIR=/app/seeds
-    env_file:
-      - backend-js/.env
     ports:
       - "3000:3000"
     depends_on:
@@ -46,7 +49,6 @@ services:
       - ./backend-js/.credentials:/app/.credentials
       - ./backend-js:/app
       - ./seeds:/app/seeds:ro
-      - ./.env.drive_token:/app/.env.drive_token
 
   # Optional backend-py service example
   # backend-py removed: Python backend no longer used

@@ -22,7 +22,7 @@ export default function LobbyAdmin(){
   const location = useLocation()
   const params = new URLSearchParams(location.search || '')
   const wsRaw = params.get('workspace')
-  const { actingWorkspace, token } = useAuth()
+  const { actingWorkspace, accessToken: token } = useAuth()
   
   const hasWorkspace = (wsRaw && String(wsRaw).trim() !== '' && !Number.isNaN(Number(wsRaw))) || (actingWorkspace && String(actingWorkspace).trim() !== '' && !Number.isNaN(Number(actingWorkspace)))
   try{ console.log('LobbyAdmin: location.search=', location.search, 'wsRaw=', wsRaw, 'actingWorkspace=', actingWorkspace, 'hasWorkspace=', hasWorkspace) }catch(_){ }

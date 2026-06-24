@@ -4,7 +4,7 @@ import NavBarISO from '../../components/NavBarISO'
 import { useAuth } from '../../AuthContext'
 
 export default function LobbyOperative(){
-  const { token, actingWorkspace } = useAuth()
+  const { accessToken: token, actingWorkspace } = useAuth()
   
   const [metrics, setMetrics] = useState({ nc_identificadas: 0, en_progreso: 0 })
   const [tablaOperativa, setTablaOperativa] = useState([])
