@@ -7,8 +7,9 @@ const fs = require('fs')
 const path = require('path')
 const mysql = require('mysql2/promise')
 
-const SEEDS_DIR = process.env.SEEDS_DIR || path.resolve(__dirname, '../../seeds')
-const SEED_FILES = ['seedISO_utf8.sql', 'seed_users_workspaces.sql']
+// Ahora busca la carpeta seeds dentro del propio backend-js
+const SEEDS_DIR = process.env.SEEDS_DIR || path.resolve(__dirname, '../seeds')
+const SEED_FILES = ['init.sql', 'seedISO_utf8.sql', 'seed_users_workspaces.sql']
 
 async function createConnection(){
   return mysql.createConnection({
@@ -55,16 +56,19 @@ async function run(){
   try{
     connection = await createConnection()
 
-    if(await isAlreadySeeded(connection)){
-      console.log('[ensureSeed] La base ya tiene datos ISO; no se aplican seeds.')
+    const alreadySeeded = await isAlreadySeeded(connection)
+    if(!alreadySeeded){
+      console.log('[ensureSeed] Primera configuración: aplicando seeds después del esquema...')
+      for(const file of SEED_FILES){
+        await applySeedFile(connection, file)
+      }
+      console.log('[ensureSeed] Seeds aplicados correctamente.')
       return
     }
 
-    console.log('[ensureSeed] Primera configuración: aplicando seeds después del esquema...')
-    for(const file of SEED_FILES){
-      await applySeedFile(connection, file)
-    }
-    console.log('[ensureSeed] Seeds aplicados correctamente.')
+    console.log('[ensureSeed] La base ya tiene datos ISO; aplicando/verificando seed de usuarios demo...')
+    await applySeedFile(connection, 'seed_users_workspaces.sql')
+    console.log('[ensureSeed] Seed de usuarios demo aplicado/verificado correctamente.')
   }catch(err){
     console.error('[ensureSeed] Error:', err.message || err)
     process.exit(1)

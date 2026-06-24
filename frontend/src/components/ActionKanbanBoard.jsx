@@ -4,14 +4,14 @@ import { showToast } from '../lib/toast'
 import getErrorText from '../lib/errorMessage'
 import { hasRole } from '../lib/userUtils'
 import { statusColor } from '../lib/ncHelpers'
-import EditableEstado from './EditableEstado'
 import ConfirmDialog from './ConfirmDialog'
 
 const KANBAN_STATES = ['Pendiente', 'En_Progreso', 'Eficaz', 'No_Eficaz']
 
 const formatKanbanState = (state) => {
   if (state === 'En_Progreso') return 'En progreso'
-  if (state === 'No_Eficaz') return 'No eficaz'
+  if (state === 'Eficaz') return 'Implementada / Cumplida'
+  if (state === 'No_Eficaz') return 'Requiere Ajuste'
   return state || 'Sin estado'
 }
 
@@ -75,8 +75,7 @@ export default function ActionKanbanBoard({
       accion: '',
       contenido_comentario: '',
       estado_accion: 'Pendiente',
-      acciones_futuras_propuestas: '',
-      requiere_nueva_nc: false
+      acciones_futuras_propuestas: ''
     })
     
     const children = threads.filter(t => Number(t.accion_previa_id) === Number(action.id))
@@ -86,12 +85,41 @@ export default function ActionKanbanBoard({
 
     // ✅ Mejorado: usar useRef para evitar race conditions en drag
     const dragStartTimeRef = useRef(null)
+    const isFormTarget = (target) => target && target.closest && target.closest('input,textarea,select,button,label')
+
+    const saveEdit = async () => {
+      try {
+        const payload = {
+          accion: form.accion,
+          contenido_comentario: form.contenido_comentario,
+          acciones_futuras_propuestas: form.acciones_futuras_propuestas,
+          estado_accion: form.estado_accion
+        }
+        const res = await fetchWithAuth(`/api/acciones/${action.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        })
+        if (res.ok) {
+          const updated = await res.json()
+          setThreads(prev => prev.map(t => Number(t.id) === Number(updated.id) ? updated : t))
+          showToast({ title: 'Acción guardada', message: 'Cambios guardados', type: 'success' })
+          setOpenEdit(false)
+        } else {
+          const err = await res.json().catch(() => null)
+          showToast({ title: 'Error', message: getErrorText(err, 'No se pudo guardar acción'), type: 'error' })
+        }
+      } catch (e) {
+        console.error('save edit action error', e)
+        showToast({ title: 'Error', message: 'Error al guardar acción', type: 'error' })
+      }
+    }
 
     return (
       <div
         draggable={canDrag}
         onDragStart={(e) => {
-          if (!canDrag) {
+          if (!canDrag || isFormTarget(e.target)) {
             e.preventDefault()
             return
           }
@@ -100,7 +128,6 @@ export default function ActionKanbanBoard({
             e.dataTransfer.effectAllowed = 'move'
             e.dataTransfer.setData('text/plain', String(action.id))
           } catch (_) {}
-          // ✅ Delay mínimo para que el browser procese el evento correctamente
           setTimeout(() => {
             setDraggingActionId(action.id)
           }, 0)
@@ -139,24 +166,49 @@ export default function ActionKanbanBoard({
           <div className="grid grid-cols-1 gap-2 text-sm">
             <div className="rounded-lg bg-slate-50 px-2 py-1.5">
               <div className="text-[11px] uppercase tracking-wide text-slate-400 mb-1">Comentario</div>
-              <div className="text-slate-700 break-words whitespace-pre-wrap">{action.contenido_comentario || '—'}</div>
+              {openEdit ? (
+                <textarea
+                  value={form.contenido_comentario}
+                  onChange={e => setForm({ ...form, contenido_comentario: e.target.value })}
+                  className="w-full min-h-[5rem] resize-none rounded border px-2 py-1 text-sm"
+                />
+              ) : (
+                <div className="text-slate-700 break-words whitespace-pre-wrap">{action.contenido_comentario || '—'}</div>
+              )}
             </div>
             <div className="rounded-lg bg-slate-50 px-2 py-1.5">
               <div className="text-[11px] uppercase tracking-wide text-slate-400 mb-1">Acciones futuras</div>
-              <div className="text-slate-700 break-words whitespace-pre-wrap">{action.acciones_futuras_propuestas || '—'}</div>
+              {openEdit ? (
+                <textarea
+                  value={form.acciones_futuras_propuestas}
+                  onChange={e => setForm({ ...form, acciones_futuras_propuestas: e.target.value })}
+                  className="w-full min-h-[5rem] resize-none rounded border px-2 py-1 text-sm"
+                />
+              ) : (
+                <div className="text-slate-700 break-words whitespace-pre-wrap">{action.acciones_futuras_propuestas || '—'}</div>
+              )}
             </div>
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
             <div className="flex items-center gap-2">
               {hasRole(user, 'responsable') ? (
-                <EditableEstado
-                  action={action}
-                  onUpdated={(updated) => {
-                    setThreads(prev => prev.map(t => t.id === updated.id ? updated : t))
-                    showToast({ title: 'Acción actualizada', message: 'Estado guardado', type: 'success' })
-                  }}
-                />
+                openEdit ? (
+                  <select
+                    value={form.estado_accion}
+                    onChange={e => setForm({ ...form, estado_accion: e.target.value })}
+                    className="px-3 py-1 rounded text-xs border"
+                  >
+                    <option value="Pendiente">Pendiente</option>
+                    <option value="En_Progreso">En progreso</option>
+                    <option value="Eficaz">Implementada / Cumplida</option>
+                    <option value="No_Eficaz">Requiere Ajuste</option>
+                  </select>
+                ) : (
+                  <div className={`px-3 py-1 rounded-full text-xs font-medium ${statusColor(action.estado_accion)}`}>
+                    {formatKanbanState(action.estado_accion)}
+                  </div>
+                )
               ) : (
                 <div className={`px-3 py-1 rounded-full text-xs font-medium ${statusColor(action.estado_accion)}`}>
                   {formatKanbanState(action.estado_accion)}
@@ -170,28 +222,44 @@ export default function ActionKanbanBoard({
               </button>
             </div>
             {hasRole(user, 'responsable') && (
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <button
                   onClick={() => setOpenForm(o => !o)}
                   className="text-xs px-2 py-1 border rounded bg-white hover:bg-slate-50"
                 >
                   Agregar hija
                 </button>
-                <button
-                  onClick={() => {
-                    setOpenEdit(o => !o)
-                    setForm({
-                      accion: action.accion || '',
-                      contenido_comentario: action.contenido_comentario || '',
-                      estado_accion: action.estado_accion || 'Pendiente',
-                      acciones_futuras_propuestas: action.acciones_futuras_propuestas || '',
-                      requiere_nueva_nc: !!action.requiere_nueva_nc
-                    })
-                  }}
-                  className="text-xs px-2 py-1 border rounded bg-white hover:bg-slate-50"
-                >
-                  Editar
-                </button>
+                {openEdit ? (
+                  <>
+                    <button
+                      onClick={saveEdit}
+                      className="text-xs px-2 py-1 border rounded bg-green-600 text-white hover:bg-emerald-600"
+                    >
+                      Guardar
+                    </button>
+                    <button
+                      onClick={() => { setOpenEdit(false); setForm({ accion: action.accion || '', contenido_comentario: action.contenido_comentario || '', estado_accion: action.estado_accion || 'Pendiente', acciones_futuras_propuestas: action.acciones_futuras_propuestas || '' }) }}
+                      className="text-xs px-2 py-1 border rounded bg-white hover:bg-slate-50"
+                    >
+                      Cancelar
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setOpenEdit(true)
+                      setForm({
+                        accion: action.accion || '',
+                        contenido_comentario: action.contenido_comentario || '',
+                        estado_accion: action.estado_accion || 'Pendiente',
+                        acciones_futuras_propuestas: action.acciones_futuras_propuestas || ''
+                      })
+                    }}
+                    className="text-xs px-2 py-1 border rounded bg-white hover:bg-slate-50"
+                  >
+                    Editar
+                  </button>
+                )}
                 <button
                   onClick={() => {
                     if (typeof onRequestDelete === 'function') {
@@ -272,89 +340,6 @@ export default function ActionKanbanBoard({
             </div>
           )}
 
-          {openEdit && (
-            <div className="rounded-lg border bg-slate-50 p-3">
-              <div className="mb-2 text-sm font-medium">Editar acción</div>
-              <input
-                placeholder="Acción"
-                value={form.accion}
-                onChange={e => setForm({ ...form, accion: e.target.value })}
-                className="w-full px-2 py-1 border rounded mb-2 text-sm"
-              />
-              <textarea
-                placeholder="Comentario"
-                value={form.contenido_comentario}
-                onChange={e => setForm({ ...form, contenido_comentario: e.target.value })}
-                className="w-full px-2 py-1 border rounded mb-2 text-sm"
-              />
-              <div className="flex items-center gap-2 mb-2">
-                <select
-                  value={form.estado_accion}
-                  onChange={e => setForm({ ...form, estado_accion: e.target.value })}
-                  className="px-2 py-1 border rounded text-sm"
-                >
-                  <option value="Pendiente">Pendiente</option>
-                  <option value="En_Progreso">En_Progreso</option>
-                  <option value="Eficaz">Eficaz</option>
-                  <option value="No_Eficaz">No_Eficaz</option>
-                </select>
-                <input
-                  placeholder="Acciones futuras"
-                  value={form.acciones_futuras_propuestas}
-                  onChange={e => setForm({ ...form, acciones_futuras_propuestas: e.target.value })}
-                  className="px-2 py-1 border rounded text-sm flex-1"
-                />
-              </div>
-              <div className="flex items-center gap-2 mb-2">
-                <label className="text-sm inline-flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={form.requiere_nueva_nc}
-                    onChange={e => setForm({ ...form, requiere_nueva_nc: e.target.checked })}
-                  />
-                  Requiere nueva NC
-                </label>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={async () => {
-                    try {
-                      const payload = {
-                        accion: form.accion,
-                        contenido_comentario: form.contenido_comentario,
-                        acciones_futuras_propuestas: form.acciones_futuras_propuestas,
-                        requiere_nueva_nc: form.requiere_nueva_nc ? 1 : 0,
-                        estado_accion: form.estado_accion
-                      }
-                      const res = await fetchWithAuth(`/api/acciones/${action.id}`, {
-                        method: 'PATCH',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                      })
-                      if (res.ok) {
-                        const updated = await res.json()
-                        setThreads(prev => prev.map(t => Number(t.id) === Number(updated.id) ? updated : t))
-                        showToast({ title: 'Acción guardada', message: 'Cambios guardados', type: 'success' })
-                        setOpenEdit(false)
-                      } else {
-                        const err = await res.json().catch(() => null)
-                        showToast({ title: 'Error', message: getErrorText(err, 'No se pudo guardar acción'), type: 'error' })
-                      }
-                    } catch (e) {
-                      console.error('save edit action error', e)
-                      showToast({ title: 'Error', message: 'Error al guardar acción', type: 'error' })
-                    }
-                  }}
-                  className="px-3 py-1 bg-[#00236f] text-white text-sm rounded"
-                >
-                  Guardar
-                </button>
-                <button onClick={() => setOpenEdit(false)} className="px-3 py-1 border rounded text-sm">
-                  Cancelar
-                </button>
-              </div>
-            </div>
-          )}
         </div>
       </div>
     )

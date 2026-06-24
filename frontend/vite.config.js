@@ -5,7 +5,8 @@ import react from '@vitejs/plugin-react'
 export default defineConfig(({ command, mode }) => ({
   plugins: [react()],
   server: {
-    host: 'localhost',
+    host: true, // Escucha en todas las interfaces de red (obligatorio para la nube/Docker)
+    allowedHosts: true, // Permite el acceso desde cualquier dominio generado por Railway u otras plataformas
     port: 5173,
     proxy: {
       // Proxy API and auth requests to backend to keep same-origin for cookies
@@ -30,4 +31,3 @@ export default defineConfig(({ command, mode }) => ({
     }
   }
 }))
-

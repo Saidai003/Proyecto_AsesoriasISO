@@ -15,24 +15,21 @@ SELECT id INTO @ROLE_ADMIN_ID FROM ROLES WHERE nombre='Admin' LIMIT 1;
 SELECT id INTO @ROLE_EVAL_ID FROM ROLES WHERE nombre='Evaluador' LIMIT 1;
 SELECT id INTO @ROLE_RESP_ID FROM ROLES WHERE nombre='Responsable SGC' LIMIT 1;
 
--- Password hash for '1234' (generated with bcrypt)
--- Regenerated inside container with: node -e "console.log(require('bcryptjs').hashSync('1234',10))"
-SET @HASH = '$2a$10$dpVTb/jYE4jIk2SM936jB.SabUYp4JMPY1rjMmd4dz/tTXcVELM/i';
+-- Password hash for '1234' (bcrypt 10 rounds)
+SET @HASH = '$2a$10$t9pHovNhZKk2go.jWalFOOq8F4oux4nW/PyCYnhLu5nm7/w18TtP6';
 
--- Insert users (no duplicate by email)
+-- Insert or update demo users with stable credentials (all in one operation)
 INSERT INTO USUARIOS (workspace_id, role_id, nombre, email, password_hash, estado_invitacion)
-SELECT @WORKSPACE_DEMO_ID, @ROLE_RESP_ID, 'Responsable Demo', 'responsable@demo.local', @HASH, 'Aceptada'
-WHERE NOT EXISTS (SELECT 1 FROM USUARIOS WHERE email='responsable@demo.local');
-
-INSERT INTO USUARIOS (workspace_id, role_id, nombre, email, password_hash, estado_invitacion)
-SELECT @WORKSPACE_DEMO_ID, @ROLE_EVAL_ID, 'Evaluador Demo', 'evaluador@demo.local', @HASH, 'Aceptada'
-WHERE NOT EXISTS (SELECT 1 FROM USUARIOS WHERE email='evaluador@demo.local');
-
-INSERT INTO USUARIOS (workspace_id, role_id, nombre, email, password_hash, estado_invitacion)
-SELECT @WORKSPACE_DEMO_ID, @ROLE_ADMIN_ID, 'Admin Demo', 'admin@demo.local', @HASH, 'Aceptada'
-WHERE NOT EXISTS (SELECT 1 FROM USUARIOS WHERE email='admin@demo.local');
-
--- end
+VALUES 
+  (@WORKSPACE_DEMO_ID, @ROLE_RESP_ID, 'Responsable Demo', 'responsable@demo.local', @HASH, 'Aceptada'),
+  (@WORKSPACE_DEMO_ID, @ROLE_EVAL_ID, 'Evaluador Demo', 'evaluador@demo.local', @HASH, 'Aceptada'),
+  (@WORKSPACE_DEMO_ID, @ROLE_ADMIN_ID, 'Admin Demo', 'admin@demo.local', @HASH, 'Aceptada')
+ON DUPLICATE KEY UPDATE
+  workspace_id = VALUES(workspace_id),
+  role_id = VALUES(role_id),
+  nombre = VALUES(nombre),
+  password_hash = VALUES(password_hash),
+  estado_invitacion = VALUES(estado_invitacion);
 
 -- Import note: run the mysql client with the proper charset if importing from the host
 -- Example:

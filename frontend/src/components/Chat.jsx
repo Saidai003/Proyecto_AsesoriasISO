@@ -166,7 +166,7 @@ export default function Chat({ requisitoId, evaluacionId, evidences = [], ncList
         setAttachItems(j.evidencias || [])
         return
       }
-      if(type === 'nc' && evaluacionId){
+      if((type === 'nc' || type === 'brecha') && evaluacionId){
         const r = await fetchWithAuth(`/api/nc/evaluacion/${evaluacionId}`)
         if(!r.ok) return
         const j = await r.json()
@@ -191,7 +191,7 @@ export default function Chat({ requisitoId, evaluacionId, evidences = [], ncList
       `${typ}-${m.referencia_id}`
     ]
     if(typ.includes('evid')) candidates.push(`evidence-${m.referencia_id}`, `evidencia-${m.referencia_id}`)
-    if(typ === 'nc' || typ.includes('no')) candidates.push(`nc-${m.referencia_id}`)
+    if(typ === 'nc' || typ === 'brecha' || typ.includes('no')) candidates.push(`nc-${m.referencia_id}`, `brecha-${m.referencia_id}`)
     if(typ.includes('accion')) candidates.push(`accion-${m.referencia_id}`, `acciones-${m.referencia_id}`)
     findAndFlash(candidates, 2500)
   }
@@ -203,7 +203,7 @@ export default function Chat({ requisitoId, evaluacionId, evidences = [], ncList
       `${typ}-${att.id}`
     ]
     if(typ.includes('evid')) candidates.push(`evidence-${att.id}`, `evidencia-${att.id}`)
-    if(typ === 'nc' || typ.includes('no')) candidates.push(`nc-${att.id}`)
+    if(typ === 'nc' || typ === 'brecha' || typ.includes('no')) candidates.push(`nc-${att.id}`, `brecha-${att.id}`)
     if(typ.includes('accion')) candidates.push(`accion-${att.id}`, `acciones-${att.id}`)
 
     if(findAndFlash(candidates, 3000)) return
@@ -230,7 +230,7 @@ export default function Chat({ requisitoId, evaluacionId, evidences = [], ncList
         return
       }
 
-      if(typ === 'nc' || typ === 'no conformidad' || typ === 'noconformidad') return navigate(`/nc/${att.id}`)
+      if(typ === 'nc' || typ === 'brecha' || typ === 'no conformidad' || typ === 'noconformidad') return navigate(`/nc/${att.id}`)
       if(typ.includes('evid')) return navigate(`/evidencias/${att.id}`)
     }catch(_){ }
   }
@@ -266,10 +266,10 @@ export default function Chat({ requisitoId, evaluacionId, evidences = [], ncList
       if(ev) return ev.nombre_archivo || a.title || `#${a.id}`
       return a.title || `#${a.id}`
     }
-    if(a.type === 'nc'){
+    if(a.type === 'nc' || a.type === 'brecha'){
       const nc = ncList.find(x => Number(x.id) === Number(a.id))
-      if(nc) return nc.titulo || a.title || `#${a.id}`
-      return a.title || `#${a.id}`
+      if(nc) return nc.titulo || a.title || `Brecha #${a.id}`
+      return a.title || `Brecha #${a.id}`
     }
     return a.title || `#${a.id}`
   }
@@ -284,7 +284,7 @@ export default function Chat({ requisitoId, evaluacionId, evidences = [], ncList
       const ev = evidences.find(x => Number(x.id) === Number(a.id))
       return ev ? (ev.estado_validacion_archivo || null) : null
     }
-    if(a.type === 'nc'){
+    if(a.type === 'nc' || a.type === 'brecha'){
       const nc = ncList.find(x => Number(x.id) === Number(a.id))
       return nc ? (nc.estado_validacion || nc.estado_flujo || null) : null
     }
@@ -309,7 +309,7 @@ export default function Chat({ requisitoId, evaluacionId, evidences = [], ncList
             <div className="bg-white p-2 rounded mt-1">
               <div className="whitespace-pre-wrap">{m.contenido}</div>
               {m.referencia_type && m.referencia_id && (
-                <button onClick={()=>onRefClick(m)} className="mt-2 text-xs text-blue-600">Ir a {m.referencia_type} #{m.referencia_id}</button>
+                <button onClick={()=>onRefClick(m)} className="mt-2 text-xs text-blue-600">Ir a {m.referencia_type === 'nc' ? 'brecha' : m.referencia_type} #{m.referencia_id}</button>
               )}
               {/* attachments listing */}
               {m.metadata && m.metadata.attachments && m.metadata.attachments.length > 0 && (
@@ -344,7 +344,7 @@ export default function Chat({ requisitoId, evaluacionId, evidences = [], ncList
               <select value={attachType} onChange={(e)=>{ setAttachType(e.target.value); setAttachItems([]); setAttachQuery(''); if(e.target.value) loadAttachItems(e.target.value) }} className="px-2 py-1 border rounded text-sm">
                 <option value="">Tipo de referencia</option>
                 <option value="evidencia">Evidencia</option>
-                <option value="nc">No conformidad (NC)</option>
+                <option value="brecha">Brecha</option>
                 <option value="accion">Acción correctiva</option>
               </select>
               <input value={attachQuery} onChange={(e)=>setAttachQuery(e.target.value)} placeholder="Buscar..." className="px-2 py-1 border rounded text-sm flex-1" />

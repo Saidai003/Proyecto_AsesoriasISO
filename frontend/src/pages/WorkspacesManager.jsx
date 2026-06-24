@@ -40,6 +40,18 @@ export default function WorkspacesManager() {
     })
   }, [workspaces, q])
 
+  const workspacesThisMonthCount = React.useMemo(() => {
+    if (!workspaces || !workspaces.length) return 0
+    const now = new Date()
+    const currentMonth = now.getMonth()
+    const currentYear = now.getFullYear()
+    return workspaces.reduce((count, w) => {
+      const created = w.fecha_creacion ? new Date(w.fecha_creacion) : null
+      if (!created || Number.isNaN(created.getTime())) return count
+      return created.getMonth() === currentMonth && created.getFullYear() === currentYear ? count + 1 : count
+    }, 0)
+  }, [workspaces])
+
   const [newWorkspaceRow, setNewWorkspaceRow] = React.useState(false)
   const [editingId, setEditingId] = React.useState(null)
 
@@ -85,7 +97,7 @@ export default function WorkspacesManager() {
        <div className="max-w-7xl mx-auto">
           {/* Header rendered by Layout; avoid duplicate title here */}
             <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-8">
-              <StatCard title="Total Espacios" value={String(workspaces ? workspaces.length : 0)} note="+3 este mes" />
+              <StatCard title="Total Espacios" value={String(workspaces ? workspaces.length : 0)} note={`+${workspacesThisMonthCount} este mes`} />
             </div>
             <div className="mb-6">
               <SearchInput value={q} onChange={e => setQ(e.target.value)} placeholder="Buscar clientes por nombre o ID (RF-ESP-3)..." />

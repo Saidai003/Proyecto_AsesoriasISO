@@ -8,3 +8,6 @@ __pycache__/
 .credentials/
 # drive token (allow custom path via GOOGLE_DRIVE_TOKEN_PATH)
 .env.drive_token
+
+# Documentación interna con credenciales
+DEVELOPMENT.md

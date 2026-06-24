@@ -24,7 +24,7 @@ async function getClausesByISO(req, res){
 async function getRequisitosByClausula(req, res){
   try{
     const clausulaId = req.params.id;
-    const [rows] = await pool.execute('SELECT id, requisito_padre_id, descripcion_normativa FROM REQUISITOS_BASE WHERE clausula_id = ? ORDER BY id', [clausulaId]);
+    const [rows] = await pool.execute('SELECT id, requisito_padre_id, descripcion_normativa, titulo FROM REQUISITOS_BASE WHERE clausula_id = ? ORDER BY id', [clausulaId]);
     return res.json(rows);
   }catch(err){
     console.error('getRequisitosByClausula error', err);

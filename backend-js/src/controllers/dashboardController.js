@@ -1,28 +1,32 @@
-const { pool } = require('../db')
-const { verifyAccessToken } = require('../auth')
+const { pool } = require('../db');
+const { verifyAccessToken } = require('../auth');
 
-// Función auxiliar para validar token y obtener datos de usuario (workspace y rol)
+// ------------------------------------------------------------------
+// FUNCIONES AUXILIARES
+// ------------------------------------------------------------------
+
+// Función para validar token y obtener datos de usuario (workspace y rol)
 async function getAuthUser(req, res) {
-  const token = req.headers.authorization && req.headers.authorization.startsWith('Bearer ') 
+  const token = req.headers.authorization?.startsWith('Bearer ') 
     ? req.headers.authorization.slice(7) 
-    : (req.query && req.query.token)
+    : req.query?.token;
   
   if (!token) {
-    res.status(401).json({ error: 'unauthorized' })
-    return null
+    res.status(401).json({ error: 'unauthorized' });
+    return null;
   }
 
-  let user = null
+  let user = null;
   try { 
-    user = verifyAccessToken(token) 
+    user = verifyAccessToken(token); 
   } catch (e) { 
-    res.status(401).json({ error: 'invalid_token' })
-    return null
+    res.status(401).json({ error: 'invalid_token' });
+    return null;
   }
 
-  if (!user || !user.id) {
-    res.status(401).json({ error: 'unauthorized' })
-    return null
+  if (!user?.id) {
+    res.status(401).json({ error: 'unauthorized' });
+    return null;
   }
 
   try {
@@ -32,48 +36,216 @@ async function getAuthUser(req, res) {
       LEFT JOIN ROLES r ON u.role_id = r.id 
       WHERE u.id = ?`, 
       [user.id]
-    )
-    if (!rows || !rows[0]) {
-      res.status(404).json({ error: 'user_not_found' })
-      return null
+    );
+    if (!rows?.[0]) {
+      res.status(404).json({ error: 'user_not_found' });
+      return null;
     }
-    return { id: user.id, ...rows[0] }
+    return { id: user.id, ...rows[0] };
   } catch (e) {
-    console.error('getAuthUser error', e)
-    res.status(500).json({ error: 'internal' })
-    return null
+    console.error('getAuthUser error', e);
+    res.status(500).json({ error: 'internal' });
+    return null;
   }
 }
 
-// Función auxiliar para construir filtros comunes
-function buildFilters(req, prefix = 'nc') {
-  let sql = ''
-  const params = []
+// Función para construir filtros
+function buildFilters(req, prefix) {
+  let sql = '';
+  const params = [];
   
   if (req.query.startDate && req.query.endDate) {
-    sql += ` AND ${prefix}.fecha_ultima_edicion BETWEEN ? AND ?`
-    params.push(req.query.startDate, req.query.endDate)
+    sql += ` AND ${prefix}.fecha_ultima_edicion BETWEEN ? AND ?`;
+    params.push(req.query.startDate, req.query.endDate);
   } else {
-    sql += ` AND ${prefix}.fecha_ultima_edicion >= DATE_SUB(NOW(), INTERVAL 6 MONTH)`
+    sql += ` AND ${prefix}.fecha_ultima_edicion >= DATE_SUB(NOW(), INTERVAL 6 MONTH)`;
   }
 
   if (req.query.clause) {
-    sql += ` AND c.numero_clausula = ?`
-    params.push(Number(req.query.clause))
+    sql += ` AND c.numero_clausula = ?`;
+    params.push(Number(req.query.clause));
   }
   
-  return { sql, params }
+  return { sql, params };
 }
 
+// Calcula métricas/KPIs y datos de cumplimiento agregados por cláusula y por requisito.
+// Reutilizable por evaluator y responsable (ambos comparten el mismo workspace).
+async function buildComplianceDashboard(workspaceId) {
+  // --- 1. Evaluaciones por requisito (estado de cumplimiento) ---
+  const [evaluaciones] = await pool.execute(`
+    SELECT
+      er.id              as evaluacion_id,
+      er.estado_cumplimiento as estado,
+      r.id               as requisito_id,
+      CONCAT(c.numero_clausula, '.', r.id) as codigo,
+      r.descripcion_normativa as descripcion,
+      c.numero_clausula  as clausula
+    FROM EVALUACION_REQUISITO er
+    JOIN REQUISITOS_BASE r ON er.requisito_base_id = r.id
+    JOIN CLAUSULAS c ON r.clausula_id = c.id
+    WHERE er.workspace_id = ?
+  `, [workspaceId]);
+
+  // Métricas generales basadas en EVALUACION_REQUISITO
+  const totalReqs = evaluaciones.length;
+  const cumple = evaluaciones.filter(e => e.estado === 'Cumple').length;
+  const parcial = evaluaciones.filter(e => e.estado === 'Parcial').length;
+  const noCumple = evaluaciones.filter(e => e.estado === 'No cumple').length;
+  
+  const evaluados = totalReqs - evaluaciones.filter(e => e.estado === 'NA' || e.estado === null).length;
+  const porcentajeCumplimiento = evaluados > 0
+    ? Math.round(((cumple + parcial * 0.5) / evaluados) * 100)
+    : 0;
+
+  // --- 2. Agregado por cláusula (4..9) para el radar global ---
+  const clausulasInteres = [4, 5, 6, 7, 8, 9];
+  const porClausula = clausulasInteres.map(num => {
+    const reqs = evaluaciones.filter(e => Number(e.clausula) === num);
+    const total = reqs.length;
+    const c = reqs.filter(e => e.estado === 'Cumple').length;
+    const p = reqs.filter(e => e.estado === 'Parcial').length;
+    const pct = total > 0 ? Math.round(((c + p * 0.5) / total) * 100) : 0;
+    return { clausula: num, total, cumple: c, parcial: p, porcentaje: pct, requisitos: reqs };
+  });
+
+  // --- 3. KPIs de procesos (NC) ---
+  const [resolucionRows] = await pool.execute(`
+    SELECT AVG(DATEDIFF(nc.fecha_ultima_edicion, ach.fecha_accion)) as promedio_dias
+    FROM AUDITORIA_NC nc
+    JOIN EVALUACION_REQUISITO er ON nc.evaluacion_requisito_id = er.id
+    LEFT JOIN (
+      SELECT auditoria_nc_id, MIN(fecha_accion) as fecha_accion
+      FROM ACCIONES_CORRECTIVAS
+      GROUP BY auditoria_nc_id
+    ) ach ON ach.auditoria_nc_id = nc.id
+    WHERE er.workspace_id = ? AND nc.estado_flujo = 'Cerrada'
+  `, [workspaceId]).catch(() => [[{ promedio_dias: null }]]);
+  
+  const promedioDias = resolucionRows[0]?.promedio_dias
+    ? Number(resolucionRows[0].promedio_dias).toFixed(1)
+    : 0;
+
+  const [kpiRows] = await pool.execute(`
+    SELECT
+      COUNT(*) as total_cerradas,
+      SUM(CASE WHEN nc.estado_validacion = 'Acepto' THEN 1 ELSE 0 END) as aceptadas
+    FROM AUDITORIA_NC nc
+    JOIN EVALUACION_REQUISITO er ON nc.evaluacion_requisito_id = er.id
+    WHERE er.workspace_id = ? AND nc.estado_flujo = 'Cerrada'
+  `, [workspaceId]);
+  
+  const eficiencia = kpiRows[0].total_cerradas > 0
+    ? ((kpiRows[0].aceptadas / kpiRows[0].total_cerradas) * 100).toFixed(1)
+    : 0;
+
+  const csat = '0 / 5.0';
+
+  const [pendRows] = await pool.execute(`
+    SELECT COUNT(*) as pendientes
+    FROM AUDITORIA_NC nc
+    JOIN EVALUACION_REQUISITO er ON nc.evaluacion_requisito_id = er.id
+    WHERE er.workspace_id = ? AND (nc.estado_flujo IS NULL OR nc.estado_flujo <> 'Cerrada')
+  `, [workspaceId]);
+  
+  const tareasPendientes = Number(pendRows[0]?.pendientes || 0);
+  const proximaAuditoria = '—';
+
+  async function kpisPorClausula(numClausula) {
+    const [resRows] = await pool.execute(`
+      SELECT AVG(DATEDIFF(nc.fecha_ultima_edicion, ach.fecha_accion)) as promedio_dias
+      FROM AUDITORIA_NC nc
+      JOIN EVALUACION_REQUISITO er ON nc.evaluacion_requisito_id = er.id
+      JOIN REQUISITOS_BASE r ON er.requisito_base_id = r.id
+      JOIN CLAUSULAS c ON r.clausula_id = c.id
+      LEFT JOIN (
+        SELECT auditoria_nc_id, MIN(fecha_accion) as fecha_accion
+        FROM ACCIONES_CORRECTIVAS
+        GROUP BY auditoria_nc_id
+      ) ach ON ach.auditoria_nc_id = nc.id
+      WHERE er.workspace_id = ? AND nc.estado_flujo = 'Cerrada' AND c.numero_clausula = ?
+    `, [workspaceId, numClausula]).catch(() => [[{ promedio_dias: null }]]);
+    const prom = resRows[0]?.promedio_dias ? Number(resRows[0].promedio_dias).toFixed(1) : 0;
+
+    const [efRows] = await pool.execute(`
+      SELECT
+        COUNT(*) as total_cerradas,
+        SUM(CASE WHEN nc.estado_validacion = 'Acepto' THEN 1 ELSE 0 END) as aceptadas
+      FROM AUDITORIA_NC nc
+      JOIN EVALUACION_REQUISITO er ON nc.evaluacion_requisito_id = er.id
+      JOIN REQUISITOS_BASE r ON er.requisito_base_id = r.id
+      JOIN CLAUSULAS c ON r.clausula_id = c.id
+      WHERE er.workspace_id = ? AND nc.estado_flujo = 'Cerrada' AND c.numero_clausula = ?
+    `, [workspaceId, numClausula]);
+    
+    const ef = efRows[0].total_cerradas > 0
+      ? ((efRows[0].aceptadas / efRows[0].total_cerradas) * 100).toFixed(1)
+      : 0;
+
+    return {
+      promedio_resolucion: `${prom} días`,
+      eficiencia_proceso: `${ef}%`,
+      csat: '0 / 5.0'
+    };
+  }
+
+  const kpisClausulas = {};
+  await Promise.all(clausulasInteres.map(async (n) => {
+    kpisClausulas[n] = await kpisPorClausula(n);
+  }));
+
+  return {
+    metricas: {
+      cumplimiento_general: {
+        porcentaje: porcentajeCumplimiento,
+        cumple,
+        total: totalReqs
+      },
+      brechas: {
+        cantidad: noCumple,
+        descripcion: 'requisitos por atender'
+      },
+      proxima_auditoria: proximaAuditoria,
+      tareas_pendientes: tareasPendientes
+    },
+    kpis_globales: {
+      promedio_resolucion: `${promedioDias} días`,
+      eficiencia_proceso: `${eficiencia}%`,
+      csat
+    },
+    grafico_global: {
+      labels: porClausula.map(c => `Cláusula ${c.clausula}`),
+      actual: porClausula.map(c => c.porcentaje),
+      meta: porClausula.map(() => 100)
+    },
+    clausulas: porClausula.map(c => ({
+      numero: c.clausula,
+      porcentaje: c.porcentaje,
+      requisitos: c.requisitos.map(r => ({
+        codigo: r.codigo,
+        descripcion: r.descripcion,
+        estado: r.estado,
+        porcentaje: r.estado === 'Cumple' ? 100 : r.estado === 'Parcial' ? 50 : 0
+      }))
+    })),
+    kpis_por_clausula: kpisClausulas
+  };
+}
+
+// ------------------------------------------------------------------
+// CONTROLADORES DASHBOARD
+// ------------------------------------------------------------------
+
+// Dashboard para administradores
 async function getAdminDashboard(req, res) {
   try {
-    const authUser = await getAuthUser(req, res)
-    if (!authUser) return // Response already sent in getAuthUser
+    const authUser = await getAuthUser(req, res);
+    if (!authUser) return;
     
     // Opcional: Validar que sea admin, si no lo es, lanzar 403.
     // if (authUser.rol_nombre !== 'admin') return res.status(403).json({ error: 'forbidden' })
 
-    const filters = buildFilters(req, 'nc')
+    const filters = buildFilters(req, 'nc');
 
     const [totalRows] = await pool.execute(`
       SELECT COUNT(nc.id) as total_nc 
@@ -82,9 +254,9 @@ async function getAdminDashboard(req, res) {
       LEFT JOIN REQUISITOS_BASE r ON er.requisito_base_id = r.id
       LEFT JOIN CLAUSULAS c ON r.clausula_id = c.id
       WHERE 1=1 ${filters.sql}
-    `, filters.params)
+    `, filters.params);
 
-    const [wsRows] = await pool.execute('SELECT COUNT(id) as total_empresas FROM ESPACIO_TRABAJO')
+    const [wsRows] = await pool.execute('SELECT COUNT(id) as total_empresas FROM ESPACIO_TRABAJO');
 
     const [empresasRows] = await pool.execute(`
       SELECT 
@@ -97,28 +269,29 @@ async function getAdminDashboard(req, res) {
       LEFT JOIN EVALUACION_REQUISITO er ON er.workspace_id = et.id
       LEFT JOIN AUDITORIA_NC nc ON nc.evaluacion_requisito_id = er.id
       GROUP BY et.id
-    `)
+    `);
 
-    let globalTotal = 0
-    let globalCerradas = 0
+    let globalTotal = 0;
+    let globalCerradas = 0;
 
     const tablaEmpresas = empresasRows.map(emp => {
-      globalTotal += emp.total_nc
-      globalCerradas += emp.nc_cerradas
-      const p = emp.total_nc > 0 ? Math.round((emp.nc_cerradas / emp.total_nc) * 100) : 0
-      let estado = 'Fase Documental'
-      if (p > 80) estado = 'Fase de Auditoría'
-      else if (p > 30) estado = 'Plan de Acción'
+      globalTotal += emp.total_nc;
+      globalCerradas += emp.nc_cerradas;
+      const p = emp.total_nc > 0 ? Math.round((emp.nc_cerradas / emp.total_nc) * 100) : 0;
+      let estado = 'Fase Documental';
+      
+      if (p > 80) estado = 'Fase de Auditoría';
+      else if (p > 30) estado = 'Plan de Acción';
       
       return {
         empresa: emp.empresa,
         responsable: emp.responsable || 'Sin asignar',
         estado: estado,
         avance: `${p}%`
-      }
-    })
+      };
+    });
 
-    const avanceGlobal = globalTotal > 0 ? ((globalCerradas / globalTotal) * 100).toFixed(1) : 0
+    const avanceGlobal = globalTotal > 0 ? ((globalCerradas / globalTotal) * 100).toFixed(1) : 0;
 
     res.json({
       metricas: {
@@ -127,17 +300,21 @@ async function getAdminDashboard(req, res) {
         avance_global: `${avanceGlobal}%`
       },
       empresas: tablaEmpresas
-    })
-  } catch (e) { console.error('getAdminDashboard error', e); res.status(500).json({ error: 'internal' }) }
+    });
+  } catch (e) { 
+    console.error('getAdminDashboard error', e); 
+    res.status(500).json({ error: 'internal' }); 
+  }
 }
 
+// Dashboard para evaluadores
 async function getEvaluatorDashboard(req, res) {
   try {
-    const authUser = await getAuthUser(req, res)
-    if (!authUser) return
+    const authUser = await getAuthUser(req, res);
+    if (!authUser) return;
 
-    const filters = buildFilters(req, 'nc')
-    const wsParams = [authUser.workspace_id, ...filters.params]
+    const filters = buildFilters(req, 'nc');
+    const wsParams = [authUser.workspace_id, ...filters.params];
 
     const [porVerificar] = await pool.execute(`
       SELECT 
@@ -153,47 +330,62 @@ async function getEvaluatorDashboard(req, res) {
       LEFT JOIN AUDITORIA_NC_RESPONSABLES ncr ON ncr.auditoria_nc_id = nc.id
       LEFT JOIN USUARIOS u ON ncr.usuario_id = u.id
       WHERE er.workspace_id = ? AND nc.estado_flujo = 'Verificación' ${filters.sql}
-    `, wsParams)
+    `, wsParams);
 
     const [pendientesEvidencia] = await pool.execute(`
       SELECT ev.id, ev.nombre_archivo, ev.fecha_carga
       FROM EVIDENCIAS ev
       JOIN EVALUACION_REQUISITO er ON ev.evaluacion_requisito_id = er.id
       WHERE er.workspace_id = ? AND ev.estado_validacion_archivo = 'Pendiente'
-    `, [authUser.workspace_id])
+    `, [authUser.workspace_id]);
 
-    const [kpiRows] = await pool.execute(`
-      SELECT 
-        COUNT(*) as total_cerradas,
-        SUM(CASE WHEN nc.estado_validacion = 'Acepto' THEN 1 ELSE 0 END) as aceptadas
-      FROM AUDITORIA_NC nc
-      JOIN EVALUACION_REQUISITO er ON nc.evaluacion_requisito_id = er.id
-      WHERE er.workspace_id = ? AND nc.estado_flujo = 'Cerrada'
-    `, [authUser.workspace_id])
-
-    const eficacia = kpiRows[0].total_cerradas > 0 
-      ? ((kpiRows[0].aceptadas / kpiRows[0].total_cerradas) * 100).toFixed(1) 
-      : 100
+    const compliance = await buildComplianceDashboard(authUser.workspace_id);
 
     res.json({
-      kpis: {
-        promedio_resolucion: "4.2 días",
-        eficiencia_proceso: `${eficacia}%`,
-        csat: "4.9 / 5.0" 
-      },
+      kpis: compliance.kpis_globales,
+      metricas: compliance.metricas,
+      kpis_globales: compliance.kpis_globales,
+      grafico_global: compliance.grafico_global,
+      clausulas: compliance.clausulas,
+      kpis_por_clausula: compliance.kpis_por_clausula,
       por_verificar: porVerificar,
       pendientes_revision: pendientesEvidencia
-    })
-  } catch (e) { console.error('getEvaluatorDashboard error', e); res.status(500).json({ error: 'internal' }) }
+    });
+  } catch (e) { 
+    console.error('getEvaluatorDashboard error', e); 
+    res.status(500).json({ error: 'internal' }); 
+  }
 }
 
+// Dashboard para responsables SGC
+async function getResponsibleDashboard(req, res) {
+  try {
+    const authUser = await getAuthUser(req, res);
+    if (!authUser) return;
+
+    const compliance = await buildComplianceDashboard(authUser.workspace_id);
+
+    res.json({
+      metricas: compliance.metricas,
+      kpis_globales: compliance.kpis_globales,
+      grafico_global: compliance.grafico_global,
+      clausulas: compliance.clausulas,
+      kpis_por_clausula: compliance.kpis_por_clausula
+    });
+  } catch (e) { 
+    console.error('getResponsibleDashboard error', e); 
+    res.status(500).json({ error: 'internal' }); 
+  }
+}
+
+// Dashboard operativo
 async function getOperativeDashboard(req, res) {
   try {
-    const authUser = await getAuthUser(req, res)
-    if (!authUser) return
+    const authUser = await getAuthUser(req, res);
+    if (!authUser) return;
 
-    const filters = buildFilters(req, 'nc')
-    const wsParams = [authUser.workspace_id, ...filters.params]
+    const filters = buildFilters(req, 'nc');
+    const wsParams = [authUser.workspace_id, ...filters.params];
 
     const [conteoRows] = await pool.execute(`
       SELECT 
@@ -204,7 +396,7 @@ async function getOperativeDashboard(req, res) {
       JOIN REQUISITOS_BASE r ON er.requisito_base_id = r.id
       JOIN CLAUSULAS c ON r.clausula_id = c.id
       WHERE er.workspace_id = ? ${filters.sql}
-    `, wsParams)
+    `, wsParams);
 
     const [operativoRows] = await pool.execute(`
       SELECT 
@@ -220,9 +412,15 @@ async function getOperativeDashboard(req, res) {
       LEFT JOIN USUARIOS u ON ncr.usuario_id = u.id
       WHERE er.workspace_id = ? 
       ORDER BY nc.estado_flujo ASC, nc.fecha_ultima_edicion DESC
-    `, [authUser.workspace_id])
+    `, [authUser.workspace_id]);
 
-    const mapProgreso = { 'Abierta': '10%', 'Análisis': '30%', 'Ejecución': '60%', 'Verificación': '90%', 'Cerrada': '100%' }
+    const mapProgreso = { 
+      'Abierta': '10%', 
+      'Análisis': '30%', 
+      'Ejecución': '60%', 
+      'Verificación': '90%', 
+      'Cerrada': '100%' 
+    };
 
     const tablaOperativa = operativoRows.map(row => ({
       id_visual: row.id_visual,
@@ -230,7 +428,7 @@ async function getOperativeDashboard(req, res) {
       estado: row.estado || 'Abierta',
       responsable: row.responsable,
       progreso: mapProgreso[row.estado || 'Abierta']
-    }))
+    }));
 
     res.json({
       metricas: {
@@ -238,8 +436,16 @@ async function getOperativeDashboard(req, res) {
         en_progreso: conteoRows[0].en_progreso || 0
       },
       tabla_operativa: tablaOperativa
-    })
-  } catch (e) { console.error('getOperativeDashboard error', e); res.status(500).json({ error: 'internal' }) }
+    });
+  } catch (e) { 
+    console.error('getOperativeDashboard error', e); 
+    res.status(500).json({ error: 'internal' }); 
+  }
 }
 
-module.exports = { getAdminDashboard, getEvaluatorDashboard, getOperativeDashboard }
+module.exports = { 
+  getAdminDashboard, 
+  getEvaluatorDashboard, 
+  getResponsibleDashboard, 
+  getOperativeDashboard 
+};
