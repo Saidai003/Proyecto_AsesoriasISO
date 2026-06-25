@@ -27,6 +27,17 @@ export default defineConfig(({ command, mode }) => ({
         changeOrigin: true,
         secure: false,
         cookieDomainRewrite: '',
+      },
+      '/google-drive': {
+        target: process.env.VITE_BACKEND_URL || 'http://localhost:3000',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/ws': {
+        target: process.env.VITE_BACKEND_URL || 'http://localhost:3000',
+        changeOrigin: true,
+        secure: false,
+        ws: true,
       }
     }
   }

@@ -50,14 +50,17 @@ async function listByRequisito(req, res){
     if(workspaceId == null && req.user?.role !== 'Admin'){
       return res.status(403).json({ error: 'forbidden' })
     }
+    // Resolve the EVALUACION_REQUISITO id from requisito_base_id + workspace
+    let evaluacionRequisitoId = requisitoId
     if(workspaceId != null){
       const [check] = await pool.query(
-        'SELECT id FROM EVALUACION_REQUISITO WHERE id = ? AND workspace_id = ?',
+        'SELECT id FROM EVALUACION_REQUISITO WHERE requisito_base_id = ? AND workspace_id = ?',
         [requisitoId, workspaceId]
       )
-      if(!check || !check.length) return res.status(404).json({ error: 'not_found' })
+      if(!check || !check.length) return res.json({ evidencias: [] })
+      evaluacionRequisitoId = check[0].id
     }
-    const [rows] = await pool.query('SELECT * FROM EVIDENCIAS WHERE evaluacion_requisito_id = ? ORDER BY fecha_carga DESC', [requisitoId])
+    const [rows] = await pool.query('SELECT * FROM EVIDENCIAS WHERE evaluacion_requisito_id = ? ORDER BY fecha_carga DESC', [evaluacionRequisitoId])
     // enrich with drive metadata when available
     // What does Promise.all do?
     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/all
