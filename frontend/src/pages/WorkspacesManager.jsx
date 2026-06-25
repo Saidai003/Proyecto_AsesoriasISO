@@ -105,7 +105,10 @@ export default function WorkspacesManager() {
             <div className="bg-surface-container-lowest rounded-xl overflow-hidden">
               <div className="px-6 py-4 border-b flex items-center justify-between bg-surface-container-low/50">
                 <h3 className="font-bold text-primary uppercase text-sm">Directorio de Espacios de Trabajo</h3>
-                <div className="flex items-center gap-2"><button className="p-2 hover:bg-surface-container rounded-lg"> <span className="material-symbols-outlined">filter_list</span></button></div>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => setNewWorkspaceRow(true)} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-lg font-bold text-sm shadow">Agregar Espacio</button>
+                  <button className="p-2 hover:bg-surface-container rounded-lg"> <span className="material-symbols-outlined">filter_list</span></button>
+                </div>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-left">
@@ -191,13 +194,8 @@ export default function WorkspacesManager() {
               </div>
             </div>
 
-            {/* Bottom CTA: add a new workspace row under the table */}
-            <div className="mt-4 flex justify-end">
-              <button onClick={() => setNewWorkspaceRow(true)} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-xl font-bold shadow">Agregar Espacio</button>
             </div>
-
-            </div>
-            <ConfirmDialog open={confirmOpen} title="Eliminar espacio" message="¿Confirmar eliminación del espacio de trabajo? Esta acción eliminará datos asociados." confirmText="Eliminar" cancelText="Cancelar" onConfirm={handleDeleteConfirmed} onCancel={()=>{ setConfirmOpen(false); setConfirmPayload(null) }} />
+            <ConfirmDialog open={confirmOpen} title="Eliminar espacio" message="¿Confirmar eliminación del espacio de trabajo? Esta acción eliminará todos los datos asociados (evaluaciones, evidencias, brechas, etc.) de forma irreversible." confirmText="Eliminar" cancelText="Cancelar" requireText="eliminar" onConfirm={handleDeleteConfirmed} onCancel={()=>{ setConfirmOpen(false); setConfirmPayload(null) }} />
           </Layout>
 
     </Protected>

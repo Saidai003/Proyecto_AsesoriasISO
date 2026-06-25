@@ -342,7 +342,7 @@ export default function UsersManager() {
             {/* bottom CTA removed to keep single create button at top */}
           </div>
         </div>
-        <ConfirmDialog open={confirmOpen} title="Eliminar usuario" message="¿Confirmar eliminación del usuario? Esta acción no se puede deshacer." confirmText="Eliminar" cancelText="Cancelar" onConfirm={handleDeleteConfirmed} onCancel={()=>{ setConfirmOpen(false); setConfirmPayload(null) }} />
+        <ConfirmDialog open={confirmOpen} title="Eliminar usuario" message="¿Confirmar eliminación del usuario? Esta acción no se puede deshacer." confirmText="Eliminar" cancelText="Cancelar" requireText="eliminar" onConfirm={handleDeleteConfirmed} onCancel={()=>{ setConfirmOpen(false); setConfirmPayload(null) }} />
       </Layout>
     </Protected>
   )
