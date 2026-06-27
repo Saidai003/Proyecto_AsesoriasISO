@@ -1,12 +1,58 @@
 # Design: RF1 - CRUD de Espacios de Trabajo
 
-## Overview
+## Architecture
 
-Arquitectura técnica del CRUD de Espacios de Trabajo, cubriendo base de datos, backend API, y frontend React.
+### Patrón general
 
-## Database Schema
+```
+Frontend (React)  →  Backend API (Express)  →  MySQL
+    WorkspacesManager.jsx   useWorkspaces controller   ESPACIO_TRABAJO
+    useWorkspaces.js hook   routes/workspaces.js       EVALUACION_REQUISITO
+```
 
-**Tabla:** `ESPACIO_TRABAJO`
+### Archivos involucrados
+
+| Capa | Archivo | Responsabilidad |
+|------|---------|-----------------|
+| Rutas | `backend-js/src/routes/workspaces.js` | Endpoints + middleware Admin |
+| Controller | `backend-js/src/controllers/useWorkspaces.js` | Lógica CRUD + seed evaluaciones |
+| Hook | `frontend/src/hooks/useWorkspaces.js` | Acceso a API desde React |
+| Página | `frontend/src/pages/WorkspacesManager.jsx` | CRUD visual (Admin) |
+
+> **Referencias compartidas:** [auth-middleware](../shared/auth-middleware.md) · [fetchWithAuth](../shared/fetch-with-auth.md)
+
+## Components and Interfaces
+
+### Endpoints REST
+
+| Método | Ruta | Middleware | Controller | CA |
+|--------|------|------------|------------|-----|
+| POST | `/api/workspaces` | requireAuth, requireRole('Admin') | createWorkspace | RF1-CA-001 |
+| GET | `/api/workspaces` | requireAuth, requireRole('Admin') | listWorkspaces | RF1-CA-002 |
+| GET | `/api/workspaces/:id` | requireAuth, requireRole('Admin') | getWorkspace | RF1-CA-002 |
+| PUT | `/api/workspaces/:id` | requireAuth, requireRole('Admin') | updateWorkspace | RF1-CA-003 |
+| DELETE | `/api/workspaces/:id` | requireAuth, requireRole('Admin') | deleteWorkspace | RF1-CA-004 |
+
+### Controller: createWorkspace
+
+1. Validar `nombre_cliente` presente → 400
+2. INSERT INTO ESPACIO_TRABAJO
+3. Seed: INSERT INTO EVALUACION_REQUISITO para todos los REQUISITOS_BASE con estado "NA" (no bloqueante si falla)
+4. Retornar 201 { id }
+
+### Controller: deleteWorkspace
+
+1. Validar `id` presente → 400
+2. DELETE FROM ESPACIO_TRABAJO WHERE id = ? (cascade en DB maneja evaluaciones)
+3. Retornar { id }
+
+### Frontend: UsersManager
+
+Tabla con CRUD inline, botón "Agregar Espacio" en la barra de título, búsqueda client-side, ConfirmDialog con requireText="eliminar".
+
+## Data Models
+
+### Tabla ESPACIO_TRABAJO
 
 ```sql
 CREATE TABLE ESPACIO_TRABAJO (
@@ -16,69 +62,46 @@ CREATE TABLE ESPACIO_TRABAJO (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ```
 
-**Relación clave:** Al crear workspace, se insertan filas en `EVALUACION_REQUISITO` (una por cada requisito ISO existente, estado "NA").
-
-**Comportamiento de eliminación:**
-- `EVALUACION_REQUISITO` → CASCADE (se eliminan evaluaciones del cliente)
-- `USUARIOS.workspace_id` → SET NULL (usuarios quedan sin asignar, no se borran)
-- Archivos en Google Drive → No se eliminan (respaldo histórico intencional)
-
-## Backend API
-
-### Endpoints
-
-| Método | Ruta | Middleware | Controller |
-|--------|------|------------|------------|
-| POST | `/api/workspaces` | requireAuth, requireRole('Admin') | createWorkspace |
-| GET | `/api/workspaces` | requireAuth, requireRole('Admin') | listWorkspaces |
-| GET | `/api/workspaces/:id` | requireAuth, requireRole('Admin') | getWorkspace |
-| PUT | `/api/workspaces/:id` | requireAuth, requireRole('Admin') | updateWorkspace |
-| DELETE | `/api/workspaces/:id` | requireAuth, requireRole('Admin') | deleteWorkspace |
-
-### Controller Logic
-
-**createWorkspace:**
-1. Validar `nombre_cliente` presente (400 si falta)
-2. INSERT en ESPACIO_TRABAJO
-3. Seed de EVALUACION_REQUISITO con SELECT de todos los REQUISITOS_BASE (no bloqueante)
-4. Retornar 201 { id }
-
-**deleteWorkspace:**
-1. Validar `id` presente
-2. DELETE FROM ESPACIO_TRABAJO WHERE id = ? (cascade maneja el resto)
-3. Retornar { id }
-
-### Archivos
-
-- Rutas: `backend-js/src/routes/workspaces.js`
-- Controller: `backend-js/src/controllers/useWorkspaces.js`
-- Montaje: `app.use('/api/workspaces', workspacesRouter)` en `src/index.js`
-
-## Frontend Architecture
-
-### Hook: `useWorkspaces.js`
-
-Custom hook que encapsula CRUD via `fetchWithAuth`:
-- `loadWorkspaces()` → GET
-- `createWorkspace(payload)` → POST + reload
-- `updateWorkspace(id, payload)` → PUT + reload
-- `deleteWorkspace(id)` → DELETE + reload
-
-### Page: `WorkspacesManager.jsx`
-
-- Protegida con `<Protected role="Admin">`
-- Tabla con edición inline (react-hook-form)
-- Búsqueda client-side con `useMemo`
-- `ConfirmDialog` con `requireText="eliminar"` y `z-[9999]` (cubre toda la pantalla)
-- Botón "Agregar Espacio" en la barra de título de la tabla
-
-## Data Flow
+### Comportamiento de eliminación (cascada)
 
 ```
-WorkspacesManager.jsx
-  └── useWorkspaces() hook
-        └── fetchWithAuth('/api/workspaces', ...)
-              └── requireAuth → requireRole('Admin') → controller
-                    └── pool.execute(SQL)
-                          └── MySQL: ESPACIO_TRABAJO + EVALUACION_REQUISITO
+ESPACIO_TRABAJO (eliminado)
+  → EVALUACION_REQUISITO (CASCADE) — evaluaciones del cliente
+      → EVIDENCIAS (CASCADE) — archivos de evidencia en DB
+          → EVIDENCIAS_LOG (CASCADE) — logs de evidencia
+      → EVALUACION_REQUISITO_HIST (CASCADE) — historial
+      → AUDITORIA_NC (CASCADE) — brechas del cliente
+          → ACCIONES_CORRECTIVAS (SET NULL en auditoria_nc_id)
+          → AUDITORIA_NC_HIST (CASCADE)
+          → CHAT_MESSAGES (CASCADE)
+  → USUARIOS.workspace_id (SET NULL) — usuarios quedan sin asignar
 ```
+
+**Decisión sobre Google Drive:** Los archivos de evidencia en Drive NO se eliminan. Quedan como respaldo histórico.
+
+## Error Handling
+
+| Situación | HTTP | Código |
+|-----------|------|--------|
+| nombre_cliente faltante | 400 | `nombre_cliente required` |
+| Workspace no encontrado (GET /:id) | 404 | `not_found` |
+| id faltante (PUT/DELETE) | 400 | `id required` |
+| Error interno DB | 500 | `internal_error` |
+
+## Testing Strategy
+
+### Tests unitarios existentes
+
+Archivo: `backend-js/pruebas/unitarias/workspacesController.test.js`
+
+- createWorkspace retorna 201 con id
+- createWorkspace ejecuta seed de evaluaciones
+- getWorkspace retorna 404 si no existe
+
+## Correctness Properties
+
+- Al crear un workspace, siempre se intenta el seed de EVALUACION_REQUISITO para todos los requisitos existentes (aunque no sea bloqueante).
+- Solo Admin puede ejecutar operaciones CRUD sobre workspaces.
+- La eliminación de un workspace jamás elimina usuarios (SET NULL).
+- La eliminación de un workspace jamás elimina archivos físicos de Google Drive.
+- El filtrado de búsqueda es client-side (aceptable para volumen bajo de datos).

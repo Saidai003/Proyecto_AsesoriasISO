@@ -40,7 +40,7 @@ async function login(req, res){
     logAuthInfo('login', `Intento de login`, { email: emailNorm, ip });
 
     const [rows] = await pool.execute(
-      'SELECT id, nombre, email, password_hash, role_id, workspace_id FROM USUARIOS WHERE email = ?',
+      'SELECT id, nombre, email, password_hash, role_id, workspace_id, estado_invitacion FROM USUARIOS WHERE email = ?',
       [emailNorm]
     );
     const user = rows[0];
@@ -56,6 +56,17 @@ async function login(req, res){
     const ok = await bcrypt.compare(password, user.password_hash);
     if (!ok) {
       logAuthError('login', 'Contraseña incorrecta', { email: emailNorm, userId: user.id });
+      return res.status(401).json({ error: 'invalid_credentials' });
+    }
+
+    // Verificar estado_invitacion después de validar credenciales
+    if (user.estado_invitacion === 'Pendiente') {
+      logAuthInfo('login', 'Usuario pendiente de cambio de contraseña', { userId: user.id, email: emailNorm });
+      return res.status(200).json({ status: 'requires_password_change', userId: user.id });
+    }
+
+    if (user.estado_invitacion === 'Expirada') {
+      logAuthError('login', 'Invitación expirada', { email: emailNorm, userId: user.id });
       return res.status(401).json({ error: 'invalid_credentials' });
     }
 
@@ -185,4 +196,155 @@ async function logout(req, res){
   }
 }
 
-module.exports = { login, refresh, logout };
+// ─── Rate Limiting para firstLoginPasswordChange ───
+const rateLimitMap = new Map(); // Map<userId, { attempts, firstAttemptAt }>
+const RATE_LIMIT_MAX_ATTEMPTS = 5;
+const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000; // 15 minutos
+
+function checkRateLimit(userId) {
+  const entry = rateLimitMap.get(userId);
+  if (!entry) return false; // No limitado
+
+  // Si la ventana expiró, limpiar y permitir
+  if (Date.now() - entry.firstAttemptAt > RATE_LIMIT_WINDOW_MS) {
+    rateLimitMap.delete(userId);
+    return false;
+  }
+
+  return entry.attempts >= RATE_LIMIT_MAX_ATTEMPTS;
+}
+
+function incrementRateLimit(userId) {
+  const entry = rateLimitMap.get(userId);
+  if (!entry || Date.now() - entry.firstAttemptAt > RATE_LIMIT_WINDOW_MS) {
+    rateLimitMap.set(userId, { attempts: 1, firstAttemptAt: Date.now() });
+  } else {
+    entry.attempts += 1;
+  }
+}
+
+function clearRateLimit(userId) {
+  rateLimitMap.delete(userId);
+}
+
+async function firstLoginPasswordChange(req, res) {
+  try {
+    const { userId, currentPassword, newPassword } = req.body;
+
+    // Validar campos presentes y tipos
+    if (!userId || typeof userId !== 'number') {
+      return res.status(400).json({ error: 'invalid_user_id' });
+    }
+    if (!currentPassword || typeof currentPassword !== 'string') {
+      return res.status(400).json({ error: 'invalid_current_password' });
+    }
+    if (
+      newPassword === undefined ||
+      newPassword === null ||
+      typeof newPassword !== 'string' ||
+      newPassword.trim().length === 0
+    ) {
+      return res.status(400).json({ error: 'new_password_required' });
+    }
+
+    // Validar longitud de newPassword (8-72 chars)
+    if (newPassword.length < 8 || newPassword.length > 72) {
+      return res.status(400).json({ error: 'invalid_password_length' });
+    }
+
+    // Verificar que newPassword !== currentPassword
+    if (newPassword === currentPassword) {
+      return res.status(400).json({ error: 'password_must_be_different' });
+    }
+
+    // Rate limiting check
+    if (checkRateLimit(userId)) {
+      return res.status(429).json({ error: 'too_many_attempts' });
+    }
+
+    // Buscar usuario por id
+    const [rows] = await pool.execute(
+      'SELECT id, nombre, email, password_hash, role_id, workspace_id, estado_invitacion FROM USUARIOS WHERE id = ?',
+      [userId]
+    );
+    const user = rows[0];
+
+    // Si usuario no existe
+    if (!user) {
+      return res.status(404).json({ error: 'not_found' });
+    }
+
+    // Verificar estado_invitacion
+    if (user.estado_invitacion === 'Aceptada') {
+      return res.status(403).json({ error: 'already_activated' });
+    }
+
+    if (user.estado_invitacion !== 'Pendiente') {
+      return res.status(404).json({ error: 'not_found' });
+    }
+
+    // Comparar currentPassword con password_hash almacenado
+    if (!user.password_hash) {
+      incrementRateLimit(userId);
+      return res.status(401).json({ error: 'invalid_current_password' });
+    }
+
+    const passwordMatch = await bcrypt.compare(currentPassword, user.password_hash);
+    if (!passwordMatch) {
+      incrementRateLimit(userId);
+      return res.status(401).json({ error: 'invalid_current_password' });
+    }
+
+    // Éxito: limpiar rate limit
+    clearRateLimit(userId);
+
+    // Hashear newPassword con bcrypt (10 rounds)
+    const newHash = await bcrypt.hash(newPassword, 10);
+
+    // UPDATE password_hash y estado_invitacion = 'Aceptada'
+    await pool.execute(
+      'UPDATE USUARIOS SET password_hash = ?, estado_invitacion = ? WHERE id = ?',
+      [newHash, 'Aceptada', userId]
+    );
+
+    // DELETE todas las sessions del userId
+    await pool.execute('DELETE FROM SESSIONS WHERE user_id = ?', [userId]);
+
+    // Resolver roleName
+    let roleName = 'User';
+    if (user.role_id) {
+      const [r] = await pool.execute('SELECT nombre FROM ROLES WHERE id = ?', [user.role_id]);
+      if (r[0] && r[0].nombre) roleName = r[0].nombre;
+    }
+
+    // Generar accessToken y crear nueva refresh session
+    const accessToken = signAccessToken({
+      id: user.id,
+      email: user.email,
+      role: roleName,
+      workspace_id: user.workspace_id
+    });
+    const refreshToken = await createRefreshSession(user.id);
+
+    // Enviar cookie refreshToken (misma configuración que login)
+    const cookieSecure = process.env.NODE_ENV === 'production';
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      sameSite: 'strict',
+      secure: cookieSecure,
+      maxAge: REFRESH_TOKEN_MINUTES * 60 * 1000,
+      path: '/'
+    });
+
+    logAuthInfo('firstLoginPasswordChange', 'Cambio de contraseña exitoso', { userId: user.id, email: user.email });
+    return res.json({
+      accessToken,
+      user: { id: user.id, nombre: user.nombre, email: user.email, role: roleName, workspace_id: user.workspace_id }
+    });
+  } catch (err) {
+    logAuthError('firstLoginPasswordChange', err, { endpoint: 'POST /auth/first-login-password' });
+    return res.status(500).json({ error: 'internal_server_error', message: process.env.NODE_ENV === 'development' ? err.message : undefined });
+  }
+}
+
+module.exports = { login, refresh, logout, firstLoginPasswordChange };

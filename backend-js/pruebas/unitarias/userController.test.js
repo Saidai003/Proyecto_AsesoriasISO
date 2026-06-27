@@ -26,7 +26,7 @@ describe('userController (unit)', () => {
     // insert result
     pool.execute.mockResolvedValueOnce([{ insertId: 42 }]);
 
-    const req = { body: { nombre: 'X', email: 'a@b.com', password: 'p', workspace_id: 2, role_id: 3 } };
+    const req = { body: { nombre: 'X', email: 'a@b.com', password: 'ValidPass1', workspace_id: 2, role_id: 3 } };
     const res = mockRes();
     await createUser(req, res);
     expect(res.status).toHaveBeenCalledWith(201);

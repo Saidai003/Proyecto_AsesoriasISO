@@ -1,5 +1,3 @@
-# Tasks: RF2 - CRUD de Usuarios
-
 ## Completed Tasks
 
 - [x] 1. Crear tabla USUARIOS en init.sql con FKs a ESPACIO_TRABAJO y ROLES

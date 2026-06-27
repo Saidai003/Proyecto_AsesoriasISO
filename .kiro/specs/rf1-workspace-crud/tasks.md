@@ -1,5 +1,3 @@
-# Tasks: RF1 - CRUD de Espacios de Trabajo
-
 ## Completed Tasks
 
 - [x] 1. Crear tabla ESPACIO_TRABAJO en init.sql

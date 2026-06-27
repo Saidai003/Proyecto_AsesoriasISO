@@ -5,8 +5,19 @@ async function createUser(req, res){
   try{
     const { nombre, email, password, workspace_id, role_id } = req.body;
     if (!nombre || !email || typeof workspace_id === 'undefined' || typeof role_id === 'undefined') return res.status(400).json({ error: 'nombre, email, workspace_id and role_id are required' });
+
+    // Password validation (Requirements 1.1-1.5)
+    if (!password || typeof password !== 'string' || password.trim() === '') {
+      return res.status(400).json({ error: 'password_required' });
+    }
+    if (password.trim().length < 8) {
+      return res.status(400).json({ error: 'password_too_short' });
+    }
+    if (password.length > 72) {
+      return res.status(400).json({ error: 'password_too_long' });
+    }
+
     const emailNorm = String(email).trim().toLowerCase();
-    const passwordValue = typeof password === 'string' && password.trim() !== '' ? password : null;
     // explicit pre-check to provide a friendly 409 when email already exists
     const [existing] = await pool.execute('SELECT id FROM USUARIOS WHERE email = ?', [emailNorm]);
     if(existing && existing.length) return res.status(409).json({ error: 'email_exists' });
@@ -15,7 +26,7 @@ async function createUser(req, res){
     if(!wrows || !wrows.length) return res.status(404).json({ error: 'workspace_not_found' });
     const [rrows] = await pool.execute('SELECT id FROM ROLES WHERE id = ?', [role_id]);
     if(!rrows || !rrows.length) return res.status(404).json({ error: 'role_not_found' });
-    const password_hash = passwordValue ? await bcrypt.hash(passwordValue, 10) : null;
+    const password_hash = await bcrypt.hash(password, 10);
     // When admin creates a user (even if providing a temporary password), the user
     // must change their password themselves to activate the account. Therefore
     // new users created by admin are always 'Pendiente'.
@@ -79,14 +90,20 @@ async function updateUserPassword(req, res){
       return res.status(400).json({ error: 'current_password_required' });
     }
 
-    const [rows] = await pool.execute('SELECT password_hash FROM USUARIOS WHERE id = ?', [id]);
+    const [rows] = await pool.execute('SELECT password_hash, estado_invitacion FROM USUARIOS WHERE id = ?', [id]);
     if(!rows.length) return res.status(404).json({ error: 'not_found' });
 
     const validPassword = await bcrypt.compare(currentPassword, rows[0].password_hash);
     if(!validPassword) return res.status(401).json({ error: 'invalid_current_password' });
 
     const newHash = await bcrypt.hash(password, 10);
-    await pool.execute('UPDATE USUARIOS SET password_hash = ?, estado_invitacion = ? WHERE id = ?', [newHash, 'Aceptada', id]);
+    // Only transition to 'Aceptada' if currently 'Pendiente' (avoids redundant update)
+    const currentEstado = rows[0].estado_invitacion || 'Pendiente';
+    if (currentEstado === 'Pendiente') {
+      await pool.execute('UPDATE USUARIOS SET password_hash = ?, estado_invitacion = ? WHERE id = ?', [newHash, 'Aceptada', id]);
+    } else {
+      await pool.execute('UPDATE USUARIOS SET password_hash = ? WHERE id = ?', [newHash, id]);
+    }
     return res.json({ ok: true });
   }catch(err){
     console.error('updateUserPassword error', err);
