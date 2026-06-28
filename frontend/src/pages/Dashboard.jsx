@@ -173,19 +173,20 @@ export default function Dashboard({ endpoint, title = 'Dashboard' }) {
     ],
   }
 
-  const radarDataClausula = clauseData && clauseData.requisitos.length > 0
+  const radarReqs = clauseData && (clauseData.requisitosRadar || clauseData.requisitos)
+  const radarDataClausula = radarReqs && radarReqs.length > 0
     ? {
-        labels: clauseData.requisitos.map(r => r.codigo || r.descripcion?.slice(0, 12) || ''),
+        labels: radarReqs.map(r => r.codigo || r.descripcion?.slice(0, 12) || ''),
         datasets: [
           {
             label: `Actual (Cláusula ${selectedClause})`,
-            data: clauseData.requisitos.map(r => r.porcentaje),
+            data: radarReqs.map(r => r.porcentaje),
             backgroundColor: 'rgba(220, 38, 38, 0.20)',
             borderColor: 'rgba(220, 38, 38, 1)',
           },
           {
             label: 'Meta',
-            data: clauseData.requisitos.map(_ => 100),
+            data: radarReqs.map(_ => 100),
             backgroundColor: 'rgba(148, 163, 184, 0.10)',
             borderColor: 'rgba(148, 163, 184, 0.7)',
             borderDash: [4, 4],

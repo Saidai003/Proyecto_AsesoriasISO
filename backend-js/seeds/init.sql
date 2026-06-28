@@ -149,6 +149,7 @@ CREATE TABLE IF NOT EXISTS EVALUACION_REQUISITO (
     CONSTRAINT fk_eval_req_base FOREIGN KEY (requisito_base_id) REFERENCES REQUISITOS_BASE(id) ON DELETE CASCADE,
     CONSTRAINT fk_eval_req_workspace FOREIGN KEY (workspace_id) REFERENCES ESPACIO_TRABAJO(id) ON DELETE CASCADE,
     CONSTRAINT fk_eval_req_ultima_edicion FOREIGN KEY (ultima_edicion_por) REFERENCES USUARIOS(id) ON DELETE SET NULL,
+    UNIQUE KEY uq_eval_req_workspace (requisito_base_id, workspace_id),
     INDEX idx_eval_req_workspace (workspace_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 

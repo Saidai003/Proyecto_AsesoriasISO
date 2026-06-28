@@ -8,7 +8,7 @@ if (process.env.NODE_ENV === 'production' && JWT_SECRET === 'dev_jwt_secret') {
   throw new Error('CRITICAL: JWT_SECRET must be set in production. Set JWT_SECRET environment variable.');
 }
 
-// Refresh token lifetime in minutes (default 30 minutes)
+// Refresh token lifetime in minutes (24 hours)
 const REFRESH_TOKEN_MINUTES = Number(process.env.REFRESH_TOKEN_MINUTES || 1440);
 const REFRESH_TOKEN_EXP_DAYS = REFRESH_TOKEN_MINUTES / 1440;
 

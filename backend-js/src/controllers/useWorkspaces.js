@@ -12,7 +12,7 @@ async function createWorkspace(req, res){
         // For each existing requisito, create an evaluation row for this workspace
         try{
             await pool.query(
-                'INSERT INTO EVALUACION_REQUISITO (requisito_base_id, workspace_id, estado_cumplimiento, ultima_edicion_por, fecha_ultima_edicion) SELECT id, ?, "NA", NULL, NOW() FROM REQUISITOS_BASE',
+                'INSERT INTO EVALUACION_REQUISITO (requisito_base_id, workspace_id, estado_cumplimiento, ultima_edicion_por, fecha_ultima_edicion) SELECT id, ?, "NA", NULL, NOW() FROM REQUISITOS_BASE ON DUPLICATE KEY UPDATE id=id',
                 [workspaceId]
             );
         }catch(seedErr){

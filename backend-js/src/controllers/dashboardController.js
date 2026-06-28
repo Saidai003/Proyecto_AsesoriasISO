@@ -73,11 +73,14 @@ function buildFilters(req, prefix) {
 // Reutilizable por evaluator y responsable (ambos comparten el mismo workspace).
 async function buildComplianceDashboard(workspaceId) {
   // --- 1. Evaluaciones por requisito (estado de cumplimiento) ---
+  // Use a subquery to deduplicate: keep only one row per requisito_base_id
+  // (the one with the highest id, i.e. most recent) to handle duplicate inserts.
   const [evaluaciones] = await pool.execute(`
     SELECT
       er.id              as evaluacion_id,
       er.estado_cumplimiento as estado,
       r.id               as requisito_id,
+      r.requisito_padre_id,
       CONCAT(c.numero_clausula, '.', r.id) as codigo,
       r.descripcion_normativa as descripcion,
       c.numero_clausula  as clausula
@@ -93,20 +96,21 @@ async function buildComplianceDashboard(workspaceId) {
   const parcial = evaluaciones.filter(e => e.estado === 'Parcial').length;
   const noCumple = evaluaciones.filter(e => e.estado === 'No cumple').length;
   
-  const evaluados = totalReqs - evaluaciones.filter(e => e.estado === 'NA' || e.estado === null).length;
-  const porcentajeCumplimiento = evaluados > 0
-    ? Math.round(((cumple + parcial * 0.5) / evaluados) * 100)
+  const porcentajeCumplimiento = totalReqs > 0
+    ? Math.round(((cumple + parcial * 0.5) / totalReqs) * 100)
     : 0;
 
   // --- 2. Agregado por cláusula (4..9) para el radar global ---
   const clausulasInteres = [4, 5, 6, 7, 8, 9];
   const porClausula = clausulasInteres.map(num => {
     const reqs = evaluaciones.filter(e => Number(e.clausula) === num);
+    // For the radar chart: only first-level requisitos (no subrequisitos)
+    const reqsRadar = reqs.filter(e => !e.requisito_padre_id);
     const total = reqs.length;
     const c = reqs.filter(e => e.estado === 'Cumple').length;
     const p = reqs.filter(e => e.estado === 'Parcial').length;
     const pct = total > 0 ? Math.round(((c + p * 0.5) / total) * 100) : 0;
-    return { clausula: num, total, cumple: c, parcial: p, porcentaje: pct, requisitos: reqs };
+    return { clausula: num, total, cumple: c, parcial: p, porcentaje: pct, requisitos: reqs, requisitosRadar: reqsRadar };
   });
 
   // --- 3. KPIs de procesos (NC) ---
@@ -222,6 +226,12 @@ async function buildComplianceDashboard(workspaceId) {
       numero: c.clausula,
       porcentaje: c.porcentaje,
       requisitos: c.requisitos.map(r => ({
+        codigo: r.codigo,
+        descripcion: r.descripcion,
+        estado: r.estado,
+        porcentaje: r.estado === 'Cumple' ? 100 : r.estado === 'Parcial' ? 50 : 0
+      })),
+      requisitosRadar: c.requisitosRadar.map(r => ({
         codigo: r.codigo,
         descripcion: r.descripcion,
         estado: r.estado,
