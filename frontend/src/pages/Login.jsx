@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom'
 
 export default function Login({ onLogin }) {
   const [error, setError] = React.useState(null)
-  const { login } = useAuth() || {}
+  const { login } = useAuth() || {} 
   const navigate = useNavigate()
   const { register, handleSubmit } = useForm({ defaultValues: { email: '', password: '' } })
 
@@ -13,9 +13,13 @@ export default function Login({ onLogin }) {
     setError(null)
     try{
       const body = await login({ email: data.email, password: data.password })
+      // If user needs to change password first, redirect to activate
+      if (body && body.status === 'requires_password_change') {
+        navigate('/activate', { state: { userId: body.userId } })
+        return
+      }
       // after login, go to lobby; workspace selection handled by UI/navigation
       navigate('/lobby')
-      if(onLogin) onLogin()
     }catch(err){
       setError(err.error || 'Login failed')
     }
@@ -50,9 +54,6 @@ export default function Login({ onLogin }) {
                   <input id="password" name="password" type="password" {...register('password')} placeholder="••••••••" className="w-full px-4 py-3 bg-surface-container-high text-on-surface border-0 rounded-lg placeholder:text-outline/50 text-sm" />
                 </div>
               </div>
-            </div>
-            <div className="flex items-center justify-between">
-              <a className="text-xs font-semibold text-on-primary-fixed-variant hover:text-primary" href="#">¿Olvidé mi contraseña?</a>
             </div>
             <button type="submit" className="w-full primary-gradient text-on-primary font-bold py-3.5 rounded-xl shadow-md text-sm tracking-tight">Ingresar</button>
             {error && <div className="text-sm text-red-600 mt-2">{error}</div>}

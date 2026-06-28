@@ -212,6 +212,13 @@ export function AuthProvider({ children }){
       }
 
       const body = await res.json()
+      
+      // Handle password change required (user estado = 'Pendiente')
+      if (body.status === 'requires_password_change') {
+        console.log('Usuario requiere cambio de contraseña, redirigiendo a /activate')
+        return body  // caller (Login.jsx) handles redirect
+      }
+
       console.log('Login exitoso para', email)
       
       setAccessToken(body.accessToken)
@@ -371,7 +378,7 @@ export function AuthProvider({ children }){
   const setActingWorkspace = (ws) => setActingWorkspaceState(ws ? String(ws) : null)
 
   return (
-    <AuthContext.Provider value={{ accessToken, token: accessToken, user, login, logout, initializing, actingWorkspace, setActingWorkspace }}>
+    <AuthContext.Provider value={{ accessToken, token: accessToken, user, login, logout, initializing, actingWorkspace, setActingWorkspace, setAccessToken, setUser }}>
       {children}
     </AuthContext.Provider>
   )

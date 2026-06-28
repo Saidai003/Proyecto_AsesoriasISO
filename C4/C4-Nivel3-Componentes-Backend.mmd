@@ -1,0 +1,48 @@
+graph TD
+    %% === ESTILOS C4 ===
+    classDef contenedor fill:#438DD5,stroke:#2E6295,color:#FFFFFF,font-weight:bold;
+    classDef componente fill:#85BBF0,stroke:#5D99C6,color:#000000,font-weight:bold;
+    classDef externo fill:#999999,stroke:#6B6B6B,color:#FFFFFF,font-weight:bold;
+
+    %% === CONTENEDORES EXTERNOS ===
+    frontend["💻 Frontend SPA<br/><small>[Contenedor: React]</small>"]:::contenedor
+    db[("🛢️ MySQL 8.0<br/><small>[Contenedor]</small>")]:::contenedor
+    gdrive["📁 Google Drive<br/><small>[Sistema Externo]</small>"]:::externo
+
+    %% === COMPONENTES INTERNOS DEL BACKEND ===
+    subgraph backend ["Backend API (Node.js + Express)"]
+        expressApp["🚀 Express App<br/><small>[Componente: index.js]</small><br/><small>Entry point. Levanta HTTP server,<br/>monta routers, inicia workers.</small>"]:::componente
+
+        router["🛣️ Router Layer<br/><small>[Componente: routes/*.js]</small><br/><small>14 routers: auth, users, workspaces,<br/>iso, evidencias, nc, acciones,<br/>chat, notifications, evaluaciones,<br/>dashboards, evaluator, operational, seed.</small>"]:::componente
+
+        middleware["🛡️ Middleware<br/><small>[Componente: middleware/]</small><br/><small>auth.js: requireAuth, requireRole,<br/>requireRoles (JWT verification).<br/>cors.js: CORS configurable por ENV.</small>"]:::componente
+
+        controllers["🧠 Controllers<br/><small>[Componente: controllers/]</small><br/><small>Lógica de negocio por dominio:<br/>authController, userController,<br/>isoController, ncController,<br/>accionesController, evidenceController,<br/>chatController, dashboardController,<br/>notificationsController.</small>"]:::componente
+
+        authModule["🔐 Auth Module<br/><small>[Componente: auth.js]</small><br/><small>signAccessToken (JWT 30min),<br/>verifyAccessToken,<br/>createRefreshSession (UUID → DB),<br/>revokeRefreshSession, getSession.</small>"]:::componente
+
+        driveService["☁️ Drive Service<br/><small>[Componente: services/driveService.js]</small><br/><small>OAuth2 client, uploadBuffer,<br/>ensureFolder, deleteFile,<br/>updateFile, downloadFile.<br/>Estructura: Root/Env/Workspace/files.</small>"]:::componente
+
+        wsService["📡 WebSocket Service<br/><small>[Componente: services/ws.js]</small><br/><small>WebSocket server (ws library).<br/>broadcast() para chat en tiempo real<br/>y notificaciones push.</small>"]:::componente
+
+        notifWorker["⏰ Notification Worker<br/><small>[Componente: index.js setInterval]</small><br/><small>Cada 30s procesa<br/>SCHEDULED_NOTIFICATIONS vencidas<br/>y las convierte en NOTIFICACIONES.</small>"]:::componente
+
+        dbPool["🔌 DB Pool<br/><small>[Componente: db.js]</small><br/><small>mysql2/promise pool.<br/>connectionLimit: 10, charset: utf8mb4,<br/>retry logic (8 attempts × 2s).</small>"]:::componente
+    end
+
+    %% === RELACIONES EXTERNAS ===
+    frontend -->|"HTTP REST + WebSocket"| expressApp
+    dbPool -->|"SQL queries [TCP 3306]"| db
+    driveService -->|"Upload/Download [HTTPS]"| gdrive
+    wsService -->|"Push messages [WS]"| frontend
+
+    %% === RELACIONES INTERNAS ===
+    expressApp --> router
+    router --> middleware
+    middleware --> controllers
+    controllers --> authModule
+    controllers --> dbPool
+    controllers --> driveService
+    controllers --> wsService
+    expressApp --> notifWorker
+    notifWorker --> dbPool

@@ -1,0 +1,40 @@
+---
+config:
+  layout: elk
+---
+graph TD
+    %% === ESTILOS C4 ===
+    classDef persona fill:#08427B,stroke:#052E56,color:#FFFFFF,font-weight:bold;
+    classDef contenedor fill:#438DD5,stroke:#2E6295,color:#FFFFFF,font-weight:bold;
+    classDef componente fill:#85BBF0,stroke:#5D99C6,color:#000000,font-weight:bold;
+
+    %% === EXTERNOS ===
+    user["👤 Usuario (cualquier rol)<br/><small>[Persona]</small>"]:::persona
+    backend["⚙️ Backend API<br/><small>[Contenedor: Express]</small>"]:::contenedor
+
+    %% === COMPONENTES INTERNOS DEL FRONTEND ===
+    subgraph frontend ["Frontend SPA (React 18 + Vite)"]
+        app["💻 App.jsx<br/><small>[Componente: Router]</small><br/><small>Punto de entrada. Define rutas<br/>y envuelve todo en AuthProvider.</small>"]:::componente
+
+        authContext["🔐 AuthContext<br/><small>[Componente: Context Provider]</small><br/><small>Estado global de autenticación:<br/>login/logout, auto-refresh (60s antes),<br/>idle timer, token management,<br/>actingWorkspace (Admin).</small>"]:::componente
+
+        pages["📄 Pages<br/><small>[Componente: Vistas]</small><br/><small>Login, Lobby, WorkspacesManager,<br/>UsersManager, RequirementView,<br/>NCView, Settings,<br/>DashboardEvaluator/Responsible.</small>"]:::componente
+
+        components["🧩 UI Components<br/><small>[Componente: Reutilizables]</small><br/><small>Layout, Protected, ConfirmDialog,<br/>SearchInput, StatCard, Toast,<br/>NavBarISO, Chat, EvidencePanel.</small>"]:::componente
+
+        hooks["⚓ Custom Hooks<br/><small>[Componente: Lógica de dominio]</small><br/><small>useUsers, useWorkspaces, useISO,<br/>useEvidencias, useNC, useAcciones,<br/>useNotifications.</small>"]:::componente
+
+        apiLayer["🌐 fetchWithAuth<br/><small>[Componente: lib/api.js]</small><br/><small>Wrapper de fetch nativo.<br/>Adjunta JWT, auto-retry en 401,<br/>refresh automático, propaga<br/>workspace context.</small>"]:::componente
+    end
+
+    %% === RELACIONES ===
+    user -->|"Interactúa via browser"| app
+    app --> authContext
+    app --> pages
+    pages --> components
+    pages --> hooks
+    components --> hooks
+    hooks --> apiLayer
+    authContext --> apiLayer
+    apiLayer -->|"HTTP REST [JSON]"| backend
+    backend -->|"WebSocket push [WS]"| authContext

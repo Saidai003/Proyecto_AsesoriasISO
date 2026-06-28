@@ -1,438 +1,361 @@
 # Registro de Decisiones de Arquitectura (ADR)
 
 > **Proyecto:** Gestor GAP ISO 9001:2015  
-> **Última actualización:** 25 de junio de 2026
+> **Última actualización:** 27 de junio de 2026
 
 ---
 
 ## Índice
 
-- [ADR-001: Arquitectura general del sistema](#adr-001-arquitectura-general-del-sistema)
-- [ADR-002: Stack tecnológico backend](#adr-002-stack-tecnológico-backend)
-- [ADR-003: Stack tecnológico frontend](#adr-003-stack-tecnológico-frontend)
-- [ADR-004: Base de datos y esquema relacional](#adr-004-base-de-datos-y-esquema-relacional)
-- [ADR-005: Estructura del árbol normativo ISO 9001:2015](#adr-005-estructura-del-árbol-normativo-iso-90012015)
-- [ADR-006: Estrategia de autenticación y sesiones](#adr-006-estrategia-de-autenticación-y-sesiones)
-- [ADR-007: Patrón de autorización basado en roles](#adr-007-patrón-de-autorización-basado-en-roles)
-- [ADR-008: Infraestructura y despliegue con Docker](#adr-008-infraestructura-y-despliegue-con-docker)
-- [ADR-009: Estrategia CORS y comunicación frontend-backend](#adr-009-estrategia-cors-y-comunicación-frontend-backend)
-- [ADR-010: Patrón de capa API en el frontend (fetchWithAuth)](#adr-010-patrón-de-capa-api-en-el-frontend-fetchwithauth)
-- [ADR-011: Siembra de datos (Seeding) para estructura ISO](#adr-011-siembra-de-datos-seeding-para-estructura-iso)
----
-
-## ADR-001: Arquitectura general del sistema
-
-**Estado:** Aceptada  
-**HU afectadas:** Todas (decisión transversal)
-
-### Contexto
-
-Se necesita una plataforma web para gestionar el análisis GAP de la norma ISO 9001:2015, con enfoque mono-norma pero escalable a futuro.
-
-### Decisión
-
-Se adopta una arquitectura **cliente-servidor desacoplada** con tres componentes principales:
-
-```
-┌─────────────┐       HTTP/REST         ┌─────────────────┐       MySQL         ┌───────────┐
-│  Frontend   │   ◄──────────────►      │   Backend API   │  ◄──────────────►   │    DB     │
-│  (React)    │                         │   (Express.js)  │                     │  (MySQL)  │
-│  Port 5173  │                         │   Port 3000     │                     │  Port 3306│
-└─────────────┘                         └─────────────────┘                     └───────────┘
-```
-
-- **Frontend SPA** (Single Page Application) en React
-- **Backend REST API** en Node.js/Express
-- **Base de datos relacional** MySQL 8.0
-- **Comunicación en tiempo real** vía WebSocket (ws) para notificaciones
-
-### Consecuencias
-
-- El frontend y backend pueden escalar y desplegarse de forma independiente.
-- La comunicación es exclusivamente por API REST (JSON) + WebSocket para eventos.
-- Se puede reemplazar el frontend sin afectar el backend y viceversa.
+- [ADR-001: Arquitectura cliente-servidor desacoplada](#adr-001-arquitectura-cliente-servidor-desacoplada)
+- [ADR-002: Node.js + Express como backend](#adr-002-nodejs--express-como-backend)
+- [ADR-003: React + Vite como frontend](#adr-003-react--vite-como-frontend)
+- [ADR-004: MySQL sin ORM](#adr-004-mysql-sin-orm)
+- [ADR-005: Árbol normativo con autorreferencia](#adr-005-árbol-normativo-con-autorreferencia)
+- [ADR-006: JWT + Refresh Token en DB](#adr-006-jwt--refresh-token-en-db)
+- [ADR-007: RBAC con middleware encadenado](#adr-007-rbac-con-middleware-encadenado)
+- [ADR-008: Docker Compose para despliegue](#adr-008-docker-compose-para-despliegue)
+- [ADR-009: fetchWithAuth en vez de Axios](#adr-009-fetchwithauth-en-vez-de-axios)
+- [ADR-010: Seeding estático de la norma ISO](#adr-010-seeding-estático-de-la-norma-iso)
+- [ADR-011: WebSocket para tiempo real](#adr-011-websocket-para-tiempo-real)
 
 ---
 
-## ADR-002: Stack tecnológico backend
+## ADR-001: Arquitectura cliente-servidor desacoplada
 
 **Estado:** Aceptada  
-**HU afectadas:** Todas (decisión transversal)
+**Fecha:** 23/04/2026
 
 ### Contexto
 
-Se requiere un backend ligero y rápido de desarrollar para un MVP.
+Se necesita una plataforma web para gestionar el análisis GAP de la norma ISO 9001:2015.
+Debe soportar múltiples roles con vistas distintas, comunicación en tiempo real, y
+almacenamiento de archivos.
 
 ### Decisión
 
-| Componente | Tecnología | Versión |
-|---|---|---|
-| Runtime | Node.js | 18 (Alpine) |
-| Framework HTTP | Express | ^4.18.2 |
-| Base de datos | mysql2/promise | ^3.22.1 |
-| Autenticación | jsonwebtoken + bcryptjs | ^9.0.3 / ^2.4.3 |
-| Almacenamiento externo | Google Drive API (googleapis) | ^128.0.0 |
-| WebSocket | ws | ^8.21.0 |
-| Variables de entorno | dotenv | ^16.6.1 |
-| Cookies | cookie-parser | ^1.4.7 |
-| Test runner | Jest + Supertest | ^29.6.0 / ^6.3.3 |
+Arquitectura de **3 capas desacopladas**: Frontend SPA + Backend API REST + Base de datos relacional.
+
+### Alternativas consideradas
+
+| Opción | Ventaja | Por qué se descartó |
+|--------|---------|---------------------|
+| **Monolito SSR** (Next.js) | Menor complejidad de despliegue, SEO nativo | No se necesita SEO (app interna). El acoplamiento backend-frontend dificulta escalar o reemplazar capas de forma independiente. |
+| **Microservicios** | Escalabilidad granular, despliegue independiente por servicio | Overhead excesivo para un MVP de 3 roles. Un solo equipo desarrolla todo; los microservicios aumentan complejidad operacional sin un beneficio claro. |
+| **Serverless** (Lambda + API Gateway) | Sin servidores que mantener, escala automática | El dominio requiere WebSocket persistentes y un worker de notificaciones (setInterval). Serverless complica ambos. El equipo no tiene experiencia en AWS o GCP serverless. |
+
 
 ### Justificación
 
-- Express es minimalista y permite control total sobre middlewares.
-- `mysql2/promise` ofrece interfaz async/await nativa sin ORM, manteniendo las queries explícitas y auditables.
-- No se usa ORM (como Sequelize o Prisma) para mantener control directo sobre las consultas SQL y facilitar la depuración.
-
-### Estructura de archivos backend
-
-```
-backend-js/
-├── src/
-│   ├── index.js              # Entry point, startup sequence
-│   ├── db.js                 # Pool de conexión MySQL
-│   ├── auth.js               # Funciones JWT y sesiones
-│   ├── middleware/
-│   │   ├── auth.js           # requireAuth, requireRole, requireRoles
-│   │   └── cors.js           # CORS configurable por ENV
-│   ├── controllers/          # Lógica de negocio por dominio
-│   ├── routes/               # Definición de rutas Express
-│   └── services/             # Servicios (ws, drive, etc.)
-├── seeds/                    # Scripts SQL de inicialización
-├── scripts/                  # Utilidades (seed, tokens, etc.)
-└── pruebas/                  # Tests unitarios e integración
-```
+- Un MVP con 3 roles y ~14 módulos no justifica la complejidad de microservicios.
+- La separación frontend/backend permite que el frontend se desarrolle con hot reload (Vite) sin reiniciar el backend.
+- Si a futuro se necesita escalar, el backend REST puede ponerse detrás de un load balancer sin cambios.
 
 ---
 
-## ADR-003: Stack tecnológico frontend
+## ADR-002: Node.js + Express como backend
 
 **Estado:** Aceptada  
-**HU afectadas:** Todas (decisión transversal)
+**Fecha:** 23/04/2026
 
 ### Contexto
 
-Se necesita una interfaz web reactiva y de rápido desarrollo.
+Se necesita un backend que permita desarrollo ágil, soporte async I/O (DB + Google Drive), y sea familiar para el equipo.
 
 ### Decisión
 
-| Componente | Tecnología | Versión |
-|---|---|---|
-| Librería UI | React | ^18.2.0 |
-| Bundler/Dev server | Vite | ^5.0.0 |
-| Routing | react-router-dom | ^6.14.1 |
-| Formularios | react-hook-form | ^7.46.0 |
-| Gráficos | chart.js + react-chartjs-2 | ^4.4.0 / ^5.2.0 |
-| Estilos | Tailwind CSS | (via PostCSS) |
-| Inactividad | react-idle-timer | ^5.7.3 |
+Node.js 18 con Express 4, sin ORM, con mysql2/promise para acceso directo a la base de datos.
+
+### Alternativas consideradas
+
+| Opción | Ventaja | Por qué se descartó |
+|--------|---------|---------------------|
+| **Python + FastAPI** | Typing nativo, documentación auto-generada (OpenAPI) | El equipo tiene mayor experiencia en JavaScript. Duplicar lenguajes (JS en frontend, Python en backend) aumenta el costo cognitivo. Se probó inicialmente pero se migró a JS. |
+| **NestJS** (Node + TypeScript) | Estructura opinionada, inyección de dependencias, decoradores | Mayor boilerplate y curva de aprendizaje para un MVP. Express permite prototipar más rápido y el código resultante es más auditable línea a línea. |
 
 ### Justificación
 
-- React 18 con Vite ofrece hot reload instantáneo y builds optimizados.
-- `react-hook-form` maneja formularios con mínima re-renderización (crítico para formularios CRUD extensos).
-- No se usa un state manager global (Redux/Zustand); el estado se gestiona con hooks locales + Context API, suficiente para el alcance del MVP.
+- JavaScript full-stack reduce el cambio de contexto mental entre frontend y backend.
+- Express es el framework más documentado de Node.js; cualquier problema tiene solución googleable.
+- Sin ORM porque las queries del dominio son específicas (JOINs de 3-4 tablas, autorreferencia en requisitos). Un ORM oscurecería la lógica y complicaría el debug.
 
-### Patrón de arquitectura frontend
+### Riesgos aceptados
 
-```
-frontend/src/
-├── pages/                # Vistas completas (una por ruta)
-├── components/           # Componentes reutilizables
-├── hooks/                # Custom hooks (lógica de dominio)
-├── lib/                  # Utilidades (api.js, etc.)
-├── AuthContext.jsx       # Contexto global de autenticación
-└── App.jsx               # Router principal
-```
+- Sin TypeScript: se pierde type-safety. Mitigado con tests unitarios y validaciones explícitas en controllers, revisiones con IA y documentacion segun corresponda.
+- Sin ORM: las migraciones de esquema son manuales. Mitigado con scripts SQL idempotentes.
 
 ---
 
-## ADR-004: Base de datos y esquema relacional
+## ADR-003: React + Vite como frontend
 
 **Estado:** Aceptada  
-**HU afectadas:** Todas (decisión transversal)
+**Fecha:** 23/04/2026
 
 ### Contexto
 
-El dominio requiere relaciones jerárquicas (norma → cláusula → requisito → subrequisito) y trazabilidad completa de cambios.
+Se necesita una interfaz web reactiva con formularios complejos, tablas editables, y gráficos de radar.
 
 ### Decisión
 
-Se utiliza **MySQL 8.0** con esquema relacional de 7 niveles de dependencia:
+React 18 + Vite + Tailwind CSS + react-hook-form + chart.js. Sin state manager global.
 
-```
-Nivel 1 (Base):     ISOS, ROLES, ESPACIO_TRABAJO
-Nivel 2:            CLAUSULAS, USUARIOS
-Nivel 3:            REQUISITOS_BASE, SESIONES_USUARIO, SESSIONS, NOTIFICACIONES
-Nivel 4:            EVALUACION_REQUISITO, PROCESOS, ACTIVIDAD_USUARIO
-Nivel 5:            EVIDENCIAS, AUDITORIA_NC, AUDITORIA_NC_HIST
-Nivel 6:            ACCIONES_CORRECTIVAS, CHAT_MESSAGES, EVIDENCIAS_LOG
-Nivel 7:            ACCIONES_CORRECTIVAS_HIST
-```
+### Alternativas consideradas
 
-### Características del esquema
+| Opción | Ventaja | Por qué se descartó |
+|--------|---------|---------------------|
+| **Vue 3 + Nuxt** | Sintaxis más simple, menor boilerplate | Ecosistema de componentes más pequeño. El equipo tiene más experiencia con React. |
+| **Angular** | Framework completo (routing, forms, HTTP, DI integrados) | Excesivamente opinionado y pesado para un MVP. Curva de aprendizaje mayor. |
+| **React + Redux** | State management predecible y centralizado | Para este MVP, el estado es local a cada página. Context API + hooks custom cubren el caso de auth global sin la ceremonia de Redux (actions, reducers, slices). |
+| **React + CRA** | Setup zero-config | CRA está deprecado. Vite es más rápido (HMR instantáneo) y produce builds más livianos. |
 
-- **Charset UTF-8MB4** en todas las tablas (soporte completo de caracteres).
-- **Foreign Keys con ON DELETE CASCADE** donde la eliminación en cascada es segura (evaluaciones de un workspace eliminado).
-- **ON DELETE SET NULL** para preservar registros históricos cuando se elimina un usuario.
-- **Tablas `_HIST`** para trazabilidad: `EVALUACION_REQUISITO_HIST`, `AUDITORIA_NC_HIST`, `ACCIONES_CORRECTIVAS_HIST`.
-- **Pool de conexiones** con límite de 10 conexiones simultáneas y retry automático (8 intentos, 2s entre cada uno).
+### Justificación
 
-### Consecuencias
-
-- No se usa ORM; las queries son explícitas y predecibles.
-- Las migraciones se manejan con scripts SQL estáticos (no hay sistema de migraciones como Knex o Flyway).
-- El esquema se inicializa una vez en el despliegue y los cambios se hacen manualmente.
+- `react-hook-form` fue elegido sobre Formik porque no causa re-renders del formulario completo al escribir (crítico para las tablas con edición inline donde hay 6+ campos por fila).
+- Tailwind fue elegido sobre Material UI o Ant Design porque permite diseño custom sin luchar contra estilos predefinidos. El diseño de la plataforma tiene identidad propia.
+- Chart.js fue elegido sobre Recharts o D3 porque tiene soporte nativo de radar chart (requerido para el gráfico de araña del GAP).
 
 ---
 
-## ADR-005: Estructura del árbol normativo ISO 9001:2015
+## ADR-004: MySQL sin ORM
 
 **Estado:** Aceptada  
-**HU afectadas:** HU-NAV-01, Alcance "Enfoque mono-norma"
+**Fecha:** 23/04/2026
 
 ### Contexto
 
-La ISO 9001:2015 tiene una estructura jerárquica: Norma → Cláusulas (4-10) → Requisitos → Subrequisitos. Se necesita representarla fielmente en la base de datos.
+El dominio requiere relaciones jerárquicas (autorreferencia), trazabilidad (tablas _HIST), y consultas JOIN complejas con filtros dinámicos.
 
 ### Decisión
 
-Se modela con tres tablas en relación jerárquica con **autorreferencia**:
+MySQL 8.0 con driver `mysql2/promise`. Queries SQL explícitas en los controllers. Sin ORM ni query builder.
 
-```sql
-ISOS (id, nombre, descripcion)
-  └── CLAUSULAS (id, iso_id FK, numero_clausula, titulo)
-        └── REQUISITOS_BASE (id, clausula_id FK, requisito_padre_id FK→self, descripcion_normativa)
-```
+### Alternativas consideradas
 
-- `REQUISITOS_BASE.requisito_padre_id` referencia a sí misma (NULL = requisito raíz de la cláusula).
-- Esto permite profundidad ilimitada: 5.1 → 5.1.1, 5.1.2, etc.
+| Opción | Ventaja | Por qué se descartó |
+|--------|---------|---------------------|
+| **PostgreSQL** | JSON nativo, CTE recursivas más elegantes, extensiones avanzadas | MySQL es suficiente para este dominio. El equipo tiene más experiencia con MySQL. Docker Hub tiene imagen oficial bien mantenida. |
+| **MongoDB** | Esquema flexible, documentos anidados naturales | El dominio es altamente relacional (requisitos → evaluaciones → evidencias → brechas → acciones). MongoDB forzaría denormalización excesiva o lookups que simulan JOINs mal. |
+| **Sequelize/Prisma (ORM)** | Migraciones automáticas, type-safety, queries más legibles | Las queries de este proyecto son específicas: JOINs de 3-4 tablas para IDOR protection, autorreferencia para el árbol, INSERT...SELECT para seed de evaluaciones. Un ORM obscurecería estas queries y complicaría el debug. |
+| **Knex (Query Builder)** | SQL explícito pero con builder fluent, migraciones | Ventaja marginal sobre raw queries con mysql2. Agrega dependencia sin beneficio claro para un equipo que ya sabe SQL. |
 
-### Ejemplo del seed
+### Justificación
 
-```sql
--- Requisito padre
-INSERT INTO REQUISITOS_BASE (clausula_id, requisito_padre_id, descripcion_normativa)
-VALUES (@CLAUSULA5_ID, NULL, '5.1 Liderazgo y compromiso');
-SELECT LAST_INSERT_ID() INTO @REQ51_ID;
+- Las queries son auditables línea por línea (importante para un proyecto de título donde la comisión puede preguntar "¿qué hace exactamente este endpoint?").
+- Sin capa de abstracción entre el código y la DB, el debugging es directo: se copia la query al cliente MySQL y se prueba.
+- Las tablas `_HIST` son simples INSERTs; no se necesita un sistema de event sourcing ni CDC.
 
--- Subrequisitos hijos
-INSERT INTO REQUISITOS_BASE (clausula_id, requisito_padre_id, descripcion_normativa) VALUES
-(@CLAUSULA5_ID, @REQ51_ID, '5.1.1 Generalidades'),
-(@CLAUSULA5_ID, @REQ51_ID, '5.1.2 Enfoque al cliente');
-```
+### Riesgos aceptados
 
-### Relación con evaluaciones por workspace
-
-Cada workspace tiene su propia fila de evaluación por requisito:
-
-```sql
-EVALUACION_REQUISITO (id, requisito_base_id FK, workspace_id FK, estado_cumplimiento ENUM, ...)
-```
-
-Los requisitos base son **compartidos** entre todos los workspaces (son la norma); la evaluación es **por workspace** (es el estado de cumplimiento de cada cliente).
+- Sin migraciones automáticas: los cambios de esquema requieren ALTER TABLE manuales. Mitigado con scripts idempotentes y el hecho de que el esquema está estable tras la fase de diseño.
 
 ---
 
-## ADR-006: Estrategia de autenticación y sesiones
+## ADR-005: Árbol normativo con autorreferencia
 
 **Estado:** Aceptada  
-**HU afectadas:** HU-SEG-LOGIN, RF-AUTH-1, RF-AUTH-3
+**Fecha:** 23/04/2026
 
 ### Contexto
 
-Se necesita un sistema de autenticación stateless pero con capacidad de revocar sesiones.
+ISO 9001:2015 tiene estructura: Cláusula → Requisito → Subrequisito (profundidad variable: 4.1 → 4.1.1 → 4.1.1.1 teóricamente).
 
 ### Decisión
 
-Se implementa un esquema **dual JWT + Refresh Token en DB**:
+Modelar con FK autorreferencial `REQUISITOS_BASE.requisito_padre_id → REQUISITOS_BASE.id`. El árbol se construye en memoria (2 pasadas) en el backend.
 
-| Concepto | Implementación |
-|---|---|
-| Access Token | JWT firmado con HMAC (HS256), expira en 30 minutos |
-| Refresh Token | UUID aleatorio (`crypto.randomUUID()`), almacenado en tabla `SESSIONS` |
-| Almacenamiento del refresh | Cookie HttpOnly (no accesible por JS) |
-| Almacenamiento del access | `localStorage` en el frontend |
-| Revocación | `DELETE FROM SESSIONS WHERE token = ?` |
-| Payload del JWT | `{ id, email, role, workspace_id }` |
+### Alternativas consideradas
 
-### Flujo
+| Opción | Ventaja | Por qué se descartó |
+|--------|---------|---------------------|
+| **Nested Sets** | Consultas de subárboles en O(1) con BETWEEN | Complejidad de mantenimiento (recalcular left/right en cada INSERT). La norma ISO es estática, no cambia después del seed, por lo que la ventaja de lectura rápida no se justifica. |
+| **Materialized Path** (ej: "4.1.2") | Consultas con LIKE '4.1%', humano-legible | Ya se usa implícitamente en `descripcion_normativa` ("4.1.2 Texto"). Pero como campo de búsqueda sería frágil ante cambios de numeración. La autorreferencia es más robusta. |
+| **Tabla por nivel** (cláusulas, requisitos, subrequisitos separados) | Simplicidad por tabla | Limita la profundidad a un número fijo. ISO 9001 tiene hasta 3 niveles (ej: 7.1.5.1), y futuras normas podrían tener más. La autorreferencia permite profundidad ilimitada. |
 
-```
-1. Login → backend valida credenciales → genera JWT (30min) + refresh token (24h default)
-2. Cada request → frontend envía JWT en header Authorization: Bearer <token>
-3. JWT expira → frontend recibe 401 → intenta POST /auth/refresh (con cookie)
-4. Si refresh válido → nuevo JWT + mismo refresh → retry automático del request original
-5. Logout → backend elimina refresh token de DB + limpia cookie
-```
+### Justificación
 
-### Seguridad
-
-- En producción, `JWT_SECRET` debe configurarse obligatoriamente (throw si es default).
-- Refresh token tiene vida configurable via `REFRESH_TOKEN_MINUTES` (default 1440 = 24h).
-- La cookie es HttpOnly, Secure (en prod), SameSite.
+- La norma ISO se carga una vez (seed) y nunca se modifica en runtime. La performance de escritura es irrelevante.
+- El árbol completo tiene ~80 nodos. Construirlo en memoria con 2 pasadas (indexar + enlazar) es instantáneo.
+- La autorreferencia es el patrón más simple y estándar para jerarquías en bases relacionales.
 
 ---
 
-## ADR-007: Patrón de autorización basado en roles
+## ADR-006: JWT + Refresh Token en DB
 
 **Estado:** Aceptada  
-**HU afectadas:** Roles y Privilegios (2.3), RF6
+**Fecha:** 23/04/2026
 
 ### Contexto
 
-El sistema tiene tres roles con permisos diferenciados.
+Se necesita autenticación stateless (para escalar el backend horizontalmente) pero con capacidad de revocar sesiones (para logout, reset de password, etc.).
 
 ### Decisión
 
-Tres roles fijos en la tabla `ROLES`:
+Esquema dual: Access Token (JWT stateless, 30min) + Refresh Token (UUID en tabla SESSIONS, 24h, cookie HttpOnly).
 
-| Rol | Capacidades principales |
-|---|---|
-| **Admin** | Gestión de workspaces, usuarios, acceso global a todos los espacios |
-| **Evaluador** | Gestionar estados de brechas, aprobar/rechazar evidencias |
-| **Responsable SGC** | Gestionar acciones correctivas, subir evidencias, cambiar estados operativos |
+### Alternativas consideradas
 
-La autorización se implementa con middleware encadenado:
+| Opción | Ventaja | Por qué se descartó |
+|--------|---------|---------------------|
+| **Sesiones server-side** (express-session + Redis) | Revocación instantánea, sin JWT en localStorage | Requiere Redis como dependencia adicional. Cada request valida contra Redis (latencia). No es stateless; dificulta escalar horizontalmente sin sticky sessions. |
+| **JWT solo (sin refresh)** | Máxima simplicidad | Un JWT de larga duración (24h) no se puede revocar sin blacklist. Un JWT de corta duración (30min) obliga a re-login constante. |
+| **OAuth2 con proveedor externo** (Auth0, Firebase Auth) | Zero implementación de auth, MFA gratis | Dependencia de servicio externo para un feature crítico. Costo mensual. El proyecto es on-premise/self-hosted. |
 
-```javascript
-// Uso típico en rutas:
-router.get('/', requireAuth, requireRole('Admin'), handler);
-router.put('/:id', requireAuth, requireRoles('Evaluador', 'Responsable SGC'), handler);
-```
+### Justificación
 
-**Regla implícita:** El rol `Admin` siempre pasa cualquier `requireRole`/`requireRoles` (bypass hardcoded).
+- JWT de 30min para requests rápidos sin hit a DB en cada request.
+- Refresh token en DB para poder revocar (logout, cambio de password borra todas las sesiones).
+- Cookie HttpOnly protege el refresh contra XSS (JavaScript no puede leerlo).
+- SameSite=Strict protege contra CSRF (la cookie no se envía en requests cross-origin).
 
-```javascript
-function requireRole(roleName) {
-  return (req, res, next) => {
-    if (req.user.role !== roleName && req.user.role !== 'Admin') 
-      return res.status(403).json({ error: 'forbidden' });
-    next();
-  };
-}
-```
+### Riesgos aceptados
+
+- Access token en localStorage es vulnerable a XSS. Mitigado con: corta duración (30min), Content-Security-Policy en producción, y sanitización de inputs.
 
 ---
 
-## ADR-008: Infraestructura y despliegue con Docker
+## ADR-007: RBAC con middleware encadenado
 
 **Estado:** Aceptada  
-**HU afectadas:** Todas (decisión transversal)
+**Fecha:** 23/04/2026
 
 ### Contexto
 
-Se necesita un entorno reproducible para desarrollo y despliegue.
+El sistema tiene 3 roles con permisos claramente diferenciados. Se necesita un mecanismo de autorización simple y auditable.
 
 ### Decisión
 
-Se utiliza **Docker Compose** con tres servicios:
+RBAC (Role-Based Access Control) implementado como middlewares Express encadenados. Admin bypass implícito.
 
-```yaml
-services:
-  mysql:       # MySQL 8.0, puerto 3306, healthcheck con mysqladmin ping
-  backend-js:  # Node 18 Alpine, puerto 3000, depende de mysql (healthy)
-  frontend:    # Vite dev server, puerto 5173, depende de backend-js
-```
+### Alternativas consideradas
 
-### Estrategia de inicialización de DB
+| Opción | Ventaja | Por qué se descartó |
+|--------|---------|---------------------|
+| **ABAC** (Attribute-Based Access Control) | Permisos granulares por atributo (ej: "solo evidencias de su workspace") | Overhead para 3 roles. La granularidad por workspace se resuelve con JOINs en las queries (IDOR protection), no con un motor de políticas. |
+| **Librería de permisos** (CASL, Casbin) | Políticas declarativas, fácil de testear | Dependencia adicional para un caso simple. Los 3 roles están hardcoded en la tabla ROLES y no cambian en runtime. |
+| **Permisos por endpoint en DB** | Configurable sin re-deploy | Over-engineering para un MVP con 3 roles fijos. Agrega complejidad de UI para gestionar permisos. |
 
-La base de datos se inicializa automáticamente mediante volúmenes montados en `/docker-entrypoint-initdb.d/`:
+### Justificación
 
-```
-01-init.sql          → Esquema completo (CREATE TABLE IF NOT EXISTS)
-02-seed-iso.sql      → Datos de la norma ISO 9001:2015
-03-seed-users.sql    → Usuarios y workspace demo
-```
-
-El backend además tiene un `ensureSeed.js` que verifica en cada arranque si los seeds ya están aplicados.
-
-### Secuencia de startup del backend
-
-```
-1. Esperar DB disponible (retry 60 intentos × 2s)
-2. Ejecutar ensureSeed (idempotente)
-3. Iniciar worker de notificaciones programadas
-4. Levantar servidor HTTP + WebSocket
-```
+- Con 3 roles fijos, un middleware de 5 líneas (`requireRole`) es suficiente y auditable.
+- El bypass de Admin es intencional: el Admin debe poder acceder a todo para resolver incidencias, aunque no puede operar.
+- La seguridad a nivel de datos (workspace isolation) se resuelve en las queries con JOINs, no en el middleware de roles.
 
 ---
 
-## ADR-009: Estrategia CORS y comunicación frontend-backend
+## ADR-008: Docker Compose para despliegue
 
 **Estado:** Aceptada  
-**HU afectadas:** Todas (decisión transversal)
+**Fecha:** 23/04/2026
 
 ### Contexto
 
-Frontend y backend corren en puertos distintos (5173 vs 3000) durante el desarrollo.
+Se necesita un entorno reproducible para desarrollo local y para despliegue en producción.
 
 ### Decisión
 
-CORS configurable por variable de entorno `DEV_ALLOWED_ORIGINS`:
+Docker Compose con 3 servicios: mysql (con healthcheck), backend-js (depende de mysql healthy), frontend (depende de backend).
 
-```javascript
-const allowed = (process.env.DEV_ALLOWED_ORIGINS || 'http://localhost:5173').split(',');
-// Solo se setea Access-Control-Allow-Origin si el origin está en la lista
-// Credentials: true (necesario para cookies HttpOnly de refresh)
-```
+### Alternativas consideradas
 
-- En desarrollo: Vite proxy redirige `/api/*` al backend.
-- En producción: se configuran los origins permitidos via ENV.
+| Opción | Ventaja | Por qué se descartó |
+|--------|---------|---------------------|
+| **Desarrollo sin Docker** (Node + MySQL local) | Menor overhead, startup más rápido | Problemas de "funciona en mi máquina". Cada desarrollador necesita configurar MySQL, variables de entorno, seeds manualmente. |
+| **Kubernetes** | Orquestación productiva, auto-scaling, rolling updates | Excesivo para un MVP con un solo servidor de producción. El equipo no tiene experiencia en K8s. Docker Compose es suficiente para el volumen esperado. |
+| **PaaS** (Railway, Render, Heroku) | Zero-ops, deploys con git push | Costo mensual para 3 servicios (DB + backend + frontend). Menos control sobre la configuración. Google Drive OAuth requiere URLs fijas que cambian en cada deploy en tier gratuito. |
+
+### Justificación
+
+- Docker Compose garantiza que el entorno de desarrollo es idéntico al de producción.
+- Los seeds de DB se ejecutan automáticamente en el primer arranque (montados en `docker-entrypoint-initdb.d/`).
+- El healthcheck de MySQL evita que el backend intente conectarse antes de que la DB esté lista.
 
 ---
 
-## ADR-010: Patrón de capa API en el frontend (fetchWithAuth)
+## ADR-009: fetchWithAuth en vez de Axios
 
 **Estado:** Aceptada  
-**HU afectadas:** Todas las que hacen requests al backend
+**Fecha:** 23/04/2026
 
 ### Contexto
 
-Cada request necesita incluir el JWT y manejar la renovación automática cuando expira.
+Cada request del frontend necesita incluir el JWT, manejar la renovación automática en 401, y propagar el workspace activo.
 
 ### Decisión
 
-Se implementa un wrapper `fetchWithAuth` que reemplaza a `fetch` nativo:
+Wrapper custom `fetchWithAuth` (~80 líneas) sobre `fetch` nativo. No se usa Axios ni otra librería HTTP.
 
-```
-1. Adjunta Authorization: Bearer <token> automáticamente
-2. Si no hay token → intenta refresh antes del request
-3. Si recibe 401 → intenta refresh → retry con nuevo token
-4. Propaga workspace activo como query param (?workspace=X)
-5. Emite evento 'auth:refreshed' para sincronizar otros componentes
-```
+### Alternativas consideradas
 
-### Justificación de no usar Axios
+| Opción | Ventaja | Por qué se descartó |
+|--------|---------|---------------------|
+| **Axios + interceptores** | API más ergonómica, interceptores built-in, cancelación | Agrega ~14KB de dependencia para algo que fetch nativo ya hace. Los interceptores de Axios son equivalentes a lo que fetchWithAuth implementa en 80 líneas. |
+| **ky** (wrapper moderno de fetch) | Retry built-in, hooks, más conciso | Dependencia adicional poco conocida. Menos documentación y comunidad que fetch nativo. |
+| **React Query / SWR** | Cache automático, deduplication, revalidation | Over-engineering para este MVP. Las queries no son frecuentemente re-fetched; se recargan explícitamente tras mutaciones. Agrega complejidad de cache invalidation. |
 
-- Evita dependencia adicional.
-- El wrapper es ~80 líneas y cubre exactamente lo necesario.
-- Los interceptores de Axios serían equivalentes pero con más overhead.
+### Justificación
+
+- 0 dependencias adicionales.
+- Control total sobre el flujo de refresh (importante porque el refresh token está en cookie HttpOnly y el retry debe ser transparente).
+- El código es auditable y no hay "magia" oculta de una librería.
 
 ---
 
-## ADR-011: Siembra de datos (Seeding) para estructura ISO
+## ADR-010: Seeding estático de la norma ISO
 
 **Estado:** Aceptada  
-**HU afectadas:** Alcance "Carga de requisitos mediante seeding"
+**Fecha:** 04/05/2026
 
 ### Contexto
 
-Originalmente se planteó carga dinámica de CSV para los requisitos de la norma. Fue descartado a favor de un seed estático.
+Originalmente se planteó un módulo para que el Admin suba un CSV con los requisitos de la norma. Esto fue descartado en el ajuste de alcance.
 
 ### Decisión
 
-La estructura completa de ISO 9001:2015 (cláusulas 4-10 con todos sus requisitos y subrequisitos) se inserta mediante un script SQL único (`seedISO_utf8.sql`) que:
+La estructura de ISO 9001:2015 se inserta mediante un script SQL único (`seedISO_utf8.sql`) que se ejecuta una sola vez en el primer despliegue.
 
-1. Crea el registro en `ISOS` (ISO 9001:2015)
-2. Inserta las cláusulas (4-10) en `CLAUSULAS`
-3. Inserta los requisitos con sus jerarquías padre-hijo en `REQUISITOS_BASE`
+### Alternativas consideradas
 
-Este seed se ejecuta una sola vez en el primer despliegue (idempotente via Docker initdb.d).
+| Opción | Ventaja | Por qué se descartó |
+|--------|---------|---------------------|
+| **Carga dinámica por CSV** (upload + parser) | Flexibilidad para cargar cualquier norma sin re-deploy | Riesgo de datos corruptos por formato incorrecto del CSV. Requiere UI adicional (formulario de upload), validaciones complejas, y manejo de errores parciales. Descartado en documento de ajuste de alcance. |
+| **API de creación de requisitos** (CRUD manual) | El Admin construye el árbol desde la interfaz | Extremadamente tedioso para 80+ requisitos. Alto riesgo de error humano. La norma ISO es pública y estable; no tiene sentido digitarla manualmente. |
+| **Archivo JSON embebido** en el código | Sin SQL, parseable en cualquier runtime | Menos portable que SQL. No aprovecha las constraints de FK para validar integridad. Más difícil de editar para futuras normas. |
 
-### Consecuencias
+### Justificación
 
-- No existe interfaz para modificar la estructura de la norma.
-- Para soportar una nueva norma, se escribiría un nuevo script de seed.
-- Esto simplifica enormemente el MVP y elimina riesgo de datos corruptos por carga manual.
+- La norma ISO 9001:2015 no cambia (es un estándar publicado). Un seed estático es la forma más segura de garantizar que los datos son correctos.
+- Para agregar una nueva norma en el futuro (ej: ISO 14001), se escribe un nuevo script de seed siguiendo el mismo patrón.
+- El seed es idempotente: si ya existe, no se re-ejecuta (controlado por `ensureSeed.js`).
+
+---
+
+## ADR-011: WebSocket para tiempo real
+
+**Estado:** Aceptada  
+**Fecha:** 23/04/2026
+
+### Contexto
+
+El sistema requiere notificaciones y chat en tiempo real. Los mensajes de chat deben aparecer instantáneamente para todos los participantes.
+
+### Decisión
+
+WebSocket server (`ws` library) integrado en el mismo proceso HTTP del backend. Se usa `broadcast()` para enviar mensajes a todos los clientes conectados.
+
+### Alternativas consideradas
+
+| Opción | Ventaja | Por qué se descartó |
+|--------|---------|---------------------|
+| **Server-Sent Events (SSE)** | Más simple (unidireccional), funciona sobre HTTP estándar | SSE es solo server→client. El chat necesita bidireccionalidad (client→server también). Aunque los mensajes se envían por POST, SSE no soporta reconexión con estado tan bien como WebSocket. |
+| **Socket.IO** | Fallback automático a polling, rooms, namespaces | Agrega ~50KB de dependencia. Las features de rooms/namespaces no se necesitan (se filtra por nc_id/requisito_id en la query). WebSocket raw es suficiente. |
+| **Polling** (fetch cada 5s) | Zero complejidad de infraestructura | Latencia de hasta 5s en mensajes de chat. Overhead de requests innecesarios cuando no hay mensajes nuevos. Mala UX para un chat. |
+| **Servicio externo** (Pusher, Ably) | Zero implementación, escalabilidad automática | Costo mensual. Dependencia externa para feature core. El volumen de mensajes es bajo (decenas por día, no miles). |
+
+### Justificación
+
+- La librería `ws` son ~3KB y se integra directamente con el servidor HTTP de Node.js (0 config adicional).
+- El volumen esperado es bajo (decenas de usuarios concurrentes máximo). No se necesita clustering ni Redis pub/sub para escalar WebSocket.
+- El broadcast es simple: cada nuevo mensaje de chat se envía a todos los clientes conectados. El frontend filtra por nc_id/requisito_id relevante.
 
 ---
 

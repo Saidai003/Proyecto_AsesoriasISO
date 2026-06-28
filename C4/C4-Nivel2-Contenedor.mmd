@@ -1,0 +1,34 @@
+graph TD
+    %% === ESTILOS C4 ===
+    classDef persona fill:#08427B,stroke:#052E56,color:#FFFFFF,font-weight:bold;
+    classDef contenedor fill:#438DD5,stroke:#2E6295,color:#FFFFFF,font-weight:bold;
+    classDef database fill:#438DD5,stroke:#2E6295,color:#FFFFFF,font-weight:bold;
+    classDef externo fill:#999999,stroke:#6B6B6B,color:#FFFFFF,font-weight:bold;
+    classDef boundary fill:none,stroke:#CCC,stroke-dasharray:5,color:#666;
+
+    %% === PERSONAS ===
+    admin["👤 Administrador"]:::persona
+    evaluador["👤 Evaluador"]:::persona
+    responsable["👤 Responsable SGC"]:::persona
+
+    %% === CONTENEDORES DEL SISTEMA ===
+    subgraph sistema ["Gestor GAP ISO 9001"]
+        frontend["💻 Frontend SPA<br/><small>[Contenedor: React 18 + Vite]</small><br/><small>Interfaz de usuario responsiva.<br/>Login, Lobby por rol, navegación ISO,<br/>paneles de requisitos, brechas,<br/>acciones, evidencias y chat.</small>"]:::contenedor
+
+        backend["⚙️ Backend API<br/><small>[Contenedor: Node.js 18 + Express]</small><br/><small>API REST que implementa:<br/>• Autenticación JWT + Refresh Token<br/>• CRUD de usuarios y workspaces<br/>• Motor de evaluación GAP<br/>• Workflow de brechas y acciones<br/>• Gestión de evidencias<br/>• WebSocket para chat en tiempo real<br/>• Worker de notificaciones programadas</small>"]:::contenedor
+
+        db[("🛢️ Base de Datos<br/><small>[Contenedor: MySQL 8.0]</small><br/><small>Esquema relacional de 7 niveles.<br/>Persiste: usuarios, evaluaciones,<br/>brechas, acciones, evidencias,<br/>historial, chat y notificaciones.</small>")]:::database
+    end
+
+    %% === SISTEMA EXTERNO ===
+    gdrive["📁 Google Drive<br/><small>[Sistema Externo]</small><br/><small>Almacenamiento de archivos<br/>de evidencia.</small>"]:::externo
+
+    %% === RELACIONES PERSONAS → FRONTEND ===
+    admin -->|"Gestiona usuarios y<br/>workspaces [HTTPS]"| frontend
+    evaluador -->|"Evalúa requisitos y<br/>gestiona brechas [HTTPS]"| frontend
+    responsable -->|"Gestiona acciones y<br/>sube evidencias [HTTPS]"| frontend
+
+    %% === RELACIONES ENTRE CONTENEDORES ===
+    frontend -->|"API REST + WebSocket<br/>[HTTP/JSON + WS]"| backend
+    backend -->|"Queries SQL<br/>[TCP 3306 / mysql2]"| db
+    backend -->|"Upload/Download archivos<br/>[Google Drive API v3 / OAuth2]"| gdrive

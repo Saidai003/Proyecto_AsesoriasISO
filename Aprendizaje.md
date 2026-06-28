@@ -253,3 +253,81 @@ En este flujo, `toDelete` se construye de forma incremental y podría reutilizar
 ## Modelo C4
 
 Quizas esto esta un poco fuera de tema, pero si deseas aprender acerca del modelamiento C4 de Simon Brown, revisa esta pagina web oficial: [text](https://c4model.com/)
+
+
+## Hashing de Contraseñas con bcrypt
+
+### Contexto
+
+La plataforma almacena contraseñas de forma segura usando **bcrypt** (librería `bcryptjs`). No se guarda la contraseña en texto plano ni con cifrado reversible; se guarda un **hash unidireccional**.
+
+### ¿Qué es hashing?
+
+Hashing es una transformación **irreversible** (unidireccional). No se puede reconstruir la contraseña original a partir del hash. Solo se puede verificar si un texto dado produce el mismo resultado.
+
+### Anatomía de un hash bcrypt
+
+```
+$2a$10$UbywX67eT3b6zK.Mte8jqe164uL0mI2bH8F6O9M2mN6P/7A2n2S.m
+ │   │  │                       │
+ │   │  └─ Salt (22 caracteres) └─ Hash resultante (31 caracteres)
+ │   └─ Cost factor (10 rounds = 2^10 iteraciones)
+ └─ Versión del algoritmo
+```
+
+La **salt** es un valor aleatorio que se genera al momento de crear el hash. Su función es evitar que dos contraseñas iguales produzcan el mismo hash (protege contra ataques con tablas rainbow).
+
+### Cómo funciona la verificación sin compartir salt
+
+La salt **está embebida dentro del propio hash almacenado**. Al verificar:
+
+1. `bcrypt.compare(password, hashAlmacenado)` extrae la salt de los primeros 29 caracteres del hash
+2. Hashea el `password` ingresado usando esa misma salt extraída
+3. Compara el resultado con el hash almacenado
+4. Si coinciden, la contraseña es correcta
+
+Por eso no importa que cada llamada a `bcrypt.hash()` genere una salt diferente: la función `compare` siempre usa la salt que ya está guardada en la base de datos.
+
+### Implementación en la plataforma
+
+**Al crear un usuario o cambiar contraseña** (`authController.js`, `userController.js`):
+
+```javascript
+const bcrypt = require('bcryptjs');
+const newHash = await bcrypt.hash(newPassword, 10); // 10 rounds
+// Se almacena newHash en la columna password_hash
+```
+
+**Al hacer login** (`authController.js`):
+
+```javascript
+const ok = await bcrypt.compare(password, user.password_hash);
+if (!ok) {
+  return res.status(401).json({ error: 'invalid_credentials' });
+}
+```
+
+### Generar un hash para el seed de usuarios
+
+Desde la carpeta `backend-js/`:
+
+```bash
+node -e "const bcrypt = require('bcryptjs'); bcrypt.hash('TU_CONTRASEÑA', 10).then(h => console.log(h));"
+```
+
+El resultado se coloca en `seeds/seed_users_workspaces.sql`:
+
+```sql
+SET @HASH = '$2a$10$...el_hash_generado...';
+```
+
+### Medidas de seguridad adicionales implementadas
+
+- **Timing attack prevention**: si el usuario no existe, el sistema ejecuta `bcrypt.compare` contra un hash dummy para que el tiempo de respuesta sea consistente.
+- **Rate limiting**: máximo 5 intentos por usuario en una ventana de 15 minutos para el flujo de cambio de contraseña inicial.
+- **Cost factor 10**: cada verificación toma ~100ms, lo que dificulta ataques de fuerza bruta (2^10 = 1024 iteraciones internas del algoritmo Blowfish).
+
+### Referencias
+
+- [bcrypt - Wikipedia](https://en.wikipedia.org/wiki/Bcrypt)
+- [OWASP Password Storage Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html)

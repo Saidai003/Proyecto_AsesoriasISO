@@ -1,0 +1,23 @@
+graph TD
+    %% === ESTILOS C4 ===
+    classDef persona fill:#08427B,stroke:#052E56,color:#FFFFFF,font-weight:bold;
+    classDef sistema fill:#1168BD,stroke:#0B4884,color:#FFFFFF,font-weight:bold;
+    classDef externo fill:#999999,stroke:#6B6B6B,color:#FFFFFF,font-weight:bold;
+
+    %% === PERSONAS (3 roles reales del sistema) ===
+    admin["👤 Administrador<br/><small>[Persona]</small><br/><small>Gestiona usuarios, workspaces<br/>y configuración global.</small>"]:::persona
+    evaluador["👤 Evaluador<br/><small>[Persona]</small><br/><small>Evalúa requisitos, crea brechas,<br/>aprueba/rechaza evidencias y<br/>verifica eficacia.</small>"]:::persona
+    responsable["👤 Responsable SGC<br/><small>[Persona]</small><br/><small>Gestiona acciones correctivas,<br/>sube evidencias y responde<br/>a brechas asignadas.</small>"]:::persona
+
+    %% === SISTEMA CENTRAL ===
+    gestor["💻 Gestor GAP ISO 9001<br/><small>[Software System]</small><br/><small>Plataforma web para gestión integral<br/>del análisis GAP: evaluación de requisitos,<br/>gestión de brechas, acciones correctivas,<br/>evidencias y comunicación en equipo.</small>"]:::sistema
+
+    %% === SISTEMAS EXTERNOS ===
+    gdrive["📁 Google Drive<br/><small>[Sistema Externo]</small><br/><small>Almacenamiento en la nube para<br/>archivos de evidencia (PDF, imágenes, CSV).<br/>Accedido via Google Drive API v3 + OAuth2.</small>"]:::externo
+
+    %% === RELACIONES ===
+    admin -->|"Configura sistema, gestiona<br/>usuarios y workspaces [HTTPS]"| gestor
+    evaluador -->|"Evalúa cláusulas, crea brechas,<br/>valida evidencias [HTTPS]"| gestor
+    responsable -->|"Gestiona acciones correctivas,<br/>sube evidencias [HTTPS]"| gestor
+
+    gestor -->|"Almacena y recupera archivos<br/>[Google Drive API v3 / OAuth2]"| gdrive
