@@ -80,28 +80,29 @@ export default function NCView(){
   const isAdmin = hasRole(user, 'admin')
   const canEditComment = isEvaluador || isAdmin
 
-  const createChildAction = (parentId, payload) => {
-    ;(async ()=>{
-      try{
-        const body = {
-          accion_previa_id: parentId,
-          accion: payload.accion,
-          contenido_comentario: payload.contenido_comentario,
-          estado_accion: payload.estado_accion,
-          acciones_futuras_propuestas: payload.acciones_futuras_propuestas || '',
-          requiere_nueva_nc: payload.requiere_nueva_nc ? 1 : 0
-        }
-        const res = await fetchWithAuth(`/api/nc/${id}/acciones`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-        if(res.ok){
-          const created = await res.json()
-          setThreads(prev => [...prev, created])
-          showToast({ title: 'Acción creada', message: 'Acción correctiva creada correctamente', type: 'success' })
-        }else{
-          const err = await res.json().catch(()=>null)
-          showToast({ title: 'Error', message: getErrorText(err, 'No se pudo crear acción'), type: 'error' })
-        }
-      }catch(e){ console.error('create action error', e); showToast({ title: 'Error', message: 'Error al crear acción', type: 'error' }) }
-    })()
+  const createChildAction = async (parentId, payload) => {
+    try {
+      const body = {
+        accion_previa_id: parentId,
+        accion: payload.accion,
+        contenido_comentario: payload.contenido_comentario,
+        estado_accion: payload.estado_accion,
+        acciones_futuras_propuestas: payload.acciones_futuras_propuestas || '',
+        requiere_nueva_nc: payload.requiere_nueva_nc ? 1 : 0
+      }
+      const res = await fetchWithAuth(`/api/nc/${id}/acciones`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+      if (res.ok) {
+        const created = await res.json()
+        setThreads(prev => [...prev, created])
+        showToast({ title: 'Acción creada', message: 'Acción correctiva creada correctamente', type: 'success' })
+        return
+      }
+      const err = await res.json().catch(() => null)
+      showToast({ title: 'Error', message: getErrorText(err, 'No se pudo crear acción'), type: 'error' })
+    } catch (e) {
+      console.error('create action error', e)
+      showToast({ title: 'Error', message: 'Error al crear acción', type: 'error' })
+    }
   }
 
   useEffect(()=>{
