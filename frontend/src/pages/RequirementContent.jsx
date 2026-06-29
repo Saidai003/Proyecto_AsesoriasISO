@@ -126,6 +126,7 @@ export default function RequirementContent({ node, onRequestCreateNc, onStatusCh
         const evId = json.id
         if(!mounted) return
         setEvaluacionId(evId)
+        if(json.estado_cumplimiento === 'NA') setManualNA(true)
         const ncr = await fetchWithAuth(`/api/nc/evaluacion/${evId}`)
         if(!ncr.ok) return
         const list = await ncr.json()
@@ -525,7 +526,19 @@ export default function RequirementContent({ node, onRequestCreateNc, onStatusCh
     return 'bg-slate-100 text-slate-700'
   }
 
+  const [manualNA, setManualNA] = useState(false)
+
+  // Reset manualNA when navigating to a different requisito
+  React.useEffect(() => {
+    setManualNA(false)
+  }, [node?.id])
+
   const requirementStatus = React.useMemo(() => {
+    // If evaluator manually marked as NA (No Aplica / excluded from scope)
+    if (manualNA) {
+      return { label: 'No Aplica', className: 'bg-slate-400 text-white' }
+    }
+
     // --- Variables base ---
     const totalEvidencias = (evidences || []).length
     const evidenciasAceptadas = (evidences || []).filter(ev => ev.estado_validacion_archivo === 'Aceptado').length
@@ -554,11 +567,27 @@ export default function RequirementContent({ node, onRequestCreateNc, onStatusCh
 
     // 4. En Revisión: hay evidencias pendientes sin brechas abiertas ni rechazos
     return { label: 'En Revisión', className: 'bg-amber-500 text-white' }
-  }, [ncList, evidences])
+  }, [ncList, evidences, manualNA])
 
   React.useEffect(() => {
     if(onStatusChange) onStatusChange(requirementStatus)
   }, [onStatusChange, requirementStatus])
+
+  // Toggle NA exclusion (ISO 9001 Req 4.3 - scope exclusion)
+  const toggleNA = async () => {
+    if (!evaluacionId) return
+    const newEstado = manualNA ? 'No cumple' : 'NA'
+    try {
+      const res = await fetchWithAuth(`/api/evaluaciones/${evaluacionId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ estado_cumplimiento: newEstado })
+      })
+      if (res.ok) {
+        setManualNA(!manualNA)
+      }
+    } catch (e) { console.error('toggleNA error', e) }
+  }
 
   const canDeleteEvidence = (ev) => {
     if(!user) return false
@@ -636,6 +665,17 @@ export default function RequirementContent({ node, onRequestCreateNc, onStatusCh
 
   return (
     <div className="p-4">
+      {/* NA exclusion toggle (ISO 9001 Req 4.3) - Only Evaluador can toggle */}
+      {hasRole(user, 'evaluador') && evaluacionId && (
+        <div className="mb-4">
+          <button
+            onClick={toggleNA}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium border ${manualNA ? 'bg-slate-400 text-white border-slate-400' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'}`}
+          >
+            {manualNA ? '✓ Marcado como No Aplica (excluido del alcance)' : 'Marcar como No Aplica'}
+          </button>
+        </div>
+      )}
       <div className="mt-2">
         {children && children.length>0 ? (
           <>

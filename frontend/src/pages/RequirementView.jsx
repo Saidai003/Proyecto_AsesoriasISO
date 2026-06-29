@@ -178,7 +178,7 @@ export default function RequirementView(){
             <div>
               <div className="text-xs uppercase tracking-widest text-slate-400">Requisito</div>
               <h3 className="text-lg font-semibold text-slate-800">{node ? (node.descripcion_normativa || '—') : 'Cargando requisito...'}</h3>
-              <div className="mt-2">
+              <div className="mt-2 flex items-center gap-2">
                 <span className={`${requirementStatus.className} px-3 py-1 rounded-full text-sm font-semibold whitespace-nowrap`}>
                   Estado requisito: {requirementStatus.label}
                 </span>

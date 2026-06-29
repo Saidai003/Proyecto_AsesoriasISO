@@ -86,13 +86,13 @@ async function login(req, res){
     const accessToken = signAccessToken({ id: user.id, email: user.email, role: roleName, workspace_id: user.workspace_id });
     const refreshToken = await createRefreshSession(user.id);
 
-    const cookieSecure = process.env.NODE_ENV === 'production'; // ✅ Seguro en producción
+    const cookieSecure = process.env.NODE_ENV === 'production';
     res.cookie('refreshToken', refreshToken, {
-      httpOnly: true,
-      sameSite: 'strict',
-      secure: cookieSecure,
-      maxAge: REFRESH_TOKEN_MINUTES * 60 * 1000,
-      path: '/'
+      httpOnly: true,                              // JS del browser NO puede leer esta cookie (protege contra XSS)
+      sameSite: 'strict',                          // Cookie NO se envía en requests de otro dominio (protege contra CSRF)
+      secure: cookieSecure,                        // Solo viaja por HTTPS; false en dev porque localhost no tiene HTTPS
+      maxAge: REFRESH_TOKEN_MINUTES * 60 * 1000,   // Tiempo de vida en ms (24h default); tras esto el browser la elimina
+      path: '/'                                    // Disponible para todas las rutas del dominio (necesaria en /auth/refresh y /auth/logout)
     });
 
     logAuthInfo('login', `Login exitoso`, { userId: user.id, email: emailNorm, workspace: user.workspace_id });

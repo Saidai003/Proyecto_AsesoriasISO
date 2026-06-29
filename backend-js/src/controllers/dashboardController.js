@@ -91,10 +91,13 @@ async function buildComplianceDashboard(workspaceId) {
   `, [workspaceId]);
 
   // Métricas generales basadas en EVALUACION_REQUISITO
-  const totalReqs = evaluaciones.length;
-  const cumple = evaluaciones.filter(e => e.estado === 'Cumple').length;
-  const parcial = evaluaciones.filter(e => e.estado === 'Parcial').length;
-  const noCumple = evaluaciones.filter(e => e.estado === 'No cumple').length;
+  // ISO 9001:2015 Req 4.3: requisitos "NA" (No Aplica) se excluyen del cálculo de cumplimiento
+  const evaluacionesAplicables = evaluaciones.filter(e => e.estado !== 'NA');
+  const totalReqs = evaluacionesAplicables.length;
+  const cumple = evaluacionesAplicables.filter(e => e.estado === 'Cumple').length;
+  const parcial = evaluacionesAplicables.filter(e => e.estado === 'Parcial').length;
+  const noCumple = evaluacionesAplicables.filter(e => e.estado === 'No cumple').length;
+  const totalNA = evaluaciones.filter(e => e.estado === 'NA').length;
   
   const porcentajeCumplimiento = totalReqs > 0
     ? Math.round(((cumple + parcial * 0.5) / totalReqs) * 100)
@@ -104,11 +107,13 @@ async function buildComplianceDashboard(workspaceId) {
   const clausulasInteres = [4, 5, 6, 7, 8, 9];
   const porClausula = clausulasInteres.map(num => {
     const reqs = evaluaciones.filter(e => Number(e.clausula) === num);
+    // ISO 9001 Req 4.3: excluir NA del cálculo por cláusula
+    const reqsAplicables = reqs.filter(e => e.estado !== 'NA');
     // For the radar chart: only first-level requisitos (no subrequisitos)
-    const reqsRadar = reqs.filter(e => !e.requisito_padre_id);
-    const total = reqs.length;
-    const c = reqs.filter(e => e.estado === 'Cumple').length;
-    const p = reqs.filter(e => e.estado === 'Parcial').length;
+    const reqsRadar = reqsAplicables.filter(e => !e.requisito_padre_id);
+    const total = reqsAplicables.length;
+    const c = reqsAplicables.filter(e => e.estado === 'Cumple').length;
+    const p = reqsAplicables.filter(e => e.estado === 'Parcial').length;
     const pct = total > 0 ? Math.round(((c + p * 0.5) / total) * 100) : 0;
     return { clausula: num, total, cumple: c, parcial: p, porcentaje: pct, requisitos: reqs, requisitosRadar: reqsRadar };
   });
@@ -203,7 +208,8 @@ async function buildComplianceDashboard(workspaceId) {
       cumplimiento_general: {
         porcentaje: porcentajeCumplimiento,
         cumple,
-        total: totalReqs
+        total: totalReqs,
+        excluidos_na: totalNA
       },
       brechas: {
         cantidad: noCumple,
