@@ -7,9 +7,17 @@ async function updateAction(req, res){
     const id = Number(req.params.id)
     if(!id) return res.status(400).json({ error: 'id required' })
     const user = req.user
+    const workspaceId = user.workspace_id || null
     const payload = req.body || {}
 
-    const [rows] = await pool.execute('SELECT * FROM ACCIONES_CORRECTIVAS WHERE id = ?', [id])
+    // IDOR protection: verify action belongs to user's workspace via NC → EVALUACION_REQUISITO
+    const [rows] = await pool.execute(
+      `SELECT ac.* FROM ACCIONES_CORRECTIVAS ac
+       JOIN AUDITORIA_NC anc ON ac.auditoria_nc_id = anc.id
+       JOIN EVALUACION_REQUISITO er ON anc.evaluacion_requisito_id = er.id
+       WHERE ac.id = ? AND er.workspace_id = ?`,
+      [id, workspaceId]
+    )
     if(!rows || rows.length===0) return res.status(404).json({ error: 'not_found' })
     const action = rows[0]
 
@@ -20,8 +28,8 @@ async function updateAction(req, res){
     const changeDetails = []
     for(const f of editableFields){
       if(Object.prototype.hasOwnProperty.call(payload, f)){
-        const newValue = f === 'requiere_nueva_nc' ? (payload[f] ? 1 : 0) : payload[f]
-        const oldValue = action[f]
+        const newValue = f === 'requiere_nueva_nc' ? (payload[f] ? 1 : 0) : payload[f] //Action updated by user
+        const oldValue = action[f] // Action retrived from BD
         const same = String(oldValue) === String(newValue)
         updates.push(`${f} = ?`)
         params.push(newValue)
