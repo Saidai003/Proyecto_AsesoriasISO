@@ -55,3 +55,20 @@ Un callback es una función que se pasa como argumento a otra función y se ejec
 * **Funciones de acción**: createUser, updateUser, etc. realizan llamadas a la API y luego llaman a loadUsers para refrescar.
 * **useCallback**: Memoriza funciones para evitar recreaciones innecesarias.
 * **Retorno del hook**: Objeto con el estado y las funciones disponibles para el componente.
+
+---
+
+## useMemo — cachear cálculos costosos
+
+> Referencia oficial: https://react.dev/reference/react/useMemo
+
+`useMemo` guarda el resultado de un cálculo y solo lo re-ejecuta cuando sus dependencias cambian:
+
+```js
+const resultado = useMemo(() => {
+  // cálculo costoso
+  return valorCalculado
+}, [dependencia1, dependencia2])
+```
+
+Si `dependencia1` y `dependencia2` no cambiaron desde el último render, React devuelve el valor cacheado sin re-ejecutar la función. Útil para evitar recalcular filtros, agrupaciones, o transformaciones de datos en cada render.
