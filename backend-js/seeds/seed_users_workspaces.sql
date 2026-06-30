@@ -15,8 +15,8 @@ SELECT id INTO @ROLE_ADMIN_ID FROM ROLES WHERE nombre='Admin' LIMIT 1;
 SELECT id INTO @ROLE_EVAL_ID FROM ROLES WHERE nombre='Evaluador' LIMIT 1;
 SELECT id INTO @ROLE_RESP_ID FROM ROLES WHERE nombre='Responsable SGC' LIMIT 1;
 
--- Password hash for 'MiClave.2026' (bcrypt 10 rounds)
-SET @HASH = '$2a$10$Di6iYV8Su12aE0sE3KPDqurawrakTsYbNVFrsQkY95bjqF1jwy5IG';
+-- bcrypt 10 rounds (password not stored in plaintext for security)
+SET @HASH = '$2a$10$0q0ES4zGzzamnE2mOHfRruymaah4fXQ59gsU.NbIMAfUQbl1IEIjK';
 
 -- Insert or update demo users with stable credentials (all in one operation)
 INSERT INTO USUARIOS (workspace_id, role_id, nombre, email, password_hash, estado_invitacion)
