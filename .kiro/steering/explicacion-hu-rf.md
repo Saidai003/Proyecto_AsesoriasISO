@@ -25,25 +25,33 @@ Descripción funcional directa de qué permite hacer esta feature al usuario.
 Si considero que no es relevante para la presentación o que es trivial, decirlo explícitamente para que el usuario pueda decidir si profundizar.
 
 ### 4. Lógica de negocio (el foco principal)
-- **Frontend**: qué componente, qué función, qué payload se envía. Referenciar archivo clickeable.
-- **Backend**: qué valida el controller, qué reglas de negocio aplica, qué tablas toca. Referenciar archivo clickeable.
+- **Frontend**: qué componente, qué función, qué payload se envía. Referenciar archivo con ruta relativa al workspace (ej: `frontend/src/components/Archivo.jsx`).
+- **Backend**: qué valida el controller, qué reglas de negocio aplica, qué tablas toca. Referenciar archivo con ruta relativa.
 - Simplificar el código en la explicación (no copiar verbatim si es largo), enfocándose en la lógica, no en la sintaxis.
+- Para cada criterio de aceptación, indicar con ✅ si está cumplido, explicando brevemente cómo.
 
-### 5. Resumen para marcar como revisado (2-3 oraciones)
+### 5. Acceso (1 línea)
+Quién puede ejecutar esta operación (qué roles) y qué ruta/middleware lo controla.
+
+### 6. Resumen para marcar como revisado (2-3 oraciones)
 Frase que el usuario podría usar si le preguntan "¿qué hace esto?" en la comisión.
 
-### 6. ⚠️ Observaciones de fontanería (solo si hay problemas)
-Si durante la revisión detecto algo inconsistente, inseguro, o que se sale del patrón documentado en `aprendizajes/13-patron-base-request-response.md`, reportarlo aquí. Si todo está normal, NO incluir esta sección.
+### 7. ⚠️ Observaciones de fontanería (solo si hay problemas)
+Si durante la revisión detecto algo inconsistente, inseguro, o que se sale del patrón documentado en `docs/aprendizajes/13-patron-base-request-response.md`, reportarlo aquí. Si todo está normal, escribir "Fontanería revisada, sin observaciones".
 
 ## Reglas
 
 - **NO** re-explicar la fontanería (React Router, Express Router, fetchWithAuth, requireAuth) a menos que haya algo anormal.
 - **SÍ** revisar internamente que la fontanería siga el patrón estándar antes de omitirla.
-- **SÍ** referenciar archivos como links clickeables: `[archivo](ruta)`.
+- **SÍ** referenciar archivos con rutas relativas al workspace (ej: `frontend/src/pages/NCView.jsx`), sin rutas absolutas.
 - **SÍ** simplificar código para la explicación, enfocando en la lógica de negocio.
+- **SÍ** indicar explícitamente el estado de cada criterio de aceptación con ✅ o ❌.
+- **SÍ** incluir una línea de "Acceso" indicando roles permitidos.
+- **SÍ** incluir siempre "Fontanería revisada, sin observaciones" o detallar el problema.
 - **NO** desviar al usuario con exploración de código tangencial.
+- **NO** usar links con rutas absolutas del sistema de archivos — solo rutas relativas al workspace.
 - **SÍ** responder preguntas puntuales del usuario sobre detalles sin convertirlas en exploraciones largas.
-- Si el usuario pregunta por algo que ya está documentado en `/aprendizajes/`, referirlo al documento en vez de re-explicar.
+- Si el usuario pregunta por algo que ya está documentado en `/docs/aprendizajes/`, referirlo al documento en vez de re-explicar.
 
 ## Información de la plataforma (contexto constante)
 
@@ -54,5 +62,5 @@ Si durante la revisión detecto algo inconsistente, inseguro, o que se sale del 
 - Historial: tablas _HIST para trazabilidad
 - Notificaciones: INSERT en NOTIFICACIONES tras cambios relevantes
 - Frontend state: useState + fetchWithAuth, sin state manager global
-- Patrón completo documentado en: `aprendizajes/13-patron-base-request-response.md`
-- Routers explicados en: `aprendizajes/12-react-router-vs-express-router.md`
+- Patrón completo documentado en: `docs/aprendizajes/13-patron-base-request-response.md`
+- Routers explicados en: `docs/aprendizajes/12-react-router-vs-express-router.md`

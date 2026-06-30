@@ -2,15 +2,16 @@ const { pool } = require('../db')
 
 const ALLOWED = ['Pendiente','En_Progreso','Eficaz','No_Eficaz']
 
-async function updateAction(req, res){
-  try{
+async function updateAction(req, res) {
+  try {
+    // 1. VALIDACIONES INICIALES Y CAPTURA DE DATOS
     const id = Number(req.params.id)
-    if(!id) return res.status(400).json({ error: 'id required' })
+    if (!id) return res.status(400).json({ error: 'id required' })
     const user = req.user
     const workspaceId = user.workspace_id || null
     const payload = req.body || {}
 
-    // IDOR protection: verify action belongs to user's workspace via NC → EVALUACION_REQUISITO
+    // 2. PROTECCIÓN IDOR: Verificar propiedad en base de datos
     const [rows] = await pool.execute(
       `SELECT ac.* FROM ACCIONES_CORRECTIVAS ac
        JOIN AUDITORIA_NC anc ON ac.auditoria_nc_id = anc.id
@@ -18,79 +19,116 @@ async function updateAction(req, res){
        WHERE ac.id = ? AND er.workspace_id = ?`,
       [id, workspaceId]
     )
-    if(!rows || rows.length===0) return res.status(404).json({ error: 'not_found' })
-    const action = rows[0]
+    if (!rows || rows.length === 0) return res.status(404).json({ error: 'not_found' })
+    const action = rows[0] // Datos actuales en la BD antes del cambio
 
-    // If request contains only general editable fields, update them
-    const editableFields = ['accion','contenido_comentario','acciones_futuras_propuestas','requiere_nueva_nc']
+    // Arreglos para ir armando la consulta SQL final paso a paso
     const updates = []
     const params = []
     const changeDetails = []
-    for(const f of editableFields){
-      if(Object.prototype.hasOwnProperty.call(payload, f)){
-        const newValue = f === 'requiere_nueva_nc' ? (payload[f] ? 1 : 0) : payload[f] //Action updated by user
-        const oldValue = action[f] // Action retrived from BD
-        const same = String(oldValue) === String(newValue)
-        updates.push(`${f} = ?`)
-        params.push(newValue)
-        if(!same){
-          changeDetails.push(`${f}: "${oldValue === null || oldValue === undefined ? '' : oldValue}" → "${newValue === null || newValue === undefined ? '' : newValue}"`)
-        }
+
+    // 3. PROCESAMIENTO EXPLÍCITO DE CAMPOS (Sin bucles raros)
+
+    // Campo: accion
+    if (payload.accion !== undefined) {
+      updates.push('accion = ?')
+      params.push(payload.accion)
+      if (String(action.accion) !== String(payload.accion)) {
+        changeDetails.push(`accion: "${action.accion || ''}" → "${payload.accion || ''}"`)
       }
     }
 
-    // Handle state change separately (keeps previous behavior)
-    if(Object.prototype.hasOwnProperty.call(payload, 'estado_accion')){
+    // Campo: contenido_comentario
+    if (payload.contenido_comentario !== undefined) {
+      updates.push('contenido_comentario = ?')
+      params.push(payload.contenido_comentario)
+      if (String(action.contenido_comentario) !== String(payload.contenido_comentario)) {
+        changeDetails.push(`contenido_comentario: "${action.contenido_comentario || ''}" → "${payload.contenido_comentario || ''}"`)
+      }
+    }
+
+    // Campo: acciones_futuras_propuestas
+    if (payload.acciones_futuras_propuestas !== undefined) {
+      updates.push('acciones_futuras_propuestas = ?')
+      params.push(payload.acciones_futuras_propuestas)
+      if (String(action.acciones_futuras_propuestas) !== String(payload.acciones_futuras_propuestas)) {
+        changeDetails.push(`acciones_futuras_propuestas: "${action.acciones_futuras_propuestas || ''}" → "${payload.acciones_futuras_propuestas || ''}"`)
+      }
+    }
+
+    // Campo Booleano: requiere_nueva_nc
+    if (payload.requiere_nueva_nc !== undefined) {
+      const newValueBinary = payload.requiere_nueva_nc ? 1 : 0
+      updates.push('requiere_nueva_nc = ?')
+      params.push(newValueBinary)
+      if (String(action.requiere_nueva_nc) !== String(newValueBinary)) {
+        changeDetails.push(`requiere_nueva_nc: "${action.requiere_nueva_nc || 0}" → "${newValueBinary}"`)
+      }
+    }
+
+    // 4. GESTIÓN DEL CAMBIO DE ESTADO
+    if (payload.estado_accion !== undefined) {
       const newState = String(payload.estado_accion)
-      if(!ALLOWED.includes(newState)) return res.status(400).json({ error: 'invalid_state' })
-      const prev = action.estado_accion
-      // update state and timestamp
+      if (!ALLOWED.includes(newState)) return res.status(400).json({ error: 'invalid_state' })
+      const prevState = action.estado_accion
+
       updates.push('estado_accion = ?')
       params.push(newState)
       updates.push('fecha_accion = NOW()')
 
-      // insert history with optional comentario
-      try{
-        await pool.execute('INSERT INTO ACCIONES_CORRECTIVAS_HIST (accion_id, estado_anterior, estado_nuevo, usuario_id, comentario, fecha_snapshot) VALUES (?, ?, ?, ?, ?, NOW())', [id, prev, newState, user.id || null, payload.comentario || null])
-      }catch(e){ console.error('insert accion hist error', e) }
+      // Registrar cambio de estado en el historial
+      try {
+        await pool.execute(
+          `INSERT INTO ACCIONES_CORRECTIVAS_HIST (accion_id, estado_anterior, estado_nuevo, usuario_id, comentario, fecha_snapshot) VALUES (?, ?, ?, ?, ?, NOW())`,
+          [id, prevState, newState, user.id || null, payload.comentario || null]
+        )
+      } catch (e) { console.error('insert accion hist error', e) }
 
-      // if comentario provided, also reflect it on the main action record so it appears on the card
-      if(payload.comentario && String(payload.comentario).trim() !== ''){
-        // ensure we overwrite contenido_comentario unless the payload also included it explicitly
-        if(!Object.prototype.hasOwnProperty.call(payload, 'contenido_comentario')){
+      // Si viene un comentario en el cambio de estado, actualizar la tarjeta principal
+      if (payload.comentario && String(payload.comentario).trim() !== '') {
+        if (payload.contenido_comentario === undefined) {
           updates.push('contenido_comentario = ?')
           params.push(payload.comentario)
         }
       }
 
-      // notify responsables of NC if any
-      try{
+      // Enviar notificaciones a los responsables
+      try {
         const [resps] = await pool.execute('SELECT usuario_id FROM AUDITORIA_NC_RESPONSABLES WHERE auditoria_nc_id = ?', [action.auditoria_nc_id])
-        const msg = `Acción correctiva #${id} actualizada: ${prev} -> ${newState}`
-        for(const r of (resps||[])){
+        const msg = `Acción correctiva #${id} actualizada: ${prevState} -> ${newState}`
+        for (const r of (resps || [])) {
           await pool.execute('INSERT INTO NOTIFICACIONES (usuario_id, tipo, mensaje, link) VALUES (?, ?, ?, ?)', [r.usuario_id, 'ACCION_UPDATED', msg, `/nc/${action.auditoria_nc_id}`])
         }
-      }catch(e){ console.error('notify responsables on action update error', e) }
+      } catch (e) { console.error('notify responsables error', e) }
     }
 
-    // If we have updates to apply, run the UPDATE
-    if(updates.length){
+    // 5. EJECUCIÓN DE LA ACTUALIZACIÓN EN BASE DE DATOS
+    if (updates.length > 0) {
       const sql = `UPDATE ACCIONES_CORRECTIVAS SET ${updates.join(', ')} WHERE id = ?`
-      const sqlParams = [ ...params, id ]
-      try{
+      const sqlParams = [...params, id]
+      try {
         await pool.execute(sql, sqlParams)
-      }catch(e){ console.error('update accion execute error', e, sql, sqlParams) }
+      } catch (e) { console.error('update accion execute error', e) }
     }
 
-    if(changeDetails.length){
-      try{
-        await pool.execute('INSERT INTO ACCIONES_CORRECTIVAS_HIST (accion_id, estado_anterior, estado_nuevo, usuario_id, comentario, fecha_snapshot) VALUES (?, ?, ?, ?, ?, NOW())', [id, null, null, user.id || null, `Campos modificados: ${changeDetails.join('; ')}`])
-      }catch(e){ console.error('insert accion field-change hist error', e) }
+    // Registrar los cambios de texto específicos en el historial
+    if (changeDetails.length > 0) {
+      try {
+        const textoHistorial = `Campos modificados: ${changeDetails.join('; ')}`
+        await pool.execute(
+          `INSERT INTO ACCIONES_CORRECTIVAS_HIST (accion_id, estado_anterior, estado_nuevo, usuario_id, comentario, fecha_snapshot) VALUES (?, ?, ?, ?, ?, NOW())`,
+          [id, null, null, user.id || null, textoHistorial]
+        )
+      } catch (e) { console.error('insert field-change hist error', e) }
     }
 
+    // 6. RETORNAR EL REGISTRO ACTUALIZADO AL CLIENTE
     const [updated] = await pool.execute('SELECT * FROM ACCIONES_CORRECTIVAS WHERE id = ?', [id])
     return res.json(updated[0])
-  }catch(err){ console.error('updateAction error', err); return res.status(500).json({ error: 'internal_error' }) }
+  } catch (err) {
+    console.error('updateAction error', err)
+    return res.status(500).json({ error: 'internal_error' })
+  }
 }
 
 async function getActionHistory(req, res){
@@ -196,7 +234,7 @@ async function deleteAction(req, res){
     // Borrar hijos antes que padres. Usamos [...toDelete] (spread) para clonar
     // antes de .reverse(): los arreglos se pasan por referencia y reverse()
     // muta in-place; sin copia, toDelete quedaría invertido también.
-    // Ver Aprendizaje.md → «Clonación superficial antes de reverse()».
+    // Ver docs/aprendizajes/05-clonacion-superficial-reverse.md
     const ordered = [...toDelete].reverse()
     for(const actionId of ordered){
       await pool.execute('DELETE FROM ACCIONES_CORRECTIVAS WHERE id = ?', [actionId])

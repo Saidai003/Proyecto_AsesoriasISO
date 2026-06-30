@@ -43,6 +43,8 @@ La IA no reemplaza al ingeniero. Reemplaza la escritura manual de código. El in
 | [DT-003](./DT-003-idor-faltante.md) | Alta | Seguridad | Varios controllers |
 | [DT-004](./DT-004-console-logs-debug.md) | Baja | Limpieza | accionesController.js |
 | [DT-005](./DT-005-tests-faltantes.md) | Media | Calidad | pruebas/ |
+| [DT-007](./DT-007-historial-acciones-duplicado.md) | Baja | Mantenibilidad | accionesController.js |
+| [DT-008](./DT-008-validacion-acciones-vacias.md) | Media | Validación | ncController.js, ActionKanbanBoard.jsx |
 
 ---
 
