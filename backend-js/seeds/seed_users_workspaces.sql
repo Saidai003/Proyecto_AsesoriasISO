@@ -1,6 +1,5 @@
 -- Seed: workspaces and users (test accounts)
--- charset
-SET NAMES 'utf8mb4';
+/*!40101 SET NAMES utf8mb4 */;
 
 -- Create a default workspace (idempotente)
 INSERT INTO ESPACIO_TRABAJO (nombre_cliente)
