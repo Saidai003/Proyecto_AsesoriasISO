@@ -111,8 +111,8 @@ async function updateNC(req, res){
       if(newFlow !== current){
         // enforce role rules
         if(role === 'Responsable SGC' || isAdmin){
-          if(current !== 'Abierta'){ return res.status(403).json({ error: 'forbidden' }) }
-          if(!['Análisis','Ejecución'].includes(newFlow)){ return res.status(400).json({ error: 'invalid_target_state' }) }
+          // Responsable SGC: libre entre Abierta ↔ Análisis ↔ Ejecución
+          if(!['Abierta','Análisis','Ejecución'].includes(newFlow)){ return res.status(400).json({ error: 'invalid_target_state' }) }
         }else if(role === 'Evaluador' || isAdmin){
           if(!['Abierta','Verificación','Cerrada'].includes(newFlow)){ return res.status(400).json({ error: 'invalid_target_state' }) }
         }else{

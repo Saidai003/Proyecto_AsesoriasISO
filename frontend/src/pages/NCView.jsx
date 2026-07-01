@@ -291,6 +291,7 @@ export default function NCView(){
                   )}
                   {isResponsable && (
                     <>
+                      <button onClick={()=>{ setFlowState('Abierta'); setFlowOpen(false) }} className="block w-full text-left px-3 py-2 hover:bg-slate-100">Abierta</button>
                       <button onClick={()=>{ setFlowState('Análisis'); setFlowOpen(false) }} className="block w-full text-left px-3 py-2 hover:bg-slate-100">Análisis</button>
                       <button onClick={()=>{ setFlowState('Ejecución'); setFlowOpen(false) }} className="block w-full text-left px-3 py-2 hover:bg-slate-100">Ejecución</button>
                     </>
