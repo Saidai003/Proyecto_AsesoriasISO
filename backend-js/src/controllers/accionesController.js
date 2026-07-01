@@ -246,8 +246,6 @@ async function deleteAction(req, res){
   }
 }
 
-module.exports = { updateAction, getActionHistory, deleteAction }
-
 async function getAccionesByEvaluacion(req, res){
   try{
     const evalId = Number(req.params.id)
@@ -257,4 +255,4 @@ async function getAccionesByEvaluacion(req, res){
   }catch(e){ console.error('getAccionesByEvaluacion error', e); return res.status(500).json({ error: 'internal' }) }
 }
 
-module.exports.getAccionesByEvaluacion = getAccionesByEvaluacion
+module.exports = { updateAction, getActionHistory, deleteAction, getAccionesByEvaluacion }

@@ -51,8 +51,8 @@ Implementación del flujo completo de cambio obligatorio de contraseña en prime
     - **Validates: Requirements 2.3, 2.4**
     - Usar `fast-check` para generar combinaciones de estado y credenciales inválidas, verificar que siempre se retorna el mismo error genérico
 
-- [ ] 3. Endpoint de cambio de contraseña de primer login
-  - [-] 3.1 Crear función `firstLoginPasswordChange` en `backend-js/src/controllers/authController.js`
+- [x] 3. Endpoint de cambio de contraseña de primer login
+  - [x] 3.1 Crear función `firstLoginPasswordChange` en `backend-js/src/controllers/authController.js`
     - Implementar rate limiting en memoria (Map con clave userId, máx 5 intentos en 15 min)
     - Extraer `{ userId, currentPassword, newPassword }` del body
     - Validar campos presentes y tipos
@@ -71,7 +71,7 @@ Implementación del flujo completo de cambio obligatorio de contraseña en prime
     - Exportar `firstLoginPasswordChange` en el module.exports
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 5.1, 5.2, 5.4, 5.5_
 
-  - [~] 3.2 Registrar ruta `POST /auth/first-login-password` en `backend-js/src/routes/auth.js`
+  - [x] 3.2 Registrar ruta `POST /auth/first-login-password` en `backend-js/src/routes/auth.js`
     - Importar `firstLoginPasswordChange` desde `authController`
     - Registrar la ruta SIN middleware de autenticación (endpoint público)
     - _Requirements: 3.1_
@@ -98,11 +98,11 @@ Implementación del flujo completo de cambio obligatorio de contraseña en prime
     - **Validates: Requirements 5.4**
     - Usar `fast-check` para generar secuencias de N intentos fallidos y verificar que el 6to+ siempre retorna 429
 
-- [~] 4. Checkpoint - Backend completo
+- [ ] 4. Checkpoint - Backend completo
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 5. Modal de cambio de contraseña en frontend
-  - [~] 5.1 Crear componente `ChangePasswordModal.jsx` en `frontend/src/components/`
+  - [ ] 5.1 Crear componente `ChangePasswordModal.jsx` en `frontend/src/components/`
     - Props: `userId`, `currentPassword`, `onSuccess`
     - Estado interno: `newPassword`, `confirmPassword`, `error`, `loading`
     - Modal no dismissible (sin cerrar con Escape, clic fuera, ni botón X)
@@ -114,7 +114,7 @@ Implementación del flujo completo de cambio obligatorio de contraseña en prime
     - Indicador de carga mientras la solicitud está en curso
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 4.8, 5.3_
 
-  - [~] 5.2 Modificar `Login.jsx` en `frontend/src/pages/Login.jsx` para manejar `requires_password_change`
+  - [ ] 5.2 Modificar `Login.jsx` en `frontend/src/pages/Login.jsx` para manejar `requires_password_change`
     - Agregar estados: `pendingUserId` y `pendingPassword` (almacenados solo en memoria local del componente)
     - En `submit`: si la respuesta contiene `status === 'requires_password_change'`, guardar userId y password en estado local
     - Renderizar `<ChangePasswordModal>` condicionalmente cuando `pendingUserId !== null`
@@ -122,13 +122,13 @@ Implementación del flujo completo de cambio obligatorio de contraseña en prime
     - Bloquear navegación mientras el modal es visible (listener `beforeunload`)
     - _Requirements: 4.1, 4.4, 4.5, 4.9_
 
-  - [~] 5.3 Modificar `AuthContext.jsx` en `frontend/src/AuthContext.jsx`
+  - [ ] 5.3 Modificar `AuthContext.jsx` en `frontend/src/AuthContext.jsx`
     - Modificar función `login` para que retorne el body completo sin lanzar error cuando `status === 'requires_password_change'`
     - Agregar método `setAuthFromResponse(response)` que: almacene accessToken, decodifique el JWT, establezca user, y programe refresh
     - Exponer `setAuthFromResponse` en el Provider value
     - _Requirements: 4.5_
 
-- [~] 6. Checkpoint - Frontend completo
+- [ ] 6. Checkpoint - Frontend completo
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 7. Tests de frontend
@@ -149,7 +149,7 @@ Implementación del flujo completo de cambio obligatorio de contraseña en prime
     - Verificar que onSuccess del modal llama a setAuthFromResponse y navega a /lobby
     - _Requirements: 4.1, 4.5_
 
-- [~] 8. Checkpoint final
+- [ ] 8. Checkpoint final
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes

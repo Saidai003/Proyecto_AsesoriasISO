@@ -25,4 +25,4 @@ if (!payload.accion || !String(payload.accion).trim()) {
 
 ## Estado
 
-Pendiente
+Completado (30/06/2026) — Validación backend agregada en `createAction` de `ncController.js`.

@@ -223,8 +223,14 @@ async function createAction(req, res){
     if (!check || check.length === 0) return res.status(404).json({ error: 'not_found' });
 
     const payload = req.body || {}
+
+    // Validar que la acción no quede vacía (RF-AC-01-CA-007)
+    if (!payload.accion || !String(payload.accion).trim()) {
+      return res.status(400).json({ error: 'accion_required' })
+    }
+
     const accion_previa_id = payload.accion_previa_id || null
-    const accion = payload.accion || ''
+    const accion = payload.accion
     const contenido_comentario = payload.contenido_comentario || ''
     const estado_accion = payload.estado_accion || 'Pendiente'
     const acciones_futuras_propuestas = payload.acciones_futuras_propuestas || ''

@@ -125,7 +125,7 @@ Asesorías ISO RCR SpA es una empresa chilena de consultoría y capacitación en
 
 El proyecto presentado en este reporte corresponde al desarrollo de una plataforma web para ejecutar GAP Análisis y gestionar evidencias asociadas a cláusulas de ISO 9001:2015. El GAP Análisis es una auditoría preliminar que compara el estado actual de una organización con los requisitos de una norma, permitiendo identificar incumplimientos, evidencias faltantes y acciones necesarias para avanzar hacia la certificación.
 
-Actualmente, el proceso de diagnóstico y seguimiento se apoya fuertemente en hojas de cálculo, carpetas compartidas y comunicación manual entre consultores, validadores y responsables del Sistema de Gestión de Calidad (SGC). Esta forma de trabajo dificulta la trazabilidad, aumenta el riesgo de pérdida o duplicación de información y limita la segregación de datos entre clientes. Por ello, el proyecto busca sentar las bases de un servicio web tipo SaaS que permita estandarizar el diagnóstico, centralizar evidencias y controlar el avance de No Conformidades (NC) de forma segura.
+Actualmente, el proceso de diagnóstico y seguimiento se apoya fuertemente en hojas de cálculo, carpetas compartidas y comunicación manual entre consultores, evaluadores y responsables del Sistema de Gestión de Calidad (SGC). Esta forma de trabajo dificulta la trazabilidad, aumenta el riesgo de pérdida o duplicación de información y limita la segregación de datos entre clientes. Por ello, el proyecto busca sentar las bases de un servicio web tipo SaaS que permita estandarizar el diagnóstico, centralizar evidencias y controlar el avance de No Conformidades (NC) de forma segura.
 
 El presente informe consolida el estado de avance del proyecto, incorporando la información existente del reporte preliminar, el Documento de Especificación de Requisitos de Software (SRS) versión 3.1, la hoja de seguimiento de tareas y los ajustes de alcance definidos para hacer viable el MVP dentro de una planificación de seis semanas, equivalente a 210 horas de trabajo de desarrollo tras el trabajo inicial de levantamiento de requerimientos y diseño.
 
@@ -275,11 +275,11 @@ A partir de finales de mayo se comenzó a traspasar progresivamente las tareas r
 
 \subsection{Justificación de herramientas técnicas}
 
-La selección tecnológica del MVP busca equilibrar rapidez de desarrollo, mantenibilidad, escalabilidad y disponibilidad de documentación oficial. En la capa de presentación se utiliza una SPA construida con Vite y React, coherente con la estructura del repositorio en la carpeta \texttt{frontend/}. React aporta un modelo de componentes reutilizables que facilita dividir la interfaz en piezas mantenibles y reducir deuda técnica, mientras que Vite entrega un entorno de desarrollo liviano, rápido y adecuado para construir una aplicación web de una sola página. En la capa backend se utiliza Express.js sobre Node.js, organizado en la carpeta \texttt{backend-js/}, lo que permite exponer servicios HTTP de forma simple y mantener una separación clara entre frontend, API y persistencia.
+La selección tecnológica del MVP busca equilibrar rapidez de desarrollo, mantenibilidad, escalabilidad y disponibilidad de documentación oficial. En la capa de presentación se utiliza una SPA construida con Vite y React, coherente con la estructura del repositorio en la carpeta \texttt{frontend/}. React aporta un modelo de componentes reutilizables que facilita dividir la interfaz en piezas mantenibles y reducir deuda técnica, mientras que Vite entrega un entorno de desarrollo liviano, rápido y adecuado para construir una aplicación web de una sola página. Se incorporan además \texttt{chart.js} con \texttt{react-chartjs-2} para gráficos radar de cumplimiento por cláusula en los dashboards, \texttt{react-hook-form} para formularios sin re-renders innecesarios y \texttt{react-idle-timer} para cierre automático de sesión tras inactividad prolongada. En la capa backend se utiliza Express.js sobre Node.js, organizado en la carpeta \texttt{backend-js/}, lo que permite exponer servicios HTTP de forma simple y mantener una separación clara entre frontend, API y persistencia.
 
-La capa de servicios se organiza mediante una API REST, debido a que este estilo arquitectónico desacopla cliente y servidor usando convenciones HTTP y JSON. Esto permite que el frontend, futuras integraciones, automatizaciones o servicios de IA puedan interactuar con el backend sin depender de una interfaz única. Para persistencia se utiliza MySQL, ya que la empresa cuenta con su propio servidor MySQL y el dominio del sistema contiene relaciones claras entre usuarios, espacios de trabajo, requisitos, evidencias, No Conformidades, acciones correctivas e historial. El enfoque relacional permite mantener integridad y consistencia transaccional mediante propiedades ACID, especialmente relevantes para trazabilidad y auditoría (se considera a futuro aplicar una tecnologia de base de datos distinta y mas robusta).
+La capa de servicios se organiza mediante una API REST, debido a que este estilo arquitectónico desacopla cliente y servidor usando convenciones HTTP y JSON. Esto permite que el frontend, futuras integraciones, automatizaciones o servicios de IA puedan interactuar con el backend sin depender de una interfaz única. Para persistencia se utiliza MySQL, ya que la empresa cuenta con su propio servidor MySQL y el dominio del sistema contiene relaciones claras entre usuarios, espacios de trabajo, requisitos, evidencias, No Conformidades, acciones correctivas e historial. El enfoque relacional permite mantener integridad y consistencia transaccional mediante propiedades ACID, especialmente relevantes para trazabilidad y auditoría (se considera a futuro aplicar una tecnologia de base de datos distinta y mas robusta). Para el almacenamiento de archivos de evidencia se integra Google Drive mediante su API REST y la librería \texttt{googleapis}, organizando carpetas por workspace y ambiente (Development/Production); cada evidencia en la base de datos almacena una referencia \texttt{drive://\{id\}} que permite recuperar el archivo desde Drive sin duplicar contenido en la base relacional.
 
-Para las interacciones en tiempo real se incorpora WebSockets. Esta decisión reconsidera el ajuste de alcance inicial, donde el chat había quedado oficialmente excluido como WebSocket o Socket.io y se planteaba como JSON persistido y actualizado vía CRUD. Durante el desarrollo se identificó que ese enfoque limitaba la inmediatez de las respuestas y la escalabilidad futura de las conversaciones, ya que los mensajes deben poder asociarse a distintos elementos del dominio, tales como evidencias, No Conformidades, acciones correctivas y futuros módulos. Para las notificaciones internas no se había fijado oficialmente una tecnología específica; por ello, se decide reutilizar la misma conexión WebSocket del chat, simplificando la arquitectura y reduciendo la sobrecarga de conexiones simultáneas (se continua estudiando y desarrollando las funciones en esta tecnologia)
+Para las interacciones en tiempo real se utiliza WebSockets mediante la librería \texttt{ws} integrada directamente en el servidor HTTP de Node.js. Esta decisión reconsidera el ajuste de alcance inicial, donde el chat había quedado oficialmente excluido como WebSocket o Socket.io y se planteaba como JSON persistido y actualizado vía CRUD. Durante el desarrollo se identificó que ese enfoque limitaba la inmediatez de las respuestas y la escalabilidad futura de las conversaciones, ya que los mensajes deben poder asociarse a distintos elementos del dominio, tales como evidencias, No Conformidades, acciones correctivas y futuros módulos. Para las notificaciones internas se reutiliza la misma conexión WebSocket del chat, simplificando la arquitectura y reduciendo la sobrecarga de conexiones simultáneas. El sistema cuenta además con un worker de notificaciones programadas que cada 30 segundos convierte registros de \texttt{SCHEDULED\_NOTIFICATIONS} en notificaciones reales cuando llega su fecha de activación.
 
 En seguridad se adopta JWT para autenticación basada en tokens firmados, siguiendo el estándar RFC 7519. Esta decisión facilita un esquema de autenticación stateless, adecuado para servicios web escalables y separación entre frontend y backend. Para reproducibilidad del entorno se incorporan scripts de seeding, con el fin de cargar la estructura ISO 9001:2015 de forma consistente en desarrollo, pruebas y despliegue. Finalmente, la gestión del proyecto se apoya en Kanban y Jira para limitar trabajo en progreso, visualizar cuellos de botella, mantener trazabilidad de tareas y migrar progresivamente desde la hoja de cálculo hacia una herramienta profesional de gestión ágil.
 
@@ -287,7 +287,7 @@ En seguridad se adopta JWT para autenticación basada en tokens firmados, siguie
 
 Para complementar el diseño técnico del MVP se elaboraron diagramas bajo el modelo C4, con el propósito de representar el sistema desde distintos niveles de abstracción. Estos documentos permiten explicar la relación entre usuarios, plataforma, contenedores principales y componentes internos, facilitando la comunicación del diseño entre el equipo técnico y la contraparte de negocio.
 
-El diagrama de contexto presenta la plataforma como un sistema web utilizado por el Administrador, el Validador y el Responsable del SGC, destacando su interacción con los espacios de trabajo y la base de datos del servicio.
+El diagrama de contexto presenta la plataforma como un sistema web utilizado por el Administrador, el Evaluador y el Responsable del SGC, destacando su interacción con los espacios de trabajo y la base de datos del servicio.
 
 \begin{figure}[H]
     \centering
@@ -329,8 +329,8 @@ A nivel de componentes, se documentaron por separado el frontend y la API backen
 \hline
 \rowcolor{gray!20}\textbf{Rol} & \textbf{Responsabilidad principal} \\ \hline
 Administrador & Gestiona espacios de trabajo, usuarios, roles y configuración inicial del sistema. Asigna contraseñas genéricas y controla la gobernanza general. \\ \hline
-Validador & Revisa auditorías, evidencias y No Conformidades. Puede aprobar, rechazar, comentar y mover estados de revisión sin editar el contenido original. \\ \hline
-Responsable del SGC & Opera el espacio de su organización, registra información, carga evidencias, responde NC y mantiene actualizados los antecedentes de cumplimiento. \\ \hline
+Evaluador & Revisa auditorías, evidencias y No Conformidades (brechas). Puede aprobar, rechazar, comentar y mover estados de revisión sin editar el contenido original. Marca requisitos como No Aplica según ISO 9001 Req 4.3. \\ \hline
+Responsable del SGC & Opera el espacio de su organización, registra información, carga evidencias, responde NC, gestiona acciones correctivas y mantiene actualizados los antecedentes de cumplimiento. \\ \hline
 \end{tabular}
 \caption{Roles principales definidos para el MVP.}
 \label{tab:roles}
@@ -343,14 +343,19 @@ El alcance vigente del MVP incluye los siguientes módulos:
 \begin{enumerate}
     \item Administración de usuarios, roles y espacios de trabajo.
     \item Login seguro con JWT, refresh token y cambio de contraseña dentro de la plataforma.
-    \item Seeding de requisitos de ISO 9001:2015 en la base de datos.
-    \item Navegación por requisitos y apertura de No Conformidades.
-    \item Gestión de estados de NC: Abierta, Análisis, Implementación, Verificación y Cerrada.
-    \item Carga, visualización, aprobación, rechazo e historial de evidencias.
-    \item Chat contextual en tiempo real mediante WebSockets, asociado a No Conformidades, evidencias, acciones correctivas y futuros elementos trazables.
-    \item Notificaciones internas en tiempo real mediante WebSockets, reutilizando la misma conexión del chat para reducir sobrecarga de conexiones.
-    \item Cálculo de cumplimiento y dashboard numérico básico.
-    \item Pruebas unitarias, integración, aislamiento multi-tenancy y UAT.
+    \item Activación de cuenta en primer ingreso con cambio obligatorio de contraseña.
+    \item Cierre automático de sesión por inactividad prolongada (\texttt{react-idle-timer}).
+    \item Seeding de requisitos de ISO 9001:2015 en la base de datos mediante script idempotente.
+    \item Navegación por requisitos ISO con árbol jerárquico y apertura de No Conformidades (brechas).
+    \item Gestión de estados de NC: Abierta, Análisis, Ejecución, Verificación y Cerrada.
+    \item Marcado de requisitos como No Aplica (NA) según ISO 9001:2015 Req 4.3, con exclusión automática del cálculo de cumplimiento.
+    \item Gestión de acciones correctivas con estructura de lista enlazada (padre/hijo), tablero Kanban con drag-and-drop, estados (Pendiente, En Progreso, Eficaz, No Eficaz), historial campo por campo y eliminación en cascada.
+    \item Carga, visualización, aprobación, rechazo e historial de evidencias almacenadas en Google Drive con carpetas segregadas por workspace.
+    \item Chat contextual en tiempo real mediante WebSockets, asociado a No Conformidades, evidencias, acciones correctivas y requisitos.
+    \item Notificaciones internas en tiempo real mediante WebSockets, reutilizando la misma conexión del chat, con worker de notificaciones programadas para verificación de eficacia.
+    \item Dashboard analítico con gráficos radar de cumplimiento por cláusula, KPIs de resolución y eficiencia, y vistas diferenciadas por rol (Administrador, Evaluador, Responsable SGC, Operativo).
+    \item Lobbies diferenciados por rol con métricas y accesos contextualizados.
+    \item Pruebas unitarias, de integración y de partición de equivalencia; pruebas multi-tenancy y UAT planificadas.
 \end{enumerate}
 
 \subsection{Funcionalidades excluidas por ajuste de alcance}
@@ -360,12 +365,12 @@ Para viabilizar el proyecto en seis semanas, se excluyen explícitamente de la E
 \begin{enumerate}
     \item Recuperación de contraseña, onboarding y notificaciones mediante correo electrónico.
     \item WebSockets o Socket.io para chat en tiempo real; el chat queda como JSON persistido y actualizado vía CRUD (exclusión oficial del ajuste de alcance inicial; posteriormente se reconsidera e implementa mediante WebSockets, ya que se requiere inmediatez y asociación escalable de mensajes con evidencias, No Conformidades, acciones correctivas y futuros elementos del sistema).
-    \item Almacenamiento en S3 u otro sistema externo; las evidencias se guardan directamente en MySQL.
+    \item Almacenamiento en AWS S3; las evidencias se almacenan en Google Drive como solución intermedia más simple, con carpetas segregadas por workspace y referencias \texttt{drive://\{id\}} en la base de datos.
     \item Carga dinámica de requisitos normativos por CSV; ISO 9001:2015 se carga por script de seeding.
     \item Edición documental en línea e importación flexible de herramientas Excel.
-    \item Flujos de aprobación complejos, firma múltiple o validadores consecutivos.
-    \item Árbol jerárquico de acciones correctivas padre/hijo.
-    \item Historial microscópico de cambios de texto; se registra solo usuario, fecha, estado o reemplazo relevante.
+    \item Flujos de aprobación complejos, firma múltiple o evaluadores consecutivos.
+    \item Árbol jerárquico de acciones correctivas padre/hijo (exclusión reconsiderada: se implementó una lista enlazada donde cada acción referencia a su predecesora mediante \texttt{accion\_previa\_id}, permitiendo profundidad ilimitada y visualización en tablero Kanban).
+    \item Historial microscópico de cambios de texto en todas las entidades del sistema; se implementó historial detallado para acciones correctivas (campo por campo) y para estados de No Conformidades y evaluaciones, pero no para todos los campos de texto de la plataforma.
     \item Soporte multi-norma, automatizaciones de riesgo/FODA, PEST, Cinco Fuerzas de Porter y cualquier herramienta no incluida en el flujo GAP/NC básico.
 \end{enumerate}
 
@@ -538,7 +543,7 @@ Dado que la plataforma operará con múltiples clientes, la validación de aisla
 
 \subsection{Pruebas de aceptación de usuario}
 
-Las pruebas UAT se proyectan sobre tres casos representativos: Administrador, Validador y Responsable del SGC. Para cada rol se espera verificar las historias de usuario vigentes y sus criterios de aceptación: administración de espacios y usuarios, navegación por requisitos ISO, apertura y seguimiento de No Conformidades, carga y revisión de evidencias, comentarios en tiempo real, notificaciones WebSocket e historial acotado. Estas pruebas aún están pendientes y se realizarán de acuerdo con el cronograma estipulado para el cierre del proyecto. Las historias relacionadas con correo transaccional, S3, carga CSV, edición documental, flujos complejos o soporte multi-norma quedan excluidas de esta validación porque fueron removidas del alcance del MVP.
+Las pruebas UAT se proyectan sobre tres casos representativos: Administrador, Evaluador y Responsable del SGC. Para cada rol se espera verificar las historias de usuario vigentes y sus criterios de aceptación: administración de espacios y usuarios, navegación por requisitos ISO, apertura y seguimiento de No Conformidades, carga y revisión de evidencias, comentarios en tiempo real, notificaciones WebSocket e historial acotado. Estas pruebas aún están pendientes y se realizarán de acuerdo con el cronograma estipulado para el cierre del proyecto. Las historias relacionadas con correo transaccional, S3, carga CSV, edición documental, flujos complejos o soporte multi-norma quedan excluidas de esta validación porque fueron removidas del alcance del MVP.
 
 \begin{table}[H]
 \centering
@@ -548,7 +553,7 @@ Las pruebas UAT se proyectan sobre tres casos representativos: Administrador, Va
 Unitarias & Verificar controladores, servicios y funciones aisladas en escenarios básicos. & Ejecutadas exitosamente en los archivos unitarios disponibles; evidencia incorporada en capturas de terminal. \\ \hline
 Integración & Comprobar flujos base de autenticación, usuarios y servicio de evidencias/Drive. & Ejecutadas exitosamente en los archivos de integración disponibles; evidencia incorporada en capturas de terminal. \\ \hline
 Multi-tenancy & Confirmar aislamiento estricto entre espacios de trabajo. & Pendiente; se ejecutará según cronograma como validación crítica final. \\ \hline
-UAT & Validar flujos reales con Administrador, Validador y Responsable del SGC. & Pendiente; se preparará, ejecutará y cerrará según cronograma con la contraparte. \\ \hline
+UAT & Validar flujos reales con Administrador, Evaluador y Responsable del SGC. & Pendiente; se preparará, ejecutará y cerrará según cronograma con la contraparte. \\ \hline
 \end{tabular}
 \caption{Plan de validación del MVP.}
 \label{tab:validacion}
@@ -571,7 +576,7 @@ La distribución de 195 unidades completadas, 8 en progreso y 78 pendientes indi
 Pruebas unitarias & Verificar controladores, servicios y funciones aisladas en escenarios básicos. & Ejecutadas exitosamente en la suite disponible. & Respaldan estabilidad inicial, pero no implican cobertura total. \\ \hline
 Pruebas de integración & Comprobar flujos base de autenticación, usuarios y servicio de evidencias/Drive. & Ejecutadas exitosamente en la suite disponible. & Respaldan integración inicial de módulos específicos, no todos los flujos del sistema. \\ \hline
 Multi-tenancy & Verificar separación estricta de datos entre clientes y espacios de trabajo. & Pendiente según cronograma. & Es condición crítica antes de considerar estable la entrega final. \\ \hline
-UAT & Validar flujos reales con Administrador, Validador y Responsable del SGC. & Pendiente según cronograma. & Permitirá confirmar aceptación funcional con contraparte. \\ \hline
+UAT & Validar flujos reales con Administrador, Evaluador y Responsable del SGC. & Pendiente según cronograma. & Permitirá confirmar aceptación funcional con contraparte. \\ \hline
 \end{tabular}
 \caption{Análisis de resultados de validación del MVP.}
 \label{tab:analisis-validacion-resultados}
@@ -589,7 +594,7 @@ Para completar el proyecto se propone priorizar las tareas restantes en el sigui
     \item Cerrar la aprobación formal del alcance ajustado con la contraparte.
     \item Finalizar historial acotado, filtros de gobernanza y dashboard numérico.
     \item Ejecutar pruebas de aislamiento multi-tenancy sobre usuarios, espacios, requisitos, NC y evidencias.
-    \item Preparar y ejecutar tres casos UAT representativos: Administrador, Validador y Responsable del SGC.
+    \item Preparar y ejecutar tres casos UAT representativos: Administrador, Evaluador y Responsable del SGC.
     \item Documentar arquitectura mediante C4 y actualizar el informe final.
     \item Corregir hallazgos críticos antes de la entrega.
 \end{enumerate}
