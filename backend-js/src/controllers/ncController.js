@@ -1,4 +1,5 @@
 const { pool } = require('../db');
+const { stripAccents } = require('../utils');
 
 // create a new NC for a requisito (accept requisito_base_id, responsables[])
 async function createNC(req, res){
@@ -116,18 +117,8 @@ async function updateNC(req, res){
         }else if(role === 'Evaluador' || isAdmin){
           if(!['Abierta','Verificación','Cerrada'].includes(newFlow)){ return res.status(400).json({ error: 'invalid_target_state' }) }
         }else{
-          return res.status(403).json({ error: 'forbidden' }) }
-
-        try{
-          if(typeof newFlow === 'string'){
-            const strip = (s) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-            const normalized = strip(newFlow).toLowerCase()
-            const allowed = ['Abierta','Análisis','Ejecución','Verificación','Cerrada']
-            const allowedStripped = allowed.map(a => strip(a).toLowerCase())
-            const idx = allowedStripped.indexOf(normalized)
-            if(idx !== -1) newFlow = allowed[idx]
-          }
-        }catch(e){ console.error('normalize flow error', e) }
+          return res.status(403).json({ error: 'forbidden' })
+        }
 
         if(newFlow === 'Verificación'){
           const fecha = payload.fecha_verificacion_eficacia
