@@ -61,6 +61,13 @@ async function updateAction(req, res) {
       }
     }
 
+    if (payload.comentario && String(payload.comentario).trim() !== '') {
+        if (payload.contenido_comentario === undefined) {
+          updates.push('contenido_comentario = ?')
+          params.push(payload.comentario)
+        }
+    }
+
     // 4. GESTIÓN DEL CAMBIO DE ESTADO
     if (payload.estado_accion !== undefined) {
       const newState = String(payload.estado_accion)
@@ -70,28 +77,26 @@ async function updateAction(req, res) {
       updates.push('estado_accion = ?')
       params.push(newState)
       updates.push('fecha_accion = NOW()')
+      
+      // Solo registrar cambio de estado si realmente cambió
+      if (String(prevState) !== newState) {
+        changeDetails.push(`estado_accion: "${prevState || ''}" → "${newState}"`)
+        
+        try {
+          await pool.execute(
+            `INSERT INTO ACCIONES_CORRECTIVAS_HIST (accion_id, estado_anterior, estado_nuevo, usuario_id, comentario, fecha_snapshot) VALUES (?, ?, ?, ?, ?, NOW())`,
+            [id, prevState, newState, user.id || null, payload.comentario || null]
+          )
+        } catch (e) { console.error('insert accion hist error', e) }
 
-      try {
-        await pool.execute(
-          `INSERT INTO ACCIONES_CORRECTIVAS_HIST (accion_id, estado_anterior, estado_nuevo, usuario_id, comentario, fecha_snapshot) VALUES (?, ?, ?, ?, ?, NOW())`,
-          [id, prevState, newState, user.id || null, payload.comentario || null]
-        )
-      } catch (e) { console.error('insert accion hist error', e) }
-
-      if (payload.comentario && String(payload.comentario).trim() !== '') {
-        if (payload.contenido_comentario === undefined) {
-          updates.push('contenido_comentario = ?')
-          params.push(payload.comentario)
-        }
+        try {
+          const [resps] = await pool.execute('SELECT usuario_id FROM AUDITORIA_NC_RESPONSABLES WHERE auditoria_nc_id = ?', [action.auditoria_nc_id])
+          const msg = `Acción correctiva #${id} actualizada: ${prevState} -> ${newState}`
+          for (const r of (resps || [])) {
+            await pool.execute('INSERT INTO NOTIFICACIONES (usuario_id, tipo, mensaje, link) VALUES (?, ?, ?, ?)', [r.usuario_id, 'ACCION_UPDATED', msg, `/nc/${action.auditoria_nc_id}`])
+          }
+        } catch (e) { console.error('notify responsables error', e) }
       }
-
-      try {
-        const [resps] = await pool.execute('SELECT usuario_id FROM AUDITORIA_NC_RESPONSABLES WHERE auditoria_nc_id = ?', [action.auditoria_nc_id])
-        const msg = `Acción correctiva #${id} actualizada: ${prevState} -> ${newState}`
-        for (const r of (resps || [])) {
-          await pool.execute('INSERT INTO NOTIFICACIONES (usuario_id, tipo, mensaje, link) VALUES (?, ?, ?, ?)', [r.usuario_id, 'ACCION_UPDATED', msg, `/nc/${action.auditoria_nc_id}`])
-        }
-      } catch (e) { console.error('notify responsables error', e) }
     }
 
     // 5. EJECUCIÓN DE LA ACTUALIZACIÓN EN BASE DE DATOS
