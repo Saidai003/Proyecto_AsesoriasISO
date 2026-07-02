@@ -144,11 +144,21 @@ async function listUsers(req, res){
 
 async function listResponsables(req, res){
   try{
-    const [rows] = await pool.execute(
-      `SELECT u.id, u.nombre, u.email FROM USUARIOS u JOIN ROLES r ON u.role_id = r.id WHERE r.nombre = ?`,
-      ['Responsable SGC']
-    );
-    return res.json(rows);
+    const user = req.user
+    const workspaceId = user?.workspace_id || null
+
+    let query, params
+    if (workspaceId) {
+      query = `SELECT u.id, u.nombre, u.email FROM USUARIOS u JOIN ROLES r ON u.role_id = r.id WHERE r.nombre = ? AND u.workspace_id = ?`
+      params = ['Responsable SGC', workspaceId]
+    } else {
+      // Admin sin workspace_id: devolver todos (necesario para asignación cross-workspace)
+      query = `SELECT u.id, u.nombre, u.email FROM USUARIOS u JOIN ROLES r ON u.role_id = r.id WHERE r.nombre = ?`
+      params = ['Responsable SGC']
+    }
+
+    const [rows] = await pool.execute(query, params)
+    return res.json(rows)
   }catch(err){
     console.error('listResponsables error', err);
     return res.status(500).json({ error: 'internal_error' });

@@ -13,6 +13,11 @@ async function markRead(req, res){
   try{
     const id = Number(req.params.id)
     if(!id) return res.status(400).json({ error: 'id required' })
+    const uid = req.user && req.user.id
+    if(!uid) return res.status(401).json({ error: 'unauth' })
+    // Verificar que la notificación pertenece al usuario
+    const [rows] = await pool.execute('SELECT id FROM NOTIFICACIONES WHERE id = ? AND usuario_id = ?', [id, uid])
+    if(!rows || rows.length === 0) return res.status(404).json({ error: 'not_found' })
     await pool.execute('UPDATE NOTIFICACIONES SET read_flag = 1 WHERE id = ?', [id])
     return res.json({ ok: true })
   }catch(err){ console.error('markRead error', err); return res.status(500).json({ error: 'internal_error' }) }

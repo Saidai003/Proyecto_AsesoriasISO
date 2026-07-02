@@ -1,5 +1,5 @@
-const { pool } = require('../db');
-const { stripAccents, formatUtcDateTime } = require('../utils');
+const { pool } = require('../db')
+const { stripAccents, formatUtcDateTime } = require('../utils')
 
 // create a new NC for a requisito (accept requisito_base_id, responsables[])
 async function createNC(req, res){
@@ -47,36 +47,31 @@ async function createNC(req, res){
   }
 }
 
+// delete NC endpoint
 async function deleteNC(req, res){
   try{
-    const id = req.params.id;
-    const workspaceId = req.user.workspace_id || null;
-    if(!id) return res.status(400).json({ error: 'id required' });
+    const id = req.params.id
+    const workspaceId = req.user?.workspace_id || null
+    if(!id) return res.status(400).json({ error: 'id required' })
 
-    // Validate Ownership (IDOR Fix)
-    const [check] = await pool.execute(
-      `SELECT a.id FROM AUDITORIA_NC a JOIN EVALUACION_REQUISITO er ON a.evaluacion_requisito_id = er.id WHERE a.id = ? AND er.workspace_id = ?`,
-      [id, workspaceId]
-    );
-    if (!check || check.length === 0) return res.status(404).json({ error: 'not_found' });
+    const access = await verifyWorkspaceAccess(id, 'nc', workspaceId)
+    if (!access) return res.status(404).json({ error: 'not_found' })
 
-    await pool.execute('DELETE FROM AUDITORIA_NC WHERE id = ?', [id]);
-    // clean pivot if exists
-    await pool.execute('DELETE FROM AUDITORIA_NC_RESPONSABLES WHERE auditoria_nc_id = ?', [id]);
-    return res.json({ id });
+    await pool.execute('DELETE FROM AUDITORIA_NC WHERE id = ?', [id])
+    await pool.execute('DELETE FROM AUDITORIA_NC_RESPONSABLES WHERE auditoria_nc_id = ?', [id])
+    return res.json({ id })
   }catch(err){
-    console.error('deleteNC error', err);
-    return res.status(500).json({ error: 'internal_error' });
+    console.error('deleteNC error', err)
+    return res.status(500).json({ error: 'internal_error' })
   }
 }
 
-// update NC state or validation
 async function updateNC(req, res){
   try{
     const id = Number(req.params.id)
     if(!id) return res.status(400).json({ error: 'id required' })
     const user = req.user
-    const workspaceId = user.workspace_id || null;
+    const workspaceId = user?.workspace_id || null
     const role = user && user.role ? user.role : ''
     const isAdmin = role === 'Admin'
     const payload = req.body || {}
@@ -147,11 +142,10 @@ async function updateNC(req, res){
     }
 
     if(updates.length===0){ return res.status(400).json({ error: 'nothing_to_update' }) }
-    params.push(id)
+    params.push(user.id, id)
     const sql = `UPDATE AUDITORIA_NC SET ${updates.join(', ')}, ultima_edicion_por = ?, fecha_ultima_edicion = NOW() WHERE id = ?`
-    const sqlParams = [ ...(params.slice(0,-1)), user.id, params[params.length-1] ]
     try{
-      await pool.execute(sql, sqlParams)
+      await pool.execute(sql, params)
     }catch(ex){
       console.error('updateNC execute error', ex)
       throw ex
@@ -185,15 +179,15 @@ async function updateNC(req, res){
 async function listActions(req, res){
   try{
     const id = Number(req.params.id)
-    const workspaceId = req.user.workspace_id || null;
+    const workspaceId = req.user?.workspace_id || null
     if(!id) return res.status(400).json({ error: 'id required' })
 
     // Validate Ownership (IDOR Fix)
     const [check] = await pool.execute(
       `SELECT a.id FROM AUDITORIA_NC a JOIN EVALUACION_REQUISITO er ON a.evaluacion_requisito_id = er.id WHERE a.id = ? AND er.workspace_id = ?`,
       [id, workspaceId]
-    );
-    if (!check || check.length === 0) return res.status(404).json({ error: 'not_found' });
+    )
+    if (!check || check.length === 0) return res.status(404).json({ error: 'not_found' })
 
     const [rows] = await pool.execute('SELECT * FROM ACCIONES_CORRECTIVAS WHERE auditoria_nc_id = ? ORDER BY fecha_accion ASC', [id])
     return res.json(rows)
@@ -204,15 +198,15 @@ async function createAction(req, res){
   try{
     const id = Number(req.params.id)
     const user = req.user
-    const workspaceId = user.workspace_id || null;
+    const workspaceId = user?.workspace_id || null
     if(!id) return res.status(400).json({ error: 'id required' })
 
     // Validate Ownership (IDOR Fix)
     const [check] = await pool.execute(
       `SELECT a.id FROM AUDITORIA_NC a JOIN EVALUACION_REQUISITO er ON a.evaluacion_requisito_id = er.id WHERE a.id = ? AND er.workspace_id = ?`,
       [id, workspaceId]
-    );
-    if (!check || check.length === 0) return res.status(404).json({ error: 'not_found' });
+    )
+    if (!check || check.length === 0) return res.status(404).json({ error: 'not_found' })
 
     const payload = req.body || {}
 
@@ -292,7 +286,7 @@ async function listByEvaluacion(req, res){
 async function getNC(req, res){
   try{
     const id = Number(req.params.id)
-    const workspaceId = req.user.workspace_id || null;
+    const workspaceId = req.user?.workspace_id || null
     if(!id) return res.status(400).json({ error: 'id required' })
 
     // Changed to INNER JOIN and added workspace_id check (IDOR Fix)

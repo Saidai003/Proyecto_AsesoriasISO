@@ -1,4 +1,5 @@
 const { pool } = require('../db')
+const { verifyWorkspaceAccess } = require('../lib/workspaceAuth')
 
 const ALLOWED = ['Pendiente','En_Progreso','Eficaz','No_Eficaz']
 
@@ -8,10 +9,9 @@ async function updateAction(req, res) {
     const id = Number(req.params.id)
     if (!id) return res.status(400).json({ error: 'id required' })
     const user = req.user
-    const workspaceId = user.workspace_id || null
-    const payload = req.body || {}
+    const workspaceId = user?.workspace_id || null
 
-    // 2. PROTECCIÓN IDOR: Verificar propiedad en base de datos
+    // 2. PROTECCIÓN IDOR: Verificar propiedad y obtener datos de la acción
     const [rows] = await pool.execute(
       `SELECT ac.* FROM ACCIONES_CORRECTIVAS ac
        JOIN AUDITORIA_NC anc ON ac.auditoria_nc_id = anc.id
@@ -19,17 +19,15 @@ async function updateAction(req, res) {
        WHERE ac.id = ? AND er.workspace_id = ?`,
       [id, workspaceId]
     )
-    if (!rows || rows.length === 0) return res.status(404).json({ error: 'not_found' })
-    const action = rows[0] // Datos actuales en la BD antes del cambio
+    if (!rows || !rows.length) return res.status(404).json({ error: 'not_found' })
+    const action = rows[0]
 
-    // Arreglos para ir armando la consulta SQL final paso a paso
+    const payload = req.body || {}
     const updates = []
     const params = []
     const changeDetails = []
 
-    // 3. PROCESAMIENTO EXPLÍCITO DE CAMPOS (Sin bucles raros)
-
-    // Campo: accion
+    // 3. PROCESAMIENTO EXPLÍCITO DE CAMPOS
     if (payload.accion !== undefined) {
       updates.push('accion = ?')
       params.push(payload.accion)
@@ -38,7 +36,6 @@ async function updateAction(req, res) {
       }
     }
 
-    // Campo: contenido_comentario
     if (payload.contenido_comentario !== undefined) {
       updates.push('contenido_comentario = ?')
       params.push(payload.contenido_comentario)
@@ -47,7 +44,6 @@ async function updateAction(req, res) {
       }
     }
 
-    // Campo: acciones_futuras_propuestas
     if (payload.acciones_futuras_propuestas !== undefined) {
       updates.push('acciones_futuras_propuestas = ?')
       params.push(payload.acciones_futuras_propuestas)
@@ -56,7 +52,6 @@ async function updateAction(req, res) {
       }
     }
 
-    // Campo Booleano: requiere_nueva_nc
     if (payload.requiere_nueva_nc !== undefined) {
       const newValueBinary = payload.requiere_nueva_nc ? 1 : 0
       updates.push('requiere_nueva_nc = ?')
@@ -76,7 +71,6 @@ async function updateAction(req, res) {
       params.push(newState)
       updates.push('fecha_accion = NOW()')
 
-      // Registrar cambio de estado en el historial
       try {
         await pool.execute(
           `INSERT INTO ACCIONES_CORRECTIVAS_HIST (accion_id, estado_anterior, estado_nuevo, usuario_id, comentario, fecha_snapshot) VALUES (?, ?, ?, ?, ?, NOW())`,
@@ -84,7 +78,6 @@ async function updateAction(req, res) {
         )
       } catch (e) { console.error('insert accion hist error', e) }
 
-      // Si viene un comentario en el cambio de estado, actualizar la tarjeta principal
       if (payload.comentario && String(payload.comentario).trim() !== '') {
         if (payload.contenido_comentario === undefined) {
           updates.push('contenido_comentario = ?')
@@ -92,7 +85,6 @@ async function updateAction(req, res) {
         }
       }
 
-      // Enviar notificaciones a los responsables
       try {
         const [resps] = await pool.execute('SELECT usuario_id FROM AUDITORIA_NC_RESPONSABLES WHERE auditoria_nc_id = ?', [action.auditoria_nc_id])
         const msg = `Acción correctiva #${id} actualizada: ${prevState} -> ${newState}`
@@ -111,7 +103,6 @@ async function updateAction(req, res) {
       } catch (e) { console.error('update accion execute error', e) }
     }
 
-    // Registrar los cambios de texto específicos en el historial
     if (changeDetails.length > 0) {
       try {
         const textoHistorial = `Campos modificados: ${changeDetails.join('; ')}`
@@ -133,48 +124,39 @@ async function updateAction(req, res) {
 
 async function getActionHistory(req, res){
   try{
+    // 1. CAPTURA DE PARÁMETROS
+    const user = req.user
+    const workspaceId = user?.workspace_id || null
     const q = req.query.q || ''
     const estado = req.query.estado || ''
     const from = req.query.from || ''
     const to = req.query.to || ''
     const page = Math.max(1, Number(req.query.page) || 1)
     const pageSize = Math.min(200, Math.max(10, Number(req.query.pageSize) || 50))
+
+    // 2. CONSTRUCCIÓN DEL WHERE DINÁMICO
     const where = []
     const params = []
-    // what does where.push do?
-    // it adds a new condition to the where array, which will later be joined with 
-    // ' AND ' to form the WHERE clause of the SQL query. The params array 
-    // collects the corresponding values for the placeholders in the SQL query. 
-    // For example, if q is provided, it adds a condition to search for q 
-    // in either the accion or contenido_comentario fields, and adds the 
-    // corresponding parameters with wildcards for the LIKE operator.
     
-    // What is the LIKE operator?
-    // The LIKE operator in SQL is used to search for a specified pattern in a column. 
-    // It is often used with wildcard characters:
-    // - % represents zero or more characters
-    // - _ represents a single character
-
-    // In conclusion, here we are building a dynamic SQL query based on
-    // the provided filters (q, estado, from, to, accion_id, nc) 
-    // and collecting the parameters for those filters in the params array.
-    // By using parameterized queries, this allows us to execute a 
-    // parameterized query that is safe from SQL injection and can 
-    // handle various combinations of filters.
+    // Filtro multi-tenancy: solo historial de acciones del workspace del usuario
+    if (workspaceId) {
+      where.push('er.workspace_id = ?')
+      params.push(workspaceId)
+    }
+    
     if(q){ where.push('(a.accion LIKE ? OR a.contenido_comentario LIKE ?)'); params.push(`%${q}%`, `%${q}%`) }
     if(estado){ where.push('h.estado_nuevo = ?'); params.push(estado) }
     if(from){ where.push('h.fecha_snapshot >= ?'); params.push(from) }
     if(to){ where.push('h.fecha_snapshot <= ?'); params.push(to) }
-    // allow filtering by accion_id or auditoria_nc_id (nc)
     if(req.query.accion_id){ where.push('h.accion_id = ?'); params.push(Number(req.query.accion_id)) }
     if(req.query.nc){ where.push('a.auditoria_nc_id = ?'); params.push(Number(req.query.nc)) }
+
+    // 3. EJECUCIÓN CON PAGINACIÓN
     const whereSql = where.length ? ('WHERE ' + where.join(' AND ')) : ''
     const offset = (page-1)*pageSize
-    // Use direct numeric injection for LIMIT/OFFSET after sanitizing to avoid
-    // driver/server prepared-statement issues with LIMIT placeholders.
     const safePageSize = Number(pageSize) || 50
     const safeOffset = Number(offset) || 0
-    const sql = `SELECT h.id, h.accion_id, h.estado_anterior, h.estado_nuevo, h.usuario_id, u.nombre as usuario_nombre, h.comentario, h.fecha_snapshot, a.accion, a.nc FROM ACCIONES_CORRECTIVAS_HIST h JOIN ACCIONES_CORRECTIVAS a ON a.id = h.accion_id LEFT JOIN USUARIOS u ON u.id = h.usuario_id ${whereSql} ORDER BY h.fecha_snapshot DESC LIMIT ${safePageSize} OFFSET ${safeOffset}`
+    const sql = `SELECT h.id, h.accion_id, h.estado_anterior, h.estado_nuevo, h.usuario_id, u.nombre as usuario_nombre, h.comentario, h.fecha_snapshot, a.accion, a.nc FROM ACCIONES_CORRECTIVAS_HIST h JOIN ACCIONES_CORRECTIVAS a ON a.id = h.accion_id JOIN AUDITORIA_NC anc ON a.auditoria_nc_id = anc.id JOIN EVALUACION_REQUISITO er ON anc.evaluacion_requisito_id = er.id LEFT JOIN USUARIOS u ON u.id = h.usuario_id ${whereSql} ORDER BY h.fecha_snapshot DESC LIMIT ${safePageSize} OFFSET ${safeOffset}`
     const allParams = params
     console.log('getActionHistory sql:', sql)
     console.log('getActionHistory params length:', allParams.length, 'params:', allParams)
@@ -185,11 +167,13 @@ async function getActionHistory(req, res){
 
 async function deleteAction(req, res){
   try{
+    // 1. VALIDACIÓN INICIAL
     const id = Number(req.params.id)
     if(!id) return res.status(400).json({ error: 'id required' })
     const user = req.user
     const workspaceId = user?.workspace_id || null
 
+    // 2. PROTECCIÓN IDOR: Verificar propiedad y obtener datos de la acción
     const [rows] = await pool.execute(
       `SELECT ac.* FROM ACCIONES_CORRECTIVAS ac
        JOIN AUDITORIA_NC a ON ac.auditoria_nc_id = a.id
@@ -197,28 +181,9 @@ async function deleteAction(req, res){
        WHERE ac.id = ? AND er.workspace_id = ?`,
       [id, workspaceId]
     )
-    if(!rows || !rows.length) return res.status(404).json({ error: 'not_found' })
-    
-    // rows would look like this:
-    // [
-    //   {
-    //     id: 1,
-    //     auditoria_nc_id: 1,
-    //     accion_previa_id: 1,
-    //     autor_id: 1,
-    //     tipo_autor: 'Evaluador',
-    //     nc: 'NC #1',
-    //     accion: 'Acción 1',
-    //     contenido_comentario: 'Comentario 1',
-    //     estado_accion: 'Pendiente',
-    //     acciones_futuras_propuestas: 'Acciones futuras 1',
-    //     requiere_nueva_nc: 0,
-    //     fecha_accion: '2026-01-01 12:00:00'
-    //   }
-    // ]
-    // and so on...
-    // and since there is just one row, we can access the data like this:
+    if (!rows || !rows.length) return res.status(404).json({ error: 'not_found' })
 
+    // 3. BUSCAR ACCIONES HIJAS RECURSIVAMENTE
     const ncId = rows[0].auditoria_nc_id
     const [allRows] = await pool.execute(
       'SELECT id, accion_previa_id FROM ACCIONES_CORRECTIVAS WHERE auditoria_nc_id = ?',
@@ -231,14 +196,14 @@ async function deleteAction(req, res){
         if(Number(a.accion_previa_id) === Number(cur) && !toDelete.includes(a.id)) toDelete.push(a.id)
       }
     }
-    // Borrar hijos antes que padres. Usamos [...toDelete] (spread) para clonar
-    // antes de .reverse(): los arreglos se pasan por referencia y reverse()
-    // muta in-place; sin copia, toDelete quedaría invertido también.
-    // Ver docs/aprendizajes/05-clonacion-superficial-reverse.md
+
+    // 4. Borrar hijos antes que padres (Ver docs/aprendizajes/05-clonacion-superficial-reverse.md)
     const ordered = [...toDelete].reverse()
     for(const actionId of ordered){
       await pool.execute('DELETE FROM ACCIONES_CORRECTIVAS WHERE id = ?', [actionId])
     }
+
+    // 5. RESPUESTA
     return res.json({ ok: true, deletedIds: toDelete })
   }catch(err){
     console.error('deleteAction error', err)
@@ -250,6 +215,12 @@ async function getAccionesByEvaluacion(req, res){
   try{
     const evalId = Number(req.params.id)
     if(!evalId) return res.status(400).json({ error: 'invalid_evaluacion_id' })
+    const user = req.user
+    const workspaceId = user?.workspace_id || null
+
+    const access = await verifyWorkspaceAccess(evalId, 'evaluacion', workspaceId)
+    if (!access) return res.status(403).json({ error: 'forbidden' })
+
     const [rows] = await pool.execute('SELECT * FROM ACCIONES_CORRECTIVAS WHERE auditoria_nc_id IN (SELECT id FROM AUDITORIA_NC WHERE evaluacion_requisito_id = ?)', [evalId])
     return res.json(rows)
   }catch(e){ console.error('getAccionesByEvaluacion error', e); return res.status(500).json({ error: 'internal' }) }

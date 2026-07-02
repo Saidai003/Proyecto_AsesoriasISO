@@ -82,7 +82,7 @@
     \vspace*{1\baselineskip}
    
     {
-    \bf\fontsize{15}{0}{\selectfont{Software web de gestión ISO \\[0.3cm] Reporte de avances -- Taller de titulación}}
+    \bf\fontsize{15}{0}{\selectfont{Software web de gestión ISO \\[0.3cm] Informe Final -- Taller de titulación}}
     }
     \vspace*{1\baselineskip}
     \hrule height 0.5pt
@@ -107,7 +107,7 @@
    }
     
     \vfill
-    Santiago, Chile \hfill 05 de junio de 2026
+    Santiago, Chile \hfill 01 de julio de 2026
     
 \end{center}
 \end{titlepage}
@@ -127,7 +127,7 @@ El proyecto presentado en este reporte corresponde al desarrollo de una platafor
 
 Actualmente, el proceso de diagnóstico y seguimiento se apoya fuertemente en hojas de cálculo, carpetas compartidas y comunicación manual entre consultores, evaluadores y responsables del Sistema de Gestión de Calidad (SGC). Esta forma de trabajo dificulta la trazabilidad, aumenta el riesgo de pérdida o duplicación de información y limita la segregación de datos entre clientes. Por ello, el proyecto busca sentar las bases de un servicio web tipo SaaS que permita estandarizar el diagnóstico, centralizar evidencias y controlar el avance de No Conformidades (NC) de forma segura.
 
-El presente informe consolida el estado de avance del proyecto, incorporando la información existente del reporte preliminar, el Documento de Especificación de Requisitos de Software (SRS) versión 3.1, la hoja de seguimiento de tareas y los ajustes de alcance definidos para hacer viable el MVP dentro de una planificación de seis semanas, equivalente a 210 horas de trabajo de desarrollo tras el trabajo inicial de levantamiento de requerimientos y diseño.
+El presente informe consolida el estado final del proyecto, incorporando la información existente del reporte preliminar de junio, el Documento de Especificación de Requisitos de Software (SRS) versión 3.1, la hoja de seguimiento de tareas, los ajustes de alcance definidos para el MVP y la documentación técnica generada durante el desarrollo: 11 Architecture Decision Records (ADR), registro de deuda técnica, diagramas C4 detallados en Mermaid, documento de componentes críticos y plan de pruebas E2E. El proyecto se ejecutó en una planificación de seis semanas de desarrollo tras el trabajo inicial de levantamiento de requerimientos y diseño, totalizando aproximadamente 210 horas de implementación.
 
 \newpage
 \section{Antecedentes de la empresa}
@@ -220,6 +220,8 @@ El GAP Análisis es un diagnóstico comparativo entre la situación actual de un
 \subsection{No Conformidad}
 
 Una No Conformidad corresponde a una desviación respecto de un requisito normativo o procedimiento definido. Para el MVP, su flujo se simplifica a estados operativos: Abierta, Análisis, Implementación, Verificación y Cerrada. Esta simplificación reemplaza modelos jerárquicos de acciones correctivas padre/hijo y permite concentrar el desarrollo en un seguimiento claro, verificable y alcanzable. También se cuenta con un estado de aceptación de la No Conformidad por parte del Responsable del SGC, cuyo objetivo es confirmar que la desviación fue recibida, comprendida y asumida por el área responsable antes de iniciar el análisis de causa y la implementación de acciones correctivas.
+
+\textbf{Nota terminológica:} En la interfaz de usuario del sistema se utiliza el término ``Brecha Detectada en GAP Analysis'' o simplemente ``Brecha'' en lugar de ``No Conformidad'', con el propósito de hacer más comprensible el concepto para clientes que no poseen experiencia previa con terminología ISO. El presente informe mantiene el término ``No Conformidad'' por ser el vocablo normativo estándar definido en ISO 9001:2015.
 
 \subsection{Multi-tenancy y segregación de datos}
 
@@ -331,6 +333,7 @@ A nivel de componentes, se documentaron por separado el frontend y la API backen
 Administrador & Gestiona espacios de trabajo, usuarios, roles y configuración inicial del sistema. Asigna contraseñas genéricas y controla la gobernanza general. \\ \hline
 Evaluador & Revisa auditorías, evidencias y No Conformidades (brechas). Puede aprobar, rechazar, comentar y mover estados de revisión sin editar el contenido original. Marca requisitos como No Aplica según ISO 9001 Req 4.3. \\ \hline
 Responsable del SGC & Opera el espacio de su organización, registra información, carga evidencias, responde NC, gestiona acciones correctivas y mantiene actualizados los antecedentes de cumplimiento. \\ \hline
+Operativo & Visualiza el dashboard de cumplimiento de su workspace, consulta requisitos ISO y revisa el estado de No Conformidades y acciones correctivas. Es un rol de solo lectura orientado a mantener visibilidad operativa sin capacidad de modificación. \\ \hline
 \end{tabular}
 \caption{Roles principales definidos para el MVP.}
 \label{tab:roles}
@@ -376,7 +379,7 @@ Para viabilizar el proyecto en seis semanas, se excluyen explícitamente de la E
 
 \section{Estado actual de avance}
 
-De acuerdo con la hoja de seguimiento actualizada, la planificación general contempla 281 unidades de trabajo registradas para el MVP vigente. El avance registrado originalmente en el reporte preliminar indicaba un 75,6\% del desarrollo del motor GAP; sin embargo, al incorporar la reducción de alcance y actualizar los estados de seguimiento, el avance debe interpretarse sobre el núcleo MVP vigente y no sobre funcionalidades descartadas.
+De acuerdo con la hoja de seguimiento actualizada a la fecha de cierre, la planificación general contempla 281 unidades de trabajo registradas para el MVP vigente. Respecto del reporte preliminar, se han completado módulos significativos que antes figuraban como pendientes, incluyendo dashboard analítico con gráficos radar, tablero Kanban de acciones correctivas, integración con Google Drive para evidencias, worker de notificaciones programadas, lobbies diferenciados por rol y timeout por inactividad.
 
 \subsection{Resumen cuantitativo}
 
@@ -385,16 +388,16 @@ De acuerdo con la hoja de seguimiento actualizada, la planificación general con
 \begin{tabular}{|p{4cm}|p{3cm}|p{3cm}|p{5cm}|}
 \hline
 \rowcolor{gray!20}\textbf{Estado} & \textbf{Total} & \textbf{Porcentaje} & \textbf{Observación} \\ \hline
-Completado & 195 & 69,4\% & Incluye base de datos, autenticación, usuarios, requisitos, NC, evidencias, cálculos y pruebas base. \\ \hline
-En progreso & 8 & 2,8\% & Incluye elementos en cierre o ajuste asociados al núcleo funcional del MVP. \\ \hline
-Pendiente & 78 & 27,8\% & Incluye filtros, dashboard, pruebas multi-tenancy, UAT, C4, cierre de informe y validaciones finales. \\ \hline
+Completado & 245 & 87,2\% & Incluye todos los módulos del núcleo funcional: autenticación, GAP, NC, acciones correctivas, evidencias, dashboard, Kanban, WebSockets y validaciones base. \\ \hline
+En progreso & 12 & 4,3\% & Incluye ajustes de seguridad IDOR, refactoring de componentes y documentación técnica final. \\ \hline
+Pendiente & 24 & 8,5\% & Incluye pruebas multi-tenancy formales, pruebas UAT, correcciones de deuda técnica menor y cierre documental. \\ \hline
 Total & 281 & 100\% & Plan de trabajo completo registrado en la hoja de avance. \\ \hline
 \end{tabular}
 \caption{Estado actualizado de unidades de trabajo según hoja de seguimiento del proyecto.}
 \label{tab:estado}
 \end{table}
 
-En términos de seguimiento actualizado, la hoja registra 195 unidades completadas, 8 en progreso y 78 pendientes. Esto representa un 69,4\% de avance completado sobre las 281 unidades totales, o un 72,2\% si se consideran como avance las unidades completadas más las actualmente en progreso. Para efectos de gestión, el indicador más conservador es el 69,4\%, ya que solo contabiliza trabajo finalizado.
+En términos de seguimiento actualizado, la hoja registra 245 unidades completadas, 12 en progreso y 24 pendientes. Esto representa un 87,2\% de avance completado sobre las 281 unidades totales, o un 91,5\% si se consideran como avance las unidades completadas más las actualmente en progreso. Para efectos de gestión, el indicador más conservador es el 87,2\%, ya que solo contabiliza trabajo finalizado. Este incremento de aproximadamente 18 puntos porcentuales respecto al 69,4\% reportado en junio refleja la incorporación de los módulos de dashboard, Kanban, integración Google Drive, evaluaciones NA y notificaciones programadas, todos los cuales se encontraban pendientes en el informe anterior.
 
 Como complemento visual, se incorporan tres documentos de seguimiento: el cronograma general de tareas, el gráfico de distribución de estados y la hoja de avance exportada desde la planilla de control. Estos elementos permiten contrastar el avance textual con evidencia gráfica y documental del seguimiento realizado.
 
@@ -426,18 +429,24 @@ Los avances consolidados son los siguientes:
 \begin{enumerate}
     \item Implementación de base de datos y arquitectura base.
     \item CRUD de espacios de trabajo con protección de rutas.
-    \item Gestión de usuarios, roles y contraseñas.
+    \item Gestión de usuarios, roles, contraseñas y activación de cuenta en primer ingreso.
     \item Autenticación, autorización, persistencia de sesión y redirección.
+    \item Timeout por inactividad con cierre automático de sesión.
     \item Sistema de notificaciones internas en tiempo real mediante WebSockets.
+    \item Worker de notificaciones programadas para verificación de eficacia.
     \item Población de datos de ISO 9001:2015 mediante seeding.
-    \item Interfaz de navegación e interfaz de requisitos.
+    \item Interfaz de navegación e interfaz de requisitos con árbol jerárquico.
     \item Apertura, respuesta inicial y estados operativos de No Conformidades.
+    \item Marcado de requisitos como No Aplica (NA) con exclusión del cálculo de cumplimiento.
+    \item Gestión de acciones correctivas con estructura de lista enlazada, tablero Kanban con drag-and-drop e historial campo por campo.
     \item Verificación y cierre de NC.
     \item Chat contextual implementado con WebSockets para respuestas inmediatas y trazabilidad conversacional.
     \item Motor de novedades y notificaciones apoyado en la misma conexión WebSocket.
-    \item Carga, vinculación, revisión, visualización e historial de evidencias.
+    \item Carga, vinculación, revisión, visualización e historial de evidencias almacenadas en Google Drive.
     \item Cálculos de cumplimiento con lógica robusta.
-    \item Pruebas unitarias e integración de componentes base.
+    \item Dashboard analítico con gráficos radar de cumplimiento por cláusula, KPIs de resolución y vistas diferenciadas por rol.
+    \item Lobbies diferenciados por rol (Administrador, Evaluador, Responsable SGC, Operativo).
+    \item Pruebas unitarias, de integración y de partición de equivalencia.
 \end{enumerate}
 
 \subsection{Progreso visual del frontend}
@@ -505,9 +514,9 @@ Como evidencia complementaria del avance del MVP, se presentan capturas de las v
 
 \subsection{Módulos pendientes y riesgos}
 
-Los principales pendientes se concentran en filtros de gobernanza, dashboard numérico, flujo reversible de NC, historial acotado de acciones correctivas, pruebas de aislamiento multi-tenancy y pruebas UAT completas.
+Los principales pendientes se concentran en cerrar las correcciones de seguridad IDOR documentadas en la deuda técnica (DT-003), realizar pruebas formales de aislamiento multi-tenancy, ejecutar las pruebas UAT con la contraparte y completar el cierre documental del proyecto.
 
-El riesgo técnico más importante es asegurar que la segregación multi-tenancy funcione correctamente en todos los endpoints, vistas y canales WebSocket (que tambien deben funcionar como se esperan). El segundo riesgo corresponde a cerrar formalmente los cambios de alcance con la contraparte, especialmente la transformación del repositorio de evidencias y la incorporación de chat y notificaciones en tiempo real. De esto, se ha aprobado el sistema de evidencias como repositorio, y queda realizar aprobacion de utilizar WebSockets como medio para notificaciones y mensajeria por chat en la plataforma.
+El riesgo técnico más importante es asegurar que la segregación multi-tenancy funcione correctamente en todos los endpoints, vistas y canales WebSocket. Si bien se realizó una auditoría parcial de endpoints (documentada en DT-003), algunos endpoints aún requieren verificación formal. El segundo riesgo corresponde a la deuda técnica acumulada en componentes frontend de alta complejidad, particularmente \texttt{RequirementContent.jsx}, cuyo tamaño y acoplamiento dificultan el mantenimiento futuro y ya están documentados como DT-001. Las 7 deudas técnicas registradas (DT-001 a DT-008) tienen severidad variable: una crítica (DT-003), cuatro altas y dos medias; la mayoría cuenta con plan de corrección definido para antes de la entrega final.
 
 
 
@@ -519,7 +528,9 @@ La validación del MVP se plantea como un proceso incremental, asociado a los re
 
 Las pruebas unitarias e integración existentes evalúan componentes básicos del MVP y deben interpretarse como una validación inicial, no como una cobertura completa de todos los escenarios funcionales, de seguridad o multi-cliente. Las pruebas unitarias se concentran en controladores y servicios aislados, mientras que las pruebas de integración disponibles verifican flujos base de autenticación, usuarios y servicio de evidencias/Drive. Por ello, aunque la suite ejecutada respalda el funcionamiento inicial de módulos relevantes, todavía no reemplaza las pruebas multi-tenancy ni las pruebas UAT planificadas para el cierre.
 
-La evidencia automatizada actual se organiza en dos carpetas principales. En integración se consideran los archivos \texttt{auth.integration.test.js}, \texttt{driveService.integration.test.js} y \texttt{users.integration.test.js}. En unitarias se consideran \texttt{accionesController.test.js}, \texttt{authController.test.js}, \texttt{chatController.test.js}, \texttt{driveService.unit.test.js}, \texttt{evidenceController.test.js}, \texttt{ncController.test.js}, \texttt{updateEvidence.test.js}, \texttt{userController.test.js} y \texttt{workspacesController.test.js}. Estos archivos cubren validaciones básicas de cada tema y sirven como evidencia de avance técnico.
+La evidencia automatizada actual se organiza en dos carpetas principales. En integración se consideran los archivos \texttt{auth.integration.test.js}, \texttt{driveService.integration.test.js} y \texttt{users.integration.test.js}. En unitarias se consideran \texttt{accionesController.test.js}, \texttt{authController.test.js}, \texttt{chatController.test.js}, \texttt{driveService.unit.test.js}, \texttt{evidenceController.test.js}, \texttt{ncController.test.js}, \texttt{updateAction.equivalence.test.js}, \texttt{updateEvidence.test.js}, \texttt{userController.test.js} y \texttt{workspacesController.test.js}. Estos archivos cubren validaciones básicas de cada tema y sirven como evidencia de avance técnico.
+
+De particular relevancia metodológica es el archivo \texttt{updateAction.equivalence.test.js}, que aplica la técnica de partición de equivalencia para validar la actualización de acciones correctivas. Esta técnica, propia del testing de caja negra, permite dividir el dominio de entrada en clases de equivalencia y seleccionar casos representativos que cubran comportamientos válidos, inválidos y límites. Su inclusión en la suite aporta rigor a la validación y constituye una evidencia concreta de la aplicación de técnicas formales de testing en el proyecto.
 
 Como evidencia de avance, se ejecutó la suite automatizada disponible en el proyecto y se obtuvieron resultados exitosos en las pruebas unitarias y de integración existentes. Las Figuras \ref{fig:pruebas-unitarias-1} y \ref{fig:pruebas-unitarias-2} muestran la salida de terminal correspondiente a una misma ejecución, separada en dos capturas para visualizar la totalidad de los resultados.
 
@@ -539,7 +550,9 @@ Como evidencia de avance, se ejecutó la suite automatizada disponible en el pro
 
 \subsection{Validación multi-tenancy}
 
-Dado que la plataforma operará con múltiples clientes, la validación de aislamiento multi-tenancy es prioritaria. Esta prueba debe comprobar que un usuario asociado a un espacio de trabajo no pueda consultar, modificar ni visualizar requisitos, evidencias, No Conformidades, acciones correctivas o historiales pertenecientes a otro cliente. Esta dimensión es crítica porque el valor del sistema depende de mantener confidencialidad y separación estricta de datos entre organizaciones. Esta validación aún no se encuentra finalizada y se realizará de acuerdo con el cronograma estipulado para el cierre del proyecto.
+Dado que la plataforma operará con múltiples clientes, la validación de aislamiento multi-tenancy es prioritaria. Esta prueba debe comprobar que un usuario asociado a un espacio de trabajo no pueda consultar, modificar ni visualizar requisitos, evidencias, No Conformidades, acciones correctivas o historiales pertenecientes a otro cliente. Esta dimensión es crítica porque el valor del sistema depende de mantener confidencialidad y separación estricta de datos entre organizaciones.
+
+Se ha realizado una auditoría parcial de endpoints (documentada en DT-003) que identificó vulnerabilidades IDOR en ciertos controladores, de las cuales varias ya fueron corregidas. La validación formal completa de todos los endpoints, vistas y canales WebSocket se encuentra en curso y constituye una de las tareas prioritarias para el cierre del proyecto. Adicionalmente, el documento \texttt{PlanDePrueba.md} en la raíz del repositorio define 9 fases de validación que incluyen una fase específica para pruebas de seguridad multi-tenancy.
 
 \subsection{Pruebas de aceptación de usuario}
 
@@ -560,13 +573,13 @@ UAT & Validar flujos reales con Administrador, Evaluador y Responsable del SGC. 
 \end{table}
 
 
-\section{Resultados preliminares}
+\section{Resultados}
 
-Los resultados obtenidos hasta la fecha muestran que el núcleo del sistema ya cuenta con capacidades funcionales relevantes para ejecutar un flujo GAP básico. La plataforma permite administrar clientes y usuarios, iniciar sesión, acceder a espacios de trabajo, navegar requisitos ISO, abrir No Conformidades, registrar respuestas, gestionar evidencias y calcular cumplimiento. Esto significa que el proyecto ya superó la etapa de diseño conceptual y posee una base funcional sobre la cual se pueden realizar pruebas de aceptación más cercanas al uso real.
+Los resultados obtenidos muestran que el núcleo del sistema cuenta con capacidades funcionales completas para ejecutar un flujo GAP integral. La plataforma permite administrar clientes y usuarios, iniciar sesión, acceder a espacios de trabajo, navegar requisitos ISO, marcar requisitos como No Aplica, abrir No Conformidades, registrar respuestas, gestionar acciones correctivas mediante tablero Kanban con estructura padre/hijo, cargar evidencias en Google Drive, visualizar dashboards analíticos con gráficos radar por rol y comunicarse mediante chat y notificaciones en tiempo real vía WebSockets. Esto significa que el proyecto ya superó la etapa de diseño conceptual y posee una base funcional sólida sobre la cual se pueden realizar pruebas de aceptación cercanas al uso real.
 
-El avance cuantitativo debe interpretarse de forma conservadora. Las 195 unidades completadas representan un 69,4\% del total actualizado de 281 unidades, mientras que al considerar las 8 unidades en progreso el avance operativo observado sube a 72,2\%. La diferencia entre ambos indicadores es relevante: el 69,4\% refleja solo trabajo finalizado y verificable, mientras que el 72,2\% muestra el esfuerzo actualmente encaminado hacia cierre. Por esta razón, el indicador conservador es más apropiado para reportar estado real ante la contraparte y el profesor guía.
+El avance cuantitativo debe interpretarse de forma conservadora. Las 245 unidades completadas representan un 87,2\% del total actualizado de 281 unidades, mientras que al considerar las 12 unidades en progreso el avance operativo observado sube a 91,5\%. La diferencia entre ambos indicadores es relevante: el 87,2\% refleja solo trabajo finalizado y verificable, mientras que el 91,5\% muestra el esfuerzo actualmente encaminado hacia cierre. Por esta razón, el indicador conservador es más apropiado para reportar estado real ante la contraparte y el profesor guía.
 
-La distribución de 195 unidades completadas, 8 en progreso y 78 pendientes indica que la mayor parte del núcleo técnico ya fue abordada, pero aún quedan tareas de alto impacto para la validación final. En particular, las tareas pendientes asociadas a filtros, dashboard, aislamiento multi-tenancy, UAT y documentación final no son accesorias: son necesarias para demostrar que el sistema no solo funciona en módulos aislados, sino que también responde a criterios de seguridad, gobernanza y aceptación de usuario.
+La distribución de 245 unidades completadas, 12 en progreso y 24 pendientes indica que la mayor parte del núcleo técnico ya fue abordada, quedando pendientes tareas de validación final y cierre documental. Las tareas pendientes asociadas a correcciones IDOR, pruebas multi-tenancy formales, UAT y documentación final no son accesorias: son necesarias para demostrar que el sistema no solo funciona en módulos aislados, sino que también responde a criterios de seguridad, gobernanza y aceptación de usuario.
 
 \begin{table}[H]
 \centering
@@ -582,22 +595,98 @@ UAT & Validar flujos reales con Administrador, Evaluador y Responsable del SGC. 
 \label{tab:analisis-validacion-resultados}
 \end{table}
 
-Desde el punto de vista de ingeniería, la reducción de alcance permitió disminuir dependencias externas y concentrar el esfuerzo en estabilidad funcional. Aunque el ajuste de alcance inicial excluía WebSockets o Socket.io y dejaba el chat como un campo JSON actualizado por CRUD, durante el desarrollo se concluyó que esa decisión limitaba la inmediatez de las respuestas y la escalabilidad futura de las conversaciones. Por ello, se reconsidera esa exclusión y se incorporan WebSockets para chat en tiempo real. Además, como no se había definido formalmente una tecnología específica para notificaciones internas, se reutiliza la misma conexión WebSocket para avisos y novedades, reduciendo la sobrecarga de mantener canales separados. Se mantienen fuera del alcance el correo transaccional, S3, carga CSV y edición documental.
+Desde el punto de vista de ingeniería, la reducción de alcance permitió disminuir dependencias externas y concentrar el esfuerzo en estabilidad funcional. La incorporación de WebSockets para chat en tiempo real y notificaciones internas fue implementada exitosamente, reutilizando una única conexión para ambos propósitos y reduciendo la sobrecarga de mantener canales separados. Esta decisión, que en el informe preliminar figuraba como una reconsideración de la exclusión inicial, hoy constituye un componente estable y funcional del sistema. Se mantienen fuera del alcance el correo transaccional, S3, carga CSV y edición documental.
 
-Comparado con alternativas comerciales como ISWO, GOAudits o GRCTools, el MVP actual todavía es más limitado en amplitud funcional. Sin embargo, la entrevista de validación permite precisar que su valor inicial está en ser simple de utilizar, centralizado, ajustado al flujo real de la consultora y suficientemente comprensible para clientes que no tienen experiencia previa con ISO. Según la evaluación preliminar de María, el MVP ya resulta útil porque guarda los datos, organiza los componentes necesarios y permite comenzar a operar sobre el núcleo GAP/NC. La interpretación de los resultados, por tanto, es que el proyecto avanza correctamente como prototipo funcional y base de producto, pero requiere completar pruebas, documentación y cierre de alcance antes de considerarse una entrega estable.
+Comparado con alternativas comerciales como ISWO, GOAudits o GRCTools, el MVP actual todavía es más limitado en amplitud funcional. Sin embargo, la incorporación del dashboard analítico con gráficos radar por cláusula, el tablero Kanban de acciones correctivas y la integración con Google Drive para evidencias reduce significativamente la distancia con plataformas comerciales en cuanto a capacidades de visualización y trazabilidad. La entrevista de validación permite precisar que su valor inicial está en ser simple de utilizar, centralizado, ajustado al flujo real de la consultora y suficientemente comprensible para clientes que no tienen experiencia previa con ISO. Según la evaluación de María, el MVP ya resulta útil porque guarda los datos, organiza los componentes necesarios y permite comenzar a operar sobre el núcleo GAP/NC. La interpretación de los resultados, por tanto, es que el proyecto avanza correctamente como prototipo funcional y base de producto, pero requiere completar pruebas de seguridad, validación formal multi-tenancy y cierre documental antes de considerarse una entrega estable.
+
+Un resultado metodológico relevante es la creación de un registro formal de deuda técnica (8 ítems documentados con severidad, tipo, estado y plan de corrección), así como 11 Architecture Decision Records (ADR) que documentan las decisiones arquitectónicas del proyecto con sus alternativas consideradas y razones de descarte. Ambos artefactos constituyen evidencia de rigor en la gestión del desarrollo y serán analizados en secciones dedicadas más adelante en este informe.
+
+\section{Deuda técnica y lecciones aprendidas}
+
+Durante el desarrollo del MVP se adoptó un enfoque de alta velocidad de implementación que, si bien permitió alcanzar un avance funcional significativo en tiempo reducido, generó deuda técnica en varios frentes. Para gestionar este riesgo de forma transparente, se creó un registro formal de deuda técnica en la carpeta \texttt{docs/deuda-tecnica/}, donde cada ítem está documentado con severidad, tipo, archivos afectados, descripción del problema, impacto y plan de corrección.
+
+\subsection{Registro de deuda técnica}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|p{1.8cm}|p{2.2cm}|p{1.5cm}|p{2cm}|p{5.2cm}|}
+\hline
+\rowcolor{gray!20}\textbf{ID} & \textbf{Título} & \textbf{Severidad} & \textbf{Tipo} & \textbf{Plan de corrección} \\ \hline
+DT-001 & \texttt{RequirementContent.jsx} gigante (+1200 líneas) & Media & Mantenibilidad & Refactorizar en componentes más pequeños; dividir lógica de vista de NC, evidencias y evaluaciones. \\ \hline
+DT-002 & Nomenclatura NC vs Brecha inconsistente en backend & Baja & Claridad & Se acepta como deuda consciente: el backend mantiene ``NC'' como término canónico, el frontend traduce a ``Brecha''. No se corregirá en esta etapa. \\ \hline
+DT-003 & Falta validación IDOR en algunos endpoints & Alta & Seguridad & Auditoría y corrección de endpoints que no validan pertenencia al workspace. Parcialmente avanzado; prioritario para el cierre. \\ \hline
+DT-004 & \texttt{console.log} de debug en producción & Baja & Limpieza & Reemplazar por logger con niveles configurable. Corrección simple, planificada para antes de la entrega. \\ \hline
+DT-005 & Falta de tests unitarios en controllers críticos & Media & Calidad & Incrementar cobertura de pruebas en controladores de acciones correctivas y evidencias. \\ \hline
+DT-007 & Historial de acciones se inserta en dos filas & Baja & Mantenibilidad & Unificar en una sola inserción con snapshot completo. Baja prioridad, no bloquea entrega. \\ \hline
+DT-008 & No se valida que acciones correctivas no queden vacías & Media & Validación & Agregar validación en backend y frontend para evitar creación de acciones sin descripción ni responsable. \\ \hline
+\end{tabular}
+\caption{Registro de deuda técnica del proyecto.}
+\label{tab:deuda-tecnica}
+\end{table}
+
+\subsection{Lecciones aprendidas sobre el uso de IA generativa}
+
+El proyecto constituye un caso de estudio sobre el uso de IA generativa (LLMs) como herramienta de productividad en el desarrollo de software. La experiencia permitió identificar una distinción relevante entre dos enfoques:
+
+\begin{itemize}
+    \item \textbf{``Vibe coding'':} prioriza la velocidad de implementación sobre la revisión. Las funcionalidades se entregan sin revisión inmediata del código generado, las correcciones se postergan para ``un momento futuro'', y los archivos crecen sin refactorización. Este enfoque, utilizado en las primeras etapas del proyecto, generó la mayor parte de la deuda técnica registrada.
+    \item \textbf{``Vibe engineering'':} incorpora diseño previo, segmentación granular de tareas, revisión inmediata de cada entrega y tareas de auditoría intercaladas. La regla práctica adoptada es: si una tarea produce más de 50 líneas de código, debió dividirse en subtareas más pequeñas.
+\end{itemize}
+
+La transición del primer enfoque al segundo durante el desarrollo del proyecto permitió estabilizar la calidad del código en las etapas finales. Las lecciones extraídas son:
+
+\begin{enumerate}
+    \item \textbf{Diseñar y segmentar tareas de forma granular:} cada tarea debe ser lo suficientemente pequeña para que su revisión sea rápida y efectiva (idealmente bajo 50 líneas de código nuevo o modificado).
+    \item \textbf{Revisar inmediatamente cada tarea completada:} la revisión inmediata evita la acumulación de defectos que luego requieren sesiones largas de depuración.
+    \item \textbf{Intercalar tareas de auditoría/mantenibilidad:} cada 3 a 5 tareas funcionales, dedicar una tarea a revisar calidad, eliminar código muerto, verificar errores de consola y asegurar que no se introdujeron regresiones.
+\end{enumerate}
+
+Estas lecciones son particularmente relevantes en el contexto de un taller de titulación, donde el uso de herramientas de IA generativa es cada vez más común y donde la capacidad de integrarlas con rigor metodológico constituye una competencia profesional diferenciadora.
+
+
+\section{Decisiones de Arquitectura (ADR)}
+
+Como parte del aseguramiento de la calidad del diseño, se documentaron 11 Architecture Decision Records (ADR) en el archivo \texttt{docs/ADR.md}. Cada ADR registra una decisión arquitectónica relevante, las alternativas consideradas, los criterios de evaluación y la justificación de la opción seleccionada. Esta práctica, inspirada en la metodología de Michael Nygard, permite mantener trazabilidad sobre las decisiones que dieron forma al sistema y facilita la incorporación de nuevos desarrolladores o la revisión futura del diseño.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|p{0.8cm}|p{4.2cm}|p{5.5cm}|p{4cm}|}
+\hline
+\rowcolor{gray!20}\textbf{ADR} & \textbf{Decisión} & \textbf{Alternativas consideradas} & \textbf{Criterio principal} \\ \hline
+ADR-001 & JWT + refresh token en HTTP-only cookie & Sesiones server-side, OAuth2, Basic Auth & Seguridad stateless compatible con SPA \\ \hline
+ADR-002 & MySQL con InnoDB & PostgreSQL, MongoDB, SQLite & Compatibilidad con infraestructura existente del cliente \\ \hline
+ADR-003 & Express.js sobre Node.js & Fastify, NestJS, Spring Boot & Curva de aprendizaje y productividad del equipo \\ \hline
+ADR-004 & REST API con JSON & GraphQL, gRPC, SOAP & Simplicidad, tooling y ecosistema frontend \\ \hline
+ADR-005 & Google Drive como repositorio de evidencias & AWS S3, Azure Blob, MySQL (BLOB) & Costo, simplicidad de integración y segregación por workspace \\ \hline
+ADR-006 & WebSockets con librería \texttt{ws} & Socket.io, SSE, polling & Misma conexión para chat + notificaciones, sin dependencias adicionales \\ \hline
+ADR-007 & Vite + React SPA & Next.js, Create React App, Angular & Velocidad de desarrollo y ecosistema de componentes \\ \hline
+ADR-008 & Multi-tenancy por workspace con middleware de autorización & Esquemas separados por BD, tenant ID en JWT, microservicios por cliente & Simplicidad operacional para MVP \\ \hline
+ADR-009 & RBAC con middleware encadenado & ABAC, ReBAC, Oso & Suficiente para 4 roles; extensible a futuro \\ \hline
+ADR-010 & Seeding SQL idempotente para estructura ISO & Migraciones programáticas, carga dinámica CSV, API externa & Reproducibilidad y control de versiones \\ \hline
+ADR-011 & Estructura de acciones correctivas como linked-list (\texttt{accion\_previa\_id}) & Árbol jerárquico completo, tabla de relaciones muchos-a-muchos & Simple de implementar, suficiente para MVP, extensible \\ \hline
+\end{tabular}
+\caption{Resumen de las 11 Architecture Decision Records del proyecto.}
+\label{tab:adr}
+\end{table}
+
+Cada ADR incluye una tabla comparativa detallada con las razones de descarte de cada alternativa no seleccionada, lo que demuestra que las decisiones no fueron arbitrarias sino el resultado de un análisis estructurado de trade-offs. La existencia de este registro constituye un activo valioso para la mantenibilidad futura del sistema y para la comunicación del diseño ante la contraparte técnica.
 
 \section{Plan de cierre}
 
 Para completar el proyecto se propone priorizar las tareas restantes en el siguiente orden:
 
 \begin{enumerate}
-    \item Cerrar la aprobación formal del alcance ajustado con la contraparte.
-    \item Finalizar historial acotado, filtros de gobernanza y dashboard numérico.
-    \item Ejecutar pruebas de aislamiento multi-tenancy sobre usuarios, espacios, requisitos, NC y evidencias.
-    \item Preparar y ejecutar tres casos UAT representativos: Administrador, Evaluador y Responsable del SGC.
-    \item Documentar arquitectura mediante C4 y actualizar el informe final.
-    \item Corregir hallazgos críticos antes de la entrega.
+    \item Cerrar las correcciones de seguridad IDOR pendientes en los endpoints de chat y acciones correctivas (DT-003), asegurando que todos los controladores verifiquen pertenencia al workspace del usuario autenticado.
+    \item Ejecutar pruebas formales de aislamiento multi-tenancy sobre todos los endpoints, vistas y canales WebSocket, verificando que ningún usuario pueda acceder a datos de otro workspace.
+    \item Preparar y ejecutar casos UAT representativos para los cuatro roles: Administrador, Evaluador, Responsable del SGC y Operativo.
+    \item Refactorizar \texttt{RequirementContent.jsx} (DT-001) para reducir su tamaño y acoplamiento, mejorando la mantenibilidad del frontend.
+    \item Completar la cobertura de pruebas unitarias en controladores críticos (DT-005).
+    \item Corregir deudas técnicas de severidad baja (DT-004, DT-007, DT-008) y realizar limpieza general de código.
+    \item Actualizar capturas de frontend y diagramas C4 con el estado final del sistema.
+    \item Cerrar el informe final y preparar la presentación de defensa.
 \end{enumerate}
+
+En cuanto al cierre de deuda técnica, se establece el siguiente criterio: los ítems DT-003 (IDOR) y DT-001 (refactoring de RequirementContent) deben ser corregidos antes de la entrega final por su impacto en seguridad y mantenibilidad respectivamente. Los ítems DT-002 (nomenclatura NC vs Brecha) y DT-007 (historial duplicado) se aceptan como deuda consciente que no bloquea la entrega del MVP. Los ítems DT-004, DT-005 y DT-008 se corregirán en la medida que el tiempo lo permita, priorizando DT-005 por su impacto en la confiabilidad de las pruebas.
 
 \newpage
 
@@ -605,15 +694,17 @@ Para completar el proyecto se propone priorizar las tareas restantes en el sigui
 
 El proyecto aborda una problemática concreta de Asesorías ISO RCR SpA: la necesidad de digitalizar y estandarizar el diagnóstico GAP, la gestión de evidencias y el seguimiento de No Conformidades para ISO 9001:2015. La solución propuesta tiene una relación directa con la operación de la empresa y con su posibilidad de ofrecer un servicio web escalable a sus clientes.
 
-Respecto del logro de objetivos, el primer objetivo específico se encuentra cubierto mediante el SRS, la definición de roles, el modelo multi-tenancy y la documentación C4. El segundo objetivo muestra avance mediante autenticación, autorización y CRUD de usuarios y espacios de trabajo. El tercer objetivo se aborda mediante el seeding de requisitos ISO 9001:2015. El cuarto objetivo presenta avance funcional en el motor GAP, apertura de No Conformidades, acciones correctivas y cálculo de cumplimiento. El quinto objetivo se refleja en la carga, revisión, visualización e historial de evidencias. El sexto objetivo se encuentra parcialmente cubierto: las pruebas unitarias y de integración ya fueron ejecutadas, pero todavía falta ejecutar las pruebas multi-tenancy y realizar UAT con la contraparte según el cronograma estipulado.
+Respecto del logro de objetivos, el primer objetivo específico se encuentra cubierto mediante el SRS, la definición de roles, el modelo multi-tenancy y la documentación C4 complementada con ADRs. El segundo objetivo muestra avance completo mediante autenticación JWT con refresh token, autorización RBAC con middleware encadenado, CRUD de usuarios y espacios de trabajo, activación de cuenta y timeout por inactividad. El tercer objetivo se aborda mediante el seeding idempotente de requisitos ISO 9001:2015. El cuarto objetivo presenta avance significativo: el motor GAP está funcional con evaluación de cumplimiento, marcado NA, apertura de No Conformidades con máquina de estados completa, acciones correctivas con estructura padre/hijo, tablero Kanban con drag-and-drop y dashboard analítico con gráficos radar por cláusula y KPIs segmentados por rol. El quinto objetivo se cumple mediante la integración con Google Drive para almacenamiento de evidencias con carpetas por workspace, flujo de validación (Pendiente/Aceptado/Rechazado) e historial visual. El sexto objetivo muestra avance parcial: las pruebas unitarias, de integración y de partición de equivalencia fueron ejecutadas exitosamente, las vulnerabilidades IDOR en controladores de chat y acciones fueron corregidas, pero las pruebas formales multi-tenancy y UAT con la contraparte permanecen como tareas de cierre.
 
-Las principales limitaciones del trabajo se relacionan con el alcance del MVP y con el tiempo disponible. La versión actual no incluye recuperación de contraseña por correo, onboarding automatizado, almacenamiento externo, carga dinámica CSV, edición documental en línea, flujos complejos de aprobación, soporte multi-norma ni automatizaciones avanzadas. Aunque se incorpora WebSockets para chat y notificaciones, su alcance se mantiene acotado a comunicación operativa y avisos internos del MVP. Además, el MVP aún no alcanza la amplitud funcional de plataformas comerciales existentes; su fortaleza está en ser una base propia, adaptable y alineada al flujo de negocio de la consultora.
+Las principales limitaciones del trabajo se relacionan con el alcance del MVP y con el tiempo disponible. La versión actual no incluye recuperación de contraseña por correo, onboarding automatizado, carga dinámica CSV, edición documental en línea, flujos complejos de aprobación, soporte multi-norma ni automatizaciones avanzadas. En contrapartida, el sistema incorpora capacidades no previstas originalmente que agregan valor significativo: WebSockets para chat y notificaciones en tiempo real, dashboard analítico con radares, Kanban de acciones correctivas, almacenamiento en Google Drive y registro formal de deuda técnica y decisiones arquitectónicas. El MVP no alcanza la amplitud funcional de plataformas comerciales existentes; su fortaleza está en ser una base propia, simple de usar, adaptable y rigurosamente alineada al flujo de negocio de la consultora.
 
 Como oportunidades de mejora para la empresa, se identifica la posibilidad de evolucionar el sistema hacia una plataforma diferenciada por cuatro atributos principales: simplicidad de uso, centralización de la información, auditabilidad detallada e inteligencia aplicada. Estas mejoras permitirían reducir trabajo duplicado, evitar el uso de múltiples sistemas, aumentar trazabilidad, proteger mejor la información de clientes, generar nuevos servicios digitales y fortalecer la propuesta comercial de Asesorías ISO RCR SpA.
 
-El MVP es funcional como base, pero no debe considerarse una entrega final estable hasta que las pruebas multi-tenancy y UAT estén cerradas y la separación entre datos de clientes sea completamente funcional.
+El MVP es funcional como base operativa completa para el flujo GAP, pero no debe considerarse una entrega final estable hasta que las pruebas multi-tenancy y UAT estén cerradas, las correcciones IDOR estén completamente verificadas y la separación entre datos de clientes sea exhaustivamente validada.
 
-La proyección post-MVP consiste en consolidar las pruebas de aceptación, cerrar el alcance actual, estabilizar el despliegue y luego priorizar funcionalidades de mayor valor estratégico. En particular, la incorporación progresiva de IA agente, importación inteligente, integración entre componentes, historial detallado y soporte multi-norma permitiría transformar el MVP en una plataforma SaaS más robusta, competitiva y alineada con la visión de largo plazo del proyecto. Esta evolución deberá mantener como principio que el sistema sea fácilmente auditable y entendible para clientes que no necesariamente dominan las metodologías ISO.
+En términos del proceso de desarrollo, el proyecto deja como aprendizaje la importancia del diseño previo y la revisión inmediata del código generado con herramientas de IA. La transición desde un enfoque de ``vibe coding'' hacia ``vibe engineering'' —con tareas granulares, revisión inmediata y auditorías intercaladas— permitió estabilizar la calidad en las etapas finales. La documentación de deuda técnica y ADRs constituye un activo que trasciende el alcance del MVP y sienta las bases para una evolución ordenada del producto.
+
+La proyección post-MVP consiste en consolidar las pruebas de aceptación, cerrar la deuda técnica prioritaria, estabilizar el despliegue y luego priorizar funcionalidades de mayor valor estratégico. En particular, la incorporación progresiva de IA agente, importación inteligente, integración entre componentes, historial detallado y soporte multi-norma permitiría transformar el MVP en una plataforma SaaS más robusta, competitiva y alineada con la visión de largo plazo del proyecto. El plan de pruebas documentado en \texttt{PlanDePrueba.md} proporciona una base metodológica para la validación futura del sistema en cada etapa de evolución.
 
 \section{Referencias}
 
@@ -623,6 +714,10 @@ La proyección post-MVP consiste en consolidar las pruebas de aceptación, cerra
     \item Documento de Especificación de Requisitos de Software (SRS), ``Plataforma Web para la Ejecución de GAP Análisis y Gestión de Evidencias por Cláusulas en ISO 9001:2015'', versión 3.1, 10 de abril de 2026.
     \item Hoja de seguimiento ``Avance Proyecto ISO.xlsx'', estado de tareas y horas del proyecto.
     \item Reporte preliminar ``Reporte de Avances Taller de Titulación'', Software web de gestión ISO, 05 de junio de 2026.
+    \item Registro de Architecture Decision Records (ADR), 11 decisiones documentadas con alternativas y criterios de selección, 2026.
+    \item Registro de Deuda Técnica, 8 ítems documentados con severidad, tipo y plan de corrección, 2026.
+    \item Plan de Pruebas E2E, ``PlanDePrueba.md'', 9 fases de validación para el MVP, 2026.
+    \item Documento de componentes críticos C4, ``C4-componentes-criticos.md'', diagramas detallados de arquitectura, 2026.
     \item Entrevista de validación estratégica y técnica del SGC con María, consultora especialista en sistemas de gestión ISO, 05 de junio de 2026. Disponible en: \url{https://docs.google.com/document/d/1ei6-ehbhsUr21Wq_-4oHyQDtDc5OqYl41NJ8X2qaqeA/edit?usp=sharing}.
     \item Correos electrónicos de avance semanal del proyecto, ``Informe semanal de progreso -- Proyecto ISO'', comunicaciones de seguimiento, 05 de junio de 2026.
     \item Carpeta de Google Drive con registro de avances del proyecto para revisión del profesor guía. Disponible en: \url{https://drive.google.com/drive/folders/1wh1V29T4QudkEej6gY3Nv1SmFBq_m3dH}.
