@@ -1,5 +1,6 @@
 const { pool } = require('../db')
 const { stripAccents, formatUtcDateTime } = require('../utils')
+const { verifyWorkspaceAccess } = require('../lib/workspaceAuth')
 
 // create a new NC for a requisito (accept requisito_base_id, responsables[])
 async function createNC(req, res){
@@ -254,6 +255,10 @@ async function listByEvaluacion(req, res){
     const evaluacionId = req.params.id;
     const workspaceId = req.user.workspace_id || null;
     if(!evaluacionId) return res.status(400).json({ error: 'id required' });
+
+    // Verificar que la evaluación pertenece al workspace del usuario
+    const access = await verifyWorkspaceAccess(evaluacionId, 'evaluacion', workspaceId)
+    if (!access) return res.status(403).json({ error: 'forbidden' })
 
     // Ensure evaluation belongs to workspace via JOIN (IDOR Fix)
     const [rows] = await pool.execute(
