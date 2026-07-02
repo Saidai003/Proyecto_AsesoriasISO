@@ -1,5 +1,5 @@
 const { pool } = require('../db');
-const { stripAccents } = require('../utils');
+const { stripAccents, formatUtcDateTime } = require('../utils');
 
 // create a new NC for a requisito (accept requisito_base_id, responsables[])
 async function createNC(req, res){
@@ -128,8 +128,9 @@ async function updateNC(req, res){
           if(ts <= Date.now()) return res.status(400).json({ error: 'fecha_verificacion_must_be_future' })
           
           updates.push('estado_flujo = ?'); params.push(newFlow)
-          const dateOnly = new Date(ts).toISOString().slice(0,10)
-          updates.push('fecha_verificacion_eficacia = ?'); params.push(dateOnly)
+          const mysqlDateTime = formatUtcDateTime(fecha)
+          if(!mysqlDateTime) return res.status(400).json({ error: 'invalid_fecha_verificacion' })
+          updates.push('fecha_verificacion_eficacia = ?'); params.push(mysqlDateTime)
           
           try{
             const evaluatorId = nc.evaluador_id

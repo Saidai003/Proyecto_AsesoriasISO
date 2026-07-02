@@ -52,6 +52,7 @@ export default function NCView(){
           setFlowState(data.estado_flujo)
           setCommentText(data.comentario_nc || '')
           if(data.fecha_verificacion_eficacia){
+            // Backend lo devuelve como ISO string en UTC → convertir a datetime-local
             const d = new Date(data.fecha_verificacion_eficacia)
             if(!Number.isNaN(d.getTime())){
               const pad = (n) => String(n).padStart(2, '0')
@@ -196,7 +197,9 @@ export default function NCView(){
         body.fecha_verificacion_eficacia = new Date(fechaVerificacion).toISOString()
       }
       if(flowState === 'Cerrada'){
-        body.fecha_verificacion_eficacia = new Date().toISOString()
+        const now = new Date()
+        const pad = (n) => String(n).padStart(2, '0')
+        body.fecha_verificacion_eficacia = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`
       }
       if(typeof acceptState === 'string' && acceptState.trim() !== '') body.estado_validacion = acceptState
       const res = await fetchWithAuth(`/api/nc/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })

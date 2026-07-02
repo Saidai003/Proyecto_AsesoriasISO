@@ -13,4 +13,12 @@ function stripAccents(s) {
   return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
 }
 
-module.exports = { stripAccents }
+function formatUtcDateTime(value) {
+  const date = value instanceof Date ? value : new Date(value)
+  if (Number.isNaN(date.getTime())) return null
+
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())} ${pad(date.getUTCHours())}:${pad(date.getUTCMinutes())}:${pad(date.getUTCSeconds())}`
+}
+
+module.exports = { stripAccents, formatUtcDateTime }
