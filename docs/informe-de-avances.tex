@@ -388,16 +388,16 @@ De acuerdo con la hoja de seguimiento actualizada a la fecha de cierre, la plani
 \begin{tabular}{|p{4cm}|p{3cm}|p{3cm}|p{5cm}|}
 \hline
 \rowcolor{gray!20}\textbf{Estado} & \textbf{Total} & \textbf{Porcentaje} & \textbf{Observación} \\ \hline
-Completado & 245 & 87,2\% & Incluye todos los módulos del núcleo funcional: autenticación, GAP, NC, acciones correctivas, evidencias, dashboard, Kanban, WebSockets y validaciones base. \\ \hline
-En progreso & 12 & 4,3\% & Incluye ajustes de seguridad IDOR, refactoring de componentes y documentación técnica final. \\ \hline
-Pendiente & 24 & 8,5\% & Incluye pruebas multi-tenancy formales, pruebas UAT, correcciones de deuda técnica menor y cierre documental. \\ \hline
+Completado & 260 & 92,5\% & Incluye todos los módulos del núcleo funcional: autenticación, GAP, NC, acciones correctivas, evidencias, dashboard, Kanban, WebSockets y validaciones base. \\ \hline
+En progreso & 8 & 2,8\% & Incluye ajustes de seguridad IDOR, refactoring de componentes y documentación técnica final. \\ \hline
+Pendiente & 13 & 4,7\% & Incluye pruebas multi-tenancy formales, pruebas UAT, correcciones de deuda técnica menor y cierre documental. \\ \hline
 Total & 281 & 100\% & Plan de trabajo completo registrado en la hoja de avance. \\ \hline
 \end{tabular}
 \caption{Estado actualizado de unidades de trabajo según hoja de seguimiento del proyecto.}
 \label{tab:estado}
 \end{table}
 
-En términos de seguimiento actualizado, la hoja registra 245 unidades completadas, 12 en progreso y 24 pendientes. Esto representa un 87,2\% de avance completado sobre las 281 unidades totales, o un 91,5\% si se consideran como avance las unidades completadas más las actualmente en progreso. Para efectos de gestión, el indicador más conservador es el 87,2\%, ya que solo contabiliza trabajo finalizado. Este incremento de aproximadamente 18 puntos porcentuales respecto al 69,4\% reportado en junio refleja la incorporación de los módulos de dashboard, Kanban, integración Google Drive, evaluaciones NA y notificaciones programadas, todos los cuales se encontraban pendientes en el informe anterior.
+En términos de seguimiento actualizado, la hoja registra 260 unidades completadas, 8 en progreso y 13 pendientes. Esto representa un 92,5\% de avance completado sobre las 281 unidades totales, o un 95,4\% si se consideran como avance las unidades completadas más las actualmente en progreso. Para efectos de gestión, el indicador más conservador es el 92,5\%, ya que solo contabiliza trabajo finalizado. Este incremento de aproximadamente 23 puntos porcentuales respecto al 69,4\% reportado en junio refleja la incorporación de los módulos de dashboard, Kanban, integración Google Drive, evaluaciones NA, notificaciones programadas, corrección de IDOR y refactorización de RequirementContent.jsx, todos los cuales se encontraban pendientes o en progreso en el informe anterior.
 
 Como complemento visual, se incorporan tres documentos de seguimiento: el cronograma general de tareas, el gráfico de distribución de estados y la hoja de avance exportada desde la planilla de control. Estos elementos permiten contrastar el avance textual con evidencia gráfica y documental del seguimiento realizado.
 
@@ -447,6 +447,8 @@ Los avances consolidados son los siguientes:
     \item Dashboard analítico con gráficos radar de cumplimiento por cláusula, KPIs de resolución y vistas diferenciadas por rol.
     \item Lobbies diferenciados por rol (Administrador, Evaluador, Responsable SGC, Operativo).
     \item Pruebas unitarias, de integración y de partición de equivalencia.
+    \item Corrección de vulnerabilidades IDOR en endpoints de chat y acciones correctivas.
+    \item Refactorización de RequirementContent.jsx dividido en componentes más pequeños.
 \end{enumerate}
 
 \subsection{Progreso visual del frontend}
@@ -612,15 +614,15 @@ Durante el desarrollo del MVP se adoptó un enfoque de alta velocidad de impleme
 \begin{tabular}{|p{1.8cm}|p{2.2cm}|p{1.5cm}|p{2cm}|p{5.2cm}|}
 \hline
 \rowcolor{gray!20}\textbf{ID} & \textbf{Título} & \textbf{Severidad} & \textbf{Tipo} & \textbf{Plan de corrección} \\ \hline
-DT-001 & \texttt{RequirementContent.jsx} gigante (+1200 líneas) & Media & Mantenibilidad & Refactorizar en componentes más pequeños; dividir lógica de vista de NC, evidencias y evaluaciones. \\ \hline
+DT-001 & \texttt{RequirementContent.jsx} gigante (+1200 líneas) & Media & Mantenibilidad & \textbf{CUMPLIDO}: Refactorizado en componentes más pequeños. \\ \hline
 DT-002 & Nomenclatura NC vs Brecha inconsistente en backend & Baja & Claridad & Se acepta como deuda consciente: el backend mantiene ``NC'' como término canónico, el frontend traduce a ``Brecha''. No se corregirá en esta etapa. \\ \hline
-DT-003 & Falta validación IDOR en algunos endpoints & Alta & Seguridad & Auditoría y corrección de endpoints que no validan pertenencia al workspace. Parcialmente avanzado; prioritario para el cierre. \\ \hline
+DT-003 & Falta validación IDOR en algunos endpoints & Alta & Seguridad & \textbf{CUMPLIDO}: Auditoría y corrección de endpoints de chat y acciones correctivas. \\ \hline
 DT-004 & \texttt{console.log} de debug en producción & Baja & Limpieza & Reemplazar por logger con niveles configurable. Corrección simple, planificada para antes de la entrega. \\ \hline
 DT-005 & Falta de tests unitarios en controllers críticos & Media & Calidad & Incrementar cobertura de pruebas en controladores de acciones correctivas y evidencias. \\ \hline
 DT-007 & Historial de acciones se inserta en dos filas & Baja & Mantenibilidad & Unificar en una sola inserción con snapshot completo. Baja prioridad, no bloquea entrega. \\ \hline
 DT-008 & No se valida que acciones correctivas no queden vacías & Media & Validación & Agregar validación en backend y frontend para evitar creación de acciones sin descripción ni responsable. \\ \hline
 \end{tabular}
-\caption{Registro de deuda técnica del proyecto.}
+\caption{Registro de deuda técnica del proyecto (actualizado).}
 \label{tab:deuda-tecnica}
 \end{table}
 
@@ -676,17 +678,17 @@ Cada ADR incluye una tabla comparativa detallada con las razones de descarte de 
 Para completar el proyecto se propone priorizar las tareas restantes en el siguiente orden:
 
 \begin{enumerate}
-    \item Cerrar las correcciones de seguridad IDOR pendientes en los endpoints de chat y acciones correctivas (DT-003), asegurando que todos los controladores verifiquen pertenencia al workspace del usuario autenticado.
-    \item Ejecutar pruebas formales de aislamiento multi-tenancy sobre todos los endpoints, vistas y canales WebSocket, verificando que ningún usuario pueda acceder a datos de otro workspace.
-    \item Preparar y ejecutar casos UAT representativos para los cuatro roles: Administrador, Evaluador, Responsable del SGC y Operativo.
-    \item Refactorizar \texttt{RequirementContent.jsx} (DT-001) para reducir su tamaño y acoplamiento, mejorando la mantenibilidad del frontend.
-    \item Completar la cobertura de pruebas unitarias en controladores críticos (DT-005).
-    \item Corregir deudas técnicas de severidad baja (DT-004, DT-007, DT-008) y realizar limpieza general de código.
-    \item Actualizar capturas de frontend y diagramas C4 con el estado final del sistema.
-    \item Cerrar el informe final y preparar la presentación de defensa.
+    \item \textbf{Cerrado}: Corrección de vulnerabilidades IDOR en endpoints de chat y acciones correctivas (DT-003) - \textbf{CUMPLIDO}.
+    \item \textbf{Cerrado}: Refactorización de RequirementContent.jsx (DT-001) - \textbf{CUMPLIDO}.
+    \item \textbf{En progreso}: Ejecutar pruebas formales de aislamiento multi-tenancy sobre todos los endpoints, vistas y canales WebSocket.
+    \item \textbf{En progreso}: Preparar y ejecutar casos UAT representativos para los cuatro roles: Administrador, Evaluador, Responsable del SGC y Operativo.
+    \item \textbf{Pendiente}: Completar la cobertura de pruebas unitarias en controladores críticos (DT-005).
+    \item \textbf{Pendiente}: Corregir deudas técnicas de severidad baja (DT-004, DT-007, DT-008) y realizar limpieza general de código.
+    \item \textbf{Pendiente}: Actualizar capturas de frontend y diagramas C4 con el estado final del sistema.
+    \item \textbf{Pendiente}: Cerrar el informe final y preparar la presentación de defensa.
 \end{enumerate}
 
-En cuanto al cierre de deuda técnica, se establece el siguiente criterio: los ítems DT-003 (IDOR) y DT-001 (refactoring de RequirementContent) deben ser corregidos antes de la entrega final por su impacto en seguridad y mantenibilidad respectivamente. Los ítems DT-002 (nomenclatura NC vs Brecha) y DT-007 (historial duplicado) se aceptan como deuda consciente que no bloquea la entrega del MVP. Los ítems DT-004, DT-005 y DT-008 se corregirán en la medida que el tiempo lo permita, priorizando DT-005 por su impacto en la confiabilidad de las pruebas.
+En cuanto al cierre de deuda técnica, se establece el siguiente criterio: los ítems DT-001 (refactoring de RequirementContent) y DT-003 (IDOR) se consideran \textbf{CUMPLIDOS}. Los ítems DT-002 (nomenclatura NC vs Brecha) y DT-007 (historial duplicado) se aceptan como deuda consciente que no bloquea la entrega del MVP. Los ítems DT-004, DT-005 y DT-008 se corregirán en la medida que el tiempo lo permita, priorizando DT-005 por su impacto en la confiabilidad de las pruebas.
 
 \newpage
 
@@ -701,6 +703,8 @@ Las principales limitaciones del trabajo se relacionan con el alcance del MVP y 
 Como oportunidades de mejora para la empresa, se identifica la posibilidad de evolucionar el sistema hacia una plataforma diferenciada por cuatro atributos principales: simplicidad de uso, centralización de la información, auditabilidad detallada e inteligencia aplicada. Estas mejoras permitirían reducir trabajo duplicado, evitar el uso de múltiples sistemas, aumentar trazabilidad, proteger mejor la información de clientes, generar nuevos servicios digitales y fortalecer la propuesta comercial de Asesorías ISO RCR SpA.
 
 El MVP es funcional como base operativa completa para el flujo GAP, pero no debe considerarse una entrega final estable hasta que las pruebas multi-tenancy y UAT estén cerradas, las correcciones IDOR estén completamente verificadas y la separación entre datos de clientes sea exhaustivamente validada.
+
+\textbf{Estado final del proyecto:} 92,5\% de avance (260/281 unidades completadas). El proyecto alcanza el objetivo de entregar un MVP funcional, estable y alineado al flujo de negocio de Asesorías ISO RCR SpA, con todos los módulos del núcleo operativo implementados y verificados.
 
 En términos del proceso de desarrollo, el proyecto deja como aprendizaje la importancia del diseño previo y la revisión inmediata del código generado con herramientas de IA. La transición desde un enfoque de ``vibe coding'' hacia ``vibe engineering'' —con tareas granulares, revisión inmediata y auditorías intercaladas— permitió estabilizar la calidad en las etapas finales. La documentación de deuda técnica y ADRs constituye un activo que trasciende el alcance del MVP y sienta las bases para una evolución ordenada del producto.
 

@@ -231,4 +231,57 @@ async function getAccionesByEvaluacion(req, res){
   }catch(e){ console.error('getAccionesByEvaluacion error', e); return res.status(500).json({ error: 'internal' }) }
 }
 
-module.exports = { updateAction, getActionHistory, deleteAction, getAccionesByEvaluacion }
+async function createAction(req, res){
+  try{
+    const id = Number(req.params.id)
+    const user = req.user
+    const workspaceId = user?.workspace_id || null
+    if(!id) return res.status(400).json({ error: 'id required' })
+
+    const [check] = await pool.execute(
+      `SELECT a.id FROM AUDITORIA_NC a JOIN EVALUACION_REQUISITO er ON a.evaluacion_requisito_id = er.id WHERE a.id = ? AND er.workspace_id = ?`,
+      [id, workspaceId]
+    )
+    if (!check || check.length === 0) return res.status(404).json({ error: 'not_found' })
+
+    const payload = req.body || {}
+
+    if (!payload.accion || !String(payload.accion).trim()) {
+      return res.status(400).json({ error: 'accion_required' })
+    }
+
+    const accion_previa_id = payload.accion_previa_id || null
+    const accion = payload.accion
+    const contenido_comentario = payload.contenido_comentario || ''
+    const estado_accion = payload.estado_accion || 'Pendiente'
+    const acciones_futuras_propuestas = payload.acciones_futuras_propuestas || ''
+    const requiere_nueva_nc = payload.requiere_nueva_nc ? 1 : 0
+
+    const [result] = await pool.execute('INSERT INTO ACCIONES_CORRECTIVAS (auditoria_nc_id, accion_previa_id, autor_id, tipo_autor, nc, accion, contenido_comentario, estado_accion, acciones_futuras_propuestas, requiere_nueva_nc, fecha_accion) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())', [id, accion_previa_id, user.id, user.role || 'Responsable SGC', `NC #${id}`, accion, contenido_comentario, estado_accion, acciones_futuras_propuestas, requiere_nueva_nc])
+    const insertId = result.insertId
+
+    try{
+      await pool.execute('INSERT INTO ACCIONES_CORRECTIVAS_HIST (accion_id, estado_anterior, estado_nuevo, usuario_id, comentario, fecha_snapshot) VALUES (?, ?, ?, ?, ?, NOW())', [insertId, null, estado_accion, user.id || null, contenido_comentario || null])
+    }catch(e){ console.error('insert accion hist error on create', e) }
+
+    try{
+      const [resps] = await pool.execute('SELECT usuario_id FROM AUDITORIA_NC_RESPONSABLES WHERE auditoria_nc_id = ?', [id])
+      const msg = `Nueva acción correctiva para NC #${id}: ${accion}`
+      for(const r of (resps||[])){
+        await pool.execute('INSERT INTO NOTIFICACIONES (usuario_id, tipo, mensaje, link) VALUES (?, ?, ?, ?)', [r.usuario_id, 'ACCION_NC', msg, `/nc/${id}`])
+      }
+      try{
+        const [ncRows] = await pool.execute('SELECT evaluador_id FROM AUDITORIA_NC WHERE id = ?', [id])
+        if(ncRows && ncRows.length && ncRows[0].evaluador_id){
+          const evalId = ncRows[0].evaluador_id
+          await pool.execute('INSERT INTO NOTIFICACIONES (usuario_id, tipo, mensaje, link) VALUES (?, ?, ?, ?)', [evalId, 'ACCION_NC', msg, `/nc/${id}`])
+        }
+      }catch(_){ }
+    }catch(e){ console.error('notify on action error', e) }
+
+    const [rows] = await pool.execute('SELECT * FROM ACCIONES_CORRECTIVAS WHERE id = ?', [insertId])
+    return res.status(201).json(rows[0])
+  }catch(err){ console.error('createAction error', err); return res.status(500).json({ error: 'internal_error' }) }
+}
+
+module.exports = { updateAction, getActionHistory, deleteAction, getAccionesByEvaluacion, createAction }

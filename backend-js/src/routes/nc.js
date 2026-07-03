@@ -1,7 +1,8 @@
 const Router = require('express').Router;
 const router = Router();
 const { requireAuth, requireRoles } = require('../middleware/auth');
-const { createNC, deleteNC, listByEvaluacion, updateNC, listActions, createAction, getNC, getNCHistory, getNCHistoryByEvaluacion } = require('../controllers/ncController');
+const { createNC, deleteNC, listByEvaluacion, updateNC, listActions, getNC, getNCHistory, getNCHistoryByEvaluacion } = require('../controllers/ncController');
+const { createAction } = require('../controllers/accionesController');
 
 // create NC (evaluator or admin)
 router.post('/', requireAuth, requireRoles('Evaluador'), createNC);
