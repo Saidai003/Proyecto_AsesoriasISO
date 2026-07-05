@@ -104,7 +104,7 @@ export default function ActivateAccount() {
             <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center shadow-lg">
               <span className="material-symbols-outlined text-on-primary text-3xl" style={{fontVariationSettings: "'FILL' 1"}}>security</span>
             </div>
-            <span className="text-2xl font-extrabold tracking-tighter text-primary">Sovereign QMS</span>
+            <span className="text-2xl font-extrabold tracking-tighter text-primary">GAP ANALISYS</span>
           </div>
           <h1 className="text-3xl font-extrabold text-on-surface">Configurar tu cuenta</h1>
           <p className="text-on-surface-variant max-w-sm">Establece una nueva contraseña para activar tu acceso a la plataforma.</p>
