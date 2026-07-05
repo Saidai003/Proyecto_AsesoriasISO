@@ -12,7 +12,10 @@ async function getMessages(req, res) {
     const workspaceId = user?.workspace_id || null
 
     if (ncId && workspaceId) {
-      const access = await verifyWorkspaceAccess({ id: ncId, type: 'nc' }, workspaceId)
+      const access = await verifyWorkspaceAccess(ncId, 'nc', workspaceId)
+      if (!access) return res.status(403).json({ error: 'forbidden' })
+    } else if (reqId && workspaceId) {
+      const access = await verifyWorkspaceAccess(reqId, 'evaluacion', workspaceId)
       if (!access) return res.status(403).json({ error: 'forbidden' })
     }
 
@@ -46,7 +49,10 @@ async function postMessage(req, res) {
     const workspaceId = user.workspace_id || null
 
     if (nc_id && workspaceId) {
-      const access = await verifyWorkspaceAccess({ id: nc_id, type: 'nc' }, workspaceId)
+      const access = await verifyWorkspaceAccess(nc_id, 'nc', workspaceId)
+      if (!access) return res.status(403).json({ error: 'forbidden' })
+    } else if (requisito_id && workspaceId) {
+      const access = await verifyWorkspaceAccess(requisito_id, 'evaluacion', workspaceId)
       if (!access) return res.status(403).json({ error: 'forbidden' })
     }
 
