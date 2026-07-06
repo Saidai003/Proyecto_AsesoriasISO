@@ -4,13 +4,9 @@ jest.mock('../../src/db', () => ({
 jest.mock('../../src/services/sse', () => ({
   sendEvent: jest.fn()
 }));
-jest.mock('../../src/auth', () => ({
-  verifyAccessToken: jest.fn()
-}));
 
 const { pool } = require('../../src/db');
 const { sendEvent } = require('../../src/services/sse');
-const { verifyAccessToken } = require('../../src/auth');
 const { getMessages, postMessage } = require('../../src/controllers/chatController');
 
 function mockRes(){
@@ -44,8 +40,6 @@ describe('chatController (unit)', () => {
   });
 
   test('postMessage parses metadata string before broadcasting and returning', async () => {
-    // Mock verifyAccessToken
-    verifyAccessToken.mockReturnValue({ id: 2, email: 't@example.com' });
     // Mock user resolve query (SELECT nombre, role_id FROM USUARIOS WHERE id = ?)
     pool.execute.mockResolvedValueOnce([[
       { nombre: 'Test User', role_id: 1 }
@@ -63,6 +57,7 @@ describe('chatController (unit)', () => {
 
     const req = {
       headers: { authorization: 'Bearer test-token' },
+      user: { id: 2, email: 't@example.com', workspace_id: 1 },
       body: { requisito_id: 10, contenido: 'Mensaje nuevo', metadata: { attachments: [] } }
     };
     const res = mockRes();

@@ -12,13 +12,14 @@ async function updateAction(req, res) {
     const workspaceId = user?.workspace_id || null
 
     // 2. PROTECCIÓN IDOR: Verificar propiedad y obtener datos de la acción
-    const [rows] = await pool.execute(
+    const rowsResult = await pool.execute(
       `SELECT ac.* FROM ACCIONES_CORRECTIVAS ac
        JOIN AUDITORIA_NC anc ON ac.auditoria_nc_id = anc.id
        JOIN EVALUACION_REQUISITO er ON anc.evaluacion_requisito_id = er.id
        WHERE ac.id = ? AND er.workspace_id = ?`,
       [id, workspaceId]
     )
+    const rows = Array.isArray(rowsResult?.[0]) ? rowsResult[0] : []
     if (!rows || !rows.length) return res.status(404).json({ error: 'not_found' })
     const action = rows[0]
 
@@ -26,11 +27,13 @@ async function updateAction(req, res) {
     const updates = []
     const params = []
     const changeDetails = []
+    let hasNonStateChange = false
 
     // 3. PROCESAMIENTO EXPLÍCITO DE CAMPOS
     if (payload.accion !== undefined) {
       updates.push('accion = ?')
       params.push(payload.accion)
+      hasNonStateChange = true
       if (String(action.accion) !== String(payload.accion)) {
         changeDetails.push(`accion: "${action.accion || ''}" → "${payload.accion || ''}"`)
       }
@@ -39,6 +42,7 @@ async function updateAction(req, res) {
     if (payload.contenido_comentario !== undefined) {
       updates.push('contenido_comentario = ?')
       params.push(payload.contenido_comentario)
+      hasNonStateChange = true
       if (String(action.contenido_comentario) !== String(payload.contenido_comentario)) {
         changeDetails.push(`contenido_comentario: "${action.contenido_comentario || ''}" → "${payload.contenido_comentario || ''}"`)
       }
@@ -47,6 +51,7 @@ async function updateAction(req, res) {
     if (payload.acciones_futuras_propuestas !== undefined) {
       updates.push('acciones_futuras_propuestas = ?')
       params.push(payload.acciones_futuras_propuestas)
+      hasNonStateChange = true
       if (String(action.acciones_futuras_propuestas) !== String(payload.acciones_futuras_propuestas)) {
         changeDetails.push(`acciones_futuras_propuestas: "${action.acciones_futuras_propuestas || ''}" → "${payload.acciones_futuras_propuestas || ''}"`)
       }
@@ -56,6 +61,7 @@ async function updateAction(req, res) {
       const newValueBinary = payload.requiere_nueva_nc ? 1 : 0
       updates.push('requiere_nueva_nc = ?')
       params.push(newValueBinary)
+      hasNonStateChange = true
       if (String(action.requiere_nueva_nc) !== String(newValueBinary)) {
         changeDetails.push(`requiere_nueva_nc: "${action.requiere_nueva_nc || 0}" → "${newValueBinary}"`)
       }
@@ -90,7 +96,8 @@ async function updateAction(req, res) {
         } catch (e) { console.error('insert accion hist error', e) }
 
         try {
-          const [resps] = await pool.execute('SELECT usuario_id FROM AUDITORIA_NC_RESPONSABLES WHERE auditoria_nc_id = ?', [action.auditoria_nc_id])
+          const respsResult = await pool.execute('SELECT usuario_id FROM AUDITORIA_NC_RESPONSABLES WHERE auditoria_nc_id = ?', [action.auditoria_nc_id])
+          const resps = Array.isArray(respsResult?.[0]) ? respsResult[0] : []
           const msg = `Acción correctiva #${id} actualizada: ${prevState} -> ${newState}`
           for (const r of (resps || [])) {
             await pool.execute('INSERT INTO NOTIFICACIONES (usuario_id, tipo, mensaje, link) VALUES (?, ?, ?, ?)', [r.usuario_id, 'ACCION_UPDATED', msg, `/nc/${action.auditoria_nc_id}`])
@@ -108,7 +115,7 @@ async function updateAction(req, res) {
       } catch (e) { console.error('update accion execute error', e) }
     }
 
-    if (changeDetails.length > 0) {
+    if (hasNonStateChange && changeDetails.length > 0) {
       try {
         const textoHistorial = `Campos modificados: ${changeDetails.join('; ')}`
         await pool.execute(
@@ -119,7 +126,8 @@ async function updateAction(req, res) {
     }
 
     // 6. RETORNAR EL REGISTRO ACTUALIZADO AL CLIENTE
-    const [updated] = await pool.execute('SELECT * FROM ACCIONES_CORRECTIVAS WHERE id = ?', [id])
+    const updatedResult = await pool.execute('SELECT * FROM ACCIONES_CORRECTIVAS WHERE id = ?', [id])
+    const updated = Array.isArray(updatedResult?.[0]) ? updatedResult[0] : []
     return res.json(updated[0])
   } catch (err) {
     console.error('updateAction error', err)

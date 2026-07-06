@@ -1,6 +1,6 @@
 const { pool } = require('../db')
 const { broadcast } = require('../services/ws')
-const { verifyAccessToken } = require('../auth')
+const { sendEvent } = require('../services/sse')
 const { verifyWorkspaceAccess } = require('../lib/workspaceAuth')
 
 async function getMessages(req, res) {
@@ -80,8 +80,9 @@ async function postMessage(req, res) {
         msg.metadata = JSON.parse(msg.metadata)
       } catch (_) { }
     }
-    // broadcast to WebSocket clients
+    // broadcast to WebSocket clients and keep SSE compatibility for tests/legacy flows
     try { broadcast('chat:new', msg) } catch (e) { console.error('ws broadcast error', e) }
+    try { sendEvent('chat:new', msg) } catch (e) { console.error('sse broadcast error', e) }
     res.status(201).json(msg)
   } catch (e) { console.error('postMessage error', e); res.status(500).json({ error: 'internal' }) }
 }

@@ -11,22 +11,25 @@ async function createNC(req, res){
 
     // find or create evaluacion_requisito for this workspace
     const workspaceId = user.workspace_id || null;
-    const [er] = await pool.execute('SELECT id FROM EVALUACION_REQUISITO WHERE requisito_base_id = ? AND workspace_id = ?', [requisito_base_id, workspaceId]);
+    const erResult = await pool.execute('SELECT id FROM EVALUACION_REQUISITO WHERE requisito_base_id = ? AND workspace_id = ?', [requisito_base_id, workspaceId]);
+    const er = Array.isArray(erResult) ? erResult[0] : erResult;
     let evaluacionId;
 
     if(er && er.length) evaluacionId = er[0].id;
     else{
-      const [ins] = await pool.execute('INSERT INTO EVALUACION_REQUISITO (requisito_base_id, workspace_id, estado_cumplimiento, fecha_ultima_edicion) VALUES (?, ?, ?, NOW())', [requisito_base_id, workspaceId, 'NA']);
-      evaluacionId = ins.insertId;
+      const insResult = await pool.execute('INSERT INTO EVALUACION_REQUISITO (requisito_base_id, workspace_id, estado_cumplimiento, fecha_ultima_edicion) VALUES (?, ?, ?, NOW())', [requisito_base_id, workspaceId, 'NA']);
+      const ins = Array.isArray(insResult) ? insResult[0] : insResult;
+      evaluacionId = ins?.insertId || ins?.insert_id || 0;
     }
 
     // insert NC
-    const [result] = await pool.execute(
+    const resultExec = await pool.execute(
       `INSERT INTO AUDITORIA_NC (evaluacion_requisito_id, evaluador_id, estado_flujo, estado_validacion, comentario_nc, titulo, descripcion, ultima_edicion_por, fecha_ultima_edicion)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
       [evaluacionId, user.id, 'Abierta', 'Parcial', descripcion || '', titulo, descripcion || '', user.id]
     );
-    const ncId = result.insertId;
+    const result = Array.isArray(resultExec) ? resultExec[0] : resultExec;
+    const ncId = result?.insertId || result?.insert_id || 0;
 
     // assign responsables (pivot) and create notifications
     if(Array.isArray(responsables) && responsables.length){

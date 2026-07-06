@@ -35,8 +35,8 @@ async function clearForRequisito(req, res){
       `DELETE n FROM NOTIFICACIONES n
        JOIN AUDITORIA_NC a ON n.link = CONCAT('/nc/', a.id)
        JOIN EVALUACION_REQUISITO er ON a.evaluacion_requisito_id = er.id
-       WHERE er.requisito_base_id = ? AND n.usuario_id = ?`,
-      [requisitoId, uid]
+       WHERE n.usuario_id = ? AND er.requisito_base_id = ?`,
+      [uid, requisitoId]
     )
     return res.json({ ok: true })
   }catch(err){ console.error('clearForRequisito error', err); return res.status(500).json({ error: 'internal_error' }) }

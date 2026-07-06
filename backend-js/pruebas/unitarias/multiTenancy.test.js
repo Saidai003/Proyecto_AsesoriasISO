@@ -557,7 +557,6 @@ describe('Multi-tenancy isolation', () => {
     test('getEvaluatorDashboard queries only user workspace', async () => {
       const mockRows = [{ id_visual: 'NC-2025-001', estado: 'Verificacion' }];
       pool.execute
-        .mockResolvedValueOnce([[{ workspace_id: 1, role_id: 2 }]])
         .mockResolvedValueOnce([mockRows])
         .mockResolvedValueOnce([[]])
         .mockResolvedValueOnce([{ promedio_dias: null }])
@@ -567,7 +566,7 @@ describe('Multi-tenancy isolation', () => {
         .mockResolvedValueOnce([[]]);
 
       const req = {
-        headers: { authorization: 'Bearer valid' },
+        user: { id: 1, workspace_id: 1, role: 'Evaluador' },
         query: {}
       };
       const res = mockRes();
@@ -580,14 +579,13 @@ describe('Multi-tenancy isolation', () => {
 
     test('getResponsibleDashboard queries only user workspace', async () => {
       pool.execute
-        .mockResolvedValueOnce([[{ workspace_id: 1, role_id: 2 }]])
         .mockResolvedValueOnce([[]])
         .mockResolvedValueOnce([[]])
         .mockResolvedValueOnce([[]])
         .mockResolvedValueOnce([[]]);
 
       const req = {
-        headers: { authorization: 'Bearer valid' },
+        user: { id: 1, workspace_id: 1, role: 'Responsable SGC' },
         query: {}
       };
       const res = mockRes();
@@ -600,12 +598,12 @@ describe('Multi-tenancy isolation', () => {
 
     test('getOperativeDashboard queries only user workspace', async () => {
       pool.execute
-        .mockResolvedValueOnce([[{ workspace_id: 1, role_id: 2 }]])
+          .mockResolvedValueOnce([[]])
         .mockResolvedValueOnce([[]])
         .mockResolvedValueOnce([[]]);
 
       const req = {
-        headers: { authorization: 'Bearer valid' },
+          user: { id: 1, workspace_id: 1, role: 'Operativo' },
         query: {}
       };
       const res = mockRes();

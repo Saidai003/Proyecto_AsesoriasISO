@@ -2,6 +2,10 @@ const { pool } = require('../db');
 const bcrypt = require('bcryptjs');
 const { signAccessToken, createRefreshSession, getSession, revokeRefreshSession, REFRESH_TOKEN_MINUTES } = require('../auth');
 
+function clearRefreshTokenCookie(res) {
+  res.clearCookie('refreshToken', { path: '/' });
+}
+
 // ✅ Logging estructurado para errors de autenticación
 const logAuthError = (context, error, details = {}) => {
   const errorLog = {
@@ -21,7 +25,7 @@ const logAuthInfo = (context, message, details = {}) => {
 async function login(req, res){
   try{
     const { email, password } = req.body;
-    const ip = req.ip || req.connection.remoteAddress;
+    const ip = req.ip || req.connection?.remoteAddress || req.socket?.remoteAddress || 'unknown';
 
     // Validación de entrada
     if (!email || !password) {
@@ -107,7 +111,7 @@ async function login(req, res){
 }
 
 async function refresh(req, res){
-  const ip = req.ip || req.connection.remoteAddress;
+  const ip = req.ip || req.connection?.remoteAddress || req.socket?.remoteAddress || 'unknown';
   try{
     const token = req.cookies?.refreshToken;
 
@@ -169,7 +173,7 @@ async function refresh(req, res){
 }
 
 async function logout(req, res){
-  const ip = req.ip || req.connection.remoteAddress;
+  const ip = req.ip || req.connection?.remoteAddress || req.socket?.remoteAddress || 'unknown';
   try{
     const token = req.cookies?.refreshToken;
     const userId = req.user?.id; // Si hay middleware de autenticación
@@ -185,12 +189,12 @@ async function logout(req, res){
     }
 
     // Limpiar cookie
-    res.clearCookie('refreshToken', { path: '/', httpOnly: true, sameSite: 'strict' });
+    clearRefreshTokenCookie(res);
     logAuthInfo('logout', 'Logout completado', { userId, ip });
-    return res.json({ ok: true, message: 'Logout exitoso' });
+    return res.json({ ok: true });
   } catch (err) {
     logAuthError('logout', err, { endpoint: 'POST /auth/logout', ip });
-    res.clearCookie('refreshToken', { path: '/', httpOnly: true, sameSite: 'strict' });
+    clearRefreshTokenCookie(res);
     // Siempre responder OK en logout para limpiar client
     return res.status(500).json({ ok: true, error: 'server_error_but_cleared' });
   }

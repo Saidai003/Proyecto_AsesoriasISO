@@ -1,53 +1,9 @@
 const { pool } = require('../db');
-const { verifyAccessToken } = require('../auth');
+const { getAuthUser } = require('../lib/authUser');
 
 // ------------------------------------------------------------------
 // FUNCIONES AUXILIARES
 // ------------------------------------------------------------------
-
-// Función para validar token y obtener datos de usuario (workspace y rol)
-async function getAuthUser(req, res) {
-  const token = req.headers.authorization?.startsWith('Bearer ') 
-    ? req.headers.authorization.slice(7) 
-    : req.query?.token;
-  
-  if (!token) {
-    res.status(401).json({ error: 'unauthorized' });
-    return null;
-  }
-
-  let user = null;
-  try { 
-    user = verifyAccessToken(token); 
-  } catch (e) { 
-    res.status(401).json({ error: 'invalid_token' });
-    return null;
-  }
-
-  if (!user?.id) {
-    res.status(401).json({ error: 'unauthorized' });
-    return null;
-  }
-
-  try {
-    const [rows] = await pool.execute(`
-      SELECT u.workspace_id, u.role_id, r.nombre as rol_nombre 
-      FROM USUARIOS u 
-      LEFT JOIN ROLES r ON u.role_id = r.id 
-      WHERE u.id = ?`, 
-      [user.id]
-    );
-    if (!rows?.[0]) {
-      res.status(404).json({ error: 'user_not_found' });
-      return null;
-    }
-    return { id: user.id, ...rows[0] };
-  } catch (e) {
-    console.error('getAuthUser error', e);
-    res.status(500).json({ error: 'internal' });
-    return null;
-  }
-}
 
 // Función para construir filtros
 function buildFilters(req, prefix) {
@@ -75,7 +31,7 @@ async function buildComplianceDashboard(workspaceId) {
   // --- 1. Evaluaciones por requisito (estado de cumplimiento) ---
   // Use a subquery to deduplicate: keep only one row per requisito_base_id
   // (the one with the highest id, i.e. most recent) to handle duplicate inserts.
-  const [evaluaciones] = await pool.execute(`
+  const evaluacionesResult = await pool.execute(`
     SELECT
       er.id              as evaluacion_id,
       er.estado_cumplimiento as estado,
@@ -89,6 +45,7 @@ async function buildComplianceDashboard(workspaceId) {
     JOIN CLAUSULAS c ON r.clausula_id = c.id
     WHERE er.workspace_id = ?
   `, [workspaceId]);
+  const evaluaciones = Array.isArray(evaluacionesResult?.[0]) ? evaluacionesResult[0] : [];
 
   // Métricas generales basadas en EVALUACION_REQUISITO
   // ISO 9001:2015 Req 4.3: requisitos "NA" (No Aplica) se excluyen del cálculo de cumplimiento
@@ -119,23 +76,29 @@ async function buildComplianceDashboard(workspaceId) {
   });
 
   // --- 3. KPIs de procesos (NC) ---
-  const [resolucionRows] = await pool.execute(`
-    SELECT AVG(DATEDIFF(nc.fecha_ultima_edicion, ach.fecha_accion)) as promedio_dias
-    FROM AUDITORIA_NC nc
-    JOIN EVALUACION_REQUISITO er ON nc.evaluacion_requisito_id = er.id
-    LEFT JOIN (
-      SELECT auditoria_nc_id, MIN(fecha_accion) as fecha_accion
-      FROM ACCIONES_CORRECTIVAS
-      GROUP BY auditoria_nc_id
-    ) ach ON ach.auditoria_nc_id = nc.id
-    WHERE er.workspace_id = ? AND nc.estado_flujo = 'Cerrada'
-  `, [workspaceId]).catch(() => [[{ promedio_dias: null }]]);
-  
+  let resolucionResult
+  try {
+    resolucionResult = await pool.execute(`
+      SELECT AVG(DATEDIFF(nc.fecha_ultima_edicion, ach.fecha_accion)) as promedio_dias
+      FROM AUDITORIA_NC nc
+      JOIN EVALUACION_REQUISITO er ON nc.evaluacion_requisito_id = er.id
+      LEFT JOIN (
+        SELECT auditoria_nc_id, MIN(fecha_accion) as fecha_accion
+        FROM ACCIONES_CORRECTIVAS
+        GROUP BY auditoria_nc_id
+      ) ach ON ach.auditoria_nc_id = nc.id
+      WHERE er.workspace_id = ? AND nc.estado_flujo = 'Cerrada'
+    `, [workspaceId])
+  } catch (_) {
+    resolucionResult = [[{ promedio_dias: null }]]
+  }
+  const resolucionRows = Array.isArray(resolucionResult?.[0]) && resolucionResult[0].length ? resolucionResult[0] : [{ promedio_dias: null }];
+
   const promedioDias = resolucionRows[0]?.promedio_dias
     ? Number(resolucionRows[0].promedio_dias).toFixed(1)
     : 0;
 
-  const [kpiRows] = await pool.execute(`
+  const kpiResult = await pool.execute(`
     SELECT
       COUNT(*) as total_cerradas,
       SUM(CASE WHEN nc.estado_validacion = 'Acepto' THEN 1 ELSE 0 END) as aceptadas
@@ -143,6 +106,7 @@ async function buildComplianceDashboard(workspaceId) {
     JOIN EVALUACION_REQUISITO er ON nc.evaluacion_requisito_id = er.id
     WHERE er.workspace_id = ? AND nc.estado_flujo = 'Cerrada'
   `, [workspaceId]);
+  const kpiRows = Array.isArray(kpiResult?.[0]) && kpiResult[0].length ? kpiResult[0] : [{ total_cerradas: 0, aceptadas: 0 }];
   
   const eficiencia = kpiRows[0].total_cerradas > 0
     ? ((kpiRows[0].aceptadas / kpiRows[0].total_cerradas) * 100).toFixed(1)
@@ -150,33 +114,40 @@ async function buildComplianceDashboard(workspaceId) {
 
   const csat = '0 / 5.0';
 
-  const [pendRows] = await pool.execute(`
+  const pendResult = await pool.execute(`
     SELECT COUNT(*) as pendientes
     FROM AUDITORIA_NC nc
     JOIN EVALUACION_REQUISITO er ON nc.evaluacion_requisito_id = er.id
     WHERE er.workspace_id = ? AND (nc.estado_flujo IS NULL OR nc.estado_flujo <> 'Cerrada')
   `, [workspaceId]);
-  
+  const pendRows = Array.isArray(pendResult?.[0]) && pendResult[0].length ? pendResult[0] : [{ pendientes: 0 }];
+
   const tareasPendientes = Number(pendRows[0]?.pendientes || 0);
   const proximaAuditoria = '—';
 
   async function kpisPorClausula(numClausula) {
-    const [resRows] = await pool.execute(`
-      SELECT AVG(DATEDIFF(nc.fecha_ultima_edicion, ach.fecha_accion)) as promedio_dias
-      FROM AUDITORIA_NC nc
-      JOIN EVALUACION_REQUISITO er ON nc.evaluacion_requisito_id = er.id
-      JOIN REQUISITOS_BASE r ON er.requisito_base_id = r.id
-      JOIN CLAUSULAS c ON r.clausula_id = c.id
-      LEFT JOIN (
-        SELECT auditoria_nc_id, MIN(fecha_accion) as fecha_accion
-        FROM ACCIONES_CORRECTIVAS
-        GROUP BY auditoria_nc_id
-      ) ach ON ach.auditoria_nc_id = nc.id
-      WHERE er.workspace_id = ? AND nc.estado_flujo = 'Cerrada' AND c.numero_clausula = ?
-    `, [workspaceId, numClausula]).catch(() => [[{ promedio_dias: null }]]);
+    let resResult
+    try {
+      resResult = await pool.execute(`
+        SELECT AVG(DATEDIFF(nc.fecha_ultima_edicion, ach.fecha_accion)) as promedio_dias
+        FROM AUDITORIA_NC nc
+        JOIN EVALUACION_REQUISITO er ON nc.evaluacion_requisito_id = er.id
+        JOIN REQUISITOS_BASE r ON er.requisito_base_id = r.id
+        JOIN CLAUSULAS c ON r.clausula_id = c.id
+        LEFT JOIN (
+          SELECT auditoria_nc_id, MIN(fecha_accion) as fecha_accion
+          FROM ACCIONES_CORRECTIVAS
+          GROUP BY auditoria_nc_id
+        ) ach ON ach.auditoria_nc_id = nc.id
+        WHERE er.workspace_id = ? AND nc.estado_flujo = 'Cerrada' AND c.numero_clausula = ?
+      `, [workspaceId, numClausula])
+    } catch (_) {
+      resResult = [[{ promedio_dias: null }]]
+    }
+    const resRows = Array.isArray(resResult?.[0]) && resResult[0].length ? resResult[0] : [{ promedio_dias: null }];
     const prom = resRows[0]?.promedio_dias ? Number(resRows[0].promedio_dias).toFixed(1) : 0;
 
-    const [efRows] = await pool.execute(`
+    const efResult = await pool.execute(`
       SELECT
         COUNT(*) as total_cerradas,
         SUM(CASE WHEN nc.estado_validacion = 'Acepto' THEN 1 ELSE 0 END) as aceptadas
@@ -186,7 +157,8 @@ async function buildComplianceDashboard(workspaceId) {
       JOIN CLAUSULAS c ON r.clausula_id = c.id
       WHERE er.workspace_id = ? AND nc.estado_flujo = 'Cerrada' AND c.numero_clausula = ?
     `, [workspaceId, numClausula]);
-    
+    const efRows = Array.isArray(efResult?.[0]) && efResult[0].length ? efResult[0] : [{ total_cerradas: 0, aceptadas: 0 }];
+
     const ef = efRows[0].total_cerradas > 0
       ? ((efRows[0].aceptadas / efRows[0].total_cerradas) * 100).toFixed(1)
       : 0;
@@ -403,7 +375,7 @@ async function getOperativeDashboard(req, res) {
     const filters = buildFilters(req, 'nc');
     const wsParams = [authUser.workspace_id, ...filters.params];
 
-    const [conteoRows] = await pool.execute(`
+    const conteoResult = await pool.execute(`
       SELECT 
         COUNT(*) as identificadas,
         SUM(CASE WHEN nc.estado_flujo IN ('Análisis', 'Ejecución') THEN 1 ELSE 0 END) as en_progreso
@@ -413,8 +385,9 @@ async function getOperativeDashboard(req, res) {
       JOIN CLAUSULAS c ON r.clausula_id = c.id
       WHERE er.workspace_id = ? ${filters.sql}
     `, wsParams);
+    const conteoRows = Array.isArray(conteoResult?.[0]) && conteoResult[0].length ? conteoResult[0] : [{ identificadas: 0, en_progreso: 0 }];
 
-    const [operativoRows] = await pool.execute(`
+    const operativoResult = await pool.execute(`
       SELECT 
         CONCAT('NC-', YEAR(nc.fecha_ultima_edicion), '-', LPAD(nc.id, 3, '0')) as id_visual,
         CONCAT('Cláusula ', c.numero_clausula) as origen,
@@ -429,6 +402,7 @@ async function getOperativeDashboard(req, res) {
       WHERE er.workspace_id = ? 
       ORDER BY nc.estado_flujo ASC, nc.fecha_ultima_edicion DESC
     `, [authUser.workspace_id]);
+    const operativoRows = Array.isArray(operativoResult?.[0]) && operativoResult[0].length ? operativoResult[0] : [];
 
     const mapProgreso = { 
       'Abierta': '10%', 

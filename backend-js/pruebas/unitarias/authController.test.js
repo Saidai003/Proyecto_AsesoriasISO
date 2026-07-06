@@ -57,7 +57,7 @@ describe('authController (unit)', () => {
     const req = { cookies: { refreshToken: 'abc' } };
     const res = mockRes();
     await logout(req, res);
-    expect(res.clearCookie).toHaveBeenCalledWith('refreshToken');
+    expect(res.clearCookie).toHaveBeenCalledWith('refreshToken', { path: '/' });
     expect(res.json).toHaveBeenCalledWith({ ok: true });
   });
 });

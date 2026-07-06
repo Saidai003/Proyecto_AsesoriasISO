@@ -562,7 +562,7 @@ async function getEvidenceHistory(req, res){
   }
 }
 
-module.exports = { listByRequisito, createEvidence, updateEvidence, deleteEvidence, downloadEvidence, getEvidenceHistory }
+module.exports = { listByRequisito, createEvidence, updateEvidence, deleteEvidence, downloadEvidence, getEvidenceHistory, getEvidenceInWorkspace }
 
 
       // Is "matches" a boolean that indicates whether the pattern was matched?
