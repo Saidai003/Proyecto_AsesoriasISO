@@ -32,20 +32,26 @@ async function buildComplianceDashboard(workspaceId) {
   // --- 1. Evaluaciones por requisito (estado de cumplimiento) ---
   // Use a subquery to deduplicate: keep only one row per requisito_base_id
   // (the one with the highest id, i.e. most recent) to handle duplicate inserts.
-  const evaluacionesResult = await pool.execute(`
-    SELECT
-      er.id              as evaluacion_id,
-      er.estado_cumplimiento as estado,
-      r.id               as requisito_id,
-      r.requisito_padre_id,
-      CONCAT(c.numero_clausula, '.', r.id) as codigo,
-      r.descripcion_normativa as descripcion,
-      c.numero_clausula  as clausula
-    FROM EVALUACION_REQUISITO er
-    JOIN REQUISITOS_BASE r ON er.requisito_base_id = r.id
-    JOIN CLAUSULAS c ON r.clausula_id = c.id
-    WHERE er.workspace_id = ?
-  `, [workspaceId]);
+  let evaluacionesResult;
+  try {
+    evaluacionesResult = await pool.execute(`
+      SELECT
+        er.id as evaluacion_id,
+        er.estado_cumplimiento as estado,
+        r.id as requisito_id,
+        r.requisito_padre_id,
+        CONCAT(c.numero_clausula, '.', r.id) as codigo,
+        r.descripcion_normativa as descripcion,
+        c.numero_clausula as clausula
+      FROM EVALUACION_REQUISITO er
+      JOIN REQUISITOS_BASE r ON er.requisito_base_id = r.id
+      JOIN CLAUSULAS c ON r.clausula_id = c.id
+      WHERE er.workspace_id = ?
+    `, [workspaceId]);
+  } catch (e) {
+    evaluacionesResult = [[ ]];
+  }
+
   const evaluaciones = Array.isArray(evaluacionesResult?.[0]) ? evaluacionesResult[0] : [];
 
   // Métricas generales basadas en EVALUACION_REQUISITO
