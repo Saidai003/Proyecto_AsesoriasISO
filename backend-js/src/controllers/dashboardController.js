@@ -6,6 +6,7 @@ const { getAuthUser } = require('../lib/authUser');
 // ------------------------------------------------------------------
 
 // Función para construir filtros
+// prefix is the table alias for fecha_ultima_edicion (e.g., 'nc' or 'er')
 function buildFilters(req, prefix) {
   let sql = '';
   const params = [];
