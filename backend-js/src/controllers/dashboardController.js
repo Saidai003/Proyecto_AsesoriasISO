@@ -83,43 +83,75 @@ async function buildComplianceDashboard(workspaceId) {
   });
 
   // --- 3. KPIs de procesos (NC) ---
-  let resolucionResult
-  try {
-    resolucionResult = await pool.execute(`
-      SELECT AVG(DATEDIFF(nc.fecha_ultima_edicion, ach.fecha_accion)) as promedio_dias
-      FROM AUDITORIA_NC nc
-      JOIN EVALUACION_REQUISITO er ON nc.evaluacion_requisito_id = er.id
-      LEFT JOIN (
-        SELECT auditoria_nc_id, MIN(fecha_accion) as fecha_accion
-        FROM ACCIONES_CORRECTIVAS
-        GROUP BY auditoria_nc_id
-      ) ach ON ach.auditoria_nc_id = nc.id
-      WHERE er.workspace_id = ? AND nc.estado_flujo = 'Cerrada'
-    `, [workspaceId])
-  } catch (_) {
-    resolucionResult = [[{ promedio_dias: null }]]
+  async function obtenerMetricasResolucion(workspaceId, clausulaNumero = null) {
+    const clauseFilter = clausulaNumero ? 'AND c.numero_clausula = ?' : '';
+    const params = [workspaceId, ...(clausulaNumero ? [clausulaNumero] : [])];
+
+    let resolucionResult;
+    try {
+      resolucionResult = await pool.execute(`
+        SELECT AVG(DATEDIFF(nc.fecha_cierre, ach.fecha_accion)) AS promedio_dias
+        FROM AUDITORIA_NC nc
+        JOIN EVALUACION_REQUISITO er ON nc.evaluacion_requisito_id = er.id
+        LEFT JOIN REQUISITOS_BASE r ON er.requisito_base_id = r.id
+        LEFT JOIN CLAUSULAS c ON r.clausula_id = c.id
+        LEFT JOIN (
+          SELECT auditoria_nc_id, MIN(fecha_accion) AS fecha_accion
+          FROM ACCIONES_CORRECTIVAS
+          GROUP BY auditoria_nc_id
+        ) ach ON ach.auditoria_nc_id = nc.id
+        WHERE er.workspace_id = ?
+          AND nc.estado_flujo = 'Cerrada'
+          AND nc.fecha_cierre IS NOT NULL
+          AND ach.fecha_accion IS NOT NULL
+          ${clauseFilter}
+      `, params);
+    } catch (_) {
+      resolucionResult = [[{ promedio_dias: null }]];
+    }
+
+    const resolucionRows = Array.isArray(resolucionResult?.[0]) && resolucionResult[0].length
+      ? resolucionResult[0]
+      : [{ promedio_dias: null }];
+
+    const promedioDias = resolucionRows[0]?.promedio_dias != null && !Number.isNaN(Number(resolucionRows[0].promedio_dias))
+      ? Number(resolucionRows[0].promedio_dias).toFixed(1)
+      : '0.0';
+
+    let eficienciaResult;
+    try {
+      eficienciaResult = await pool.execute(`
+        SELECT
+          COUNT(*) AS total_aceptadas,
+          SUM(CASE WHEN nc.estado_flujo = 'Cerrada' THEN 1 ELSE 0 END) AS resueltas
+        FROM AUDITORIA_NC nc
+        JOIN EVALUACION_REQUISITO er ON nc.evaluacion_requisito_id = er.id
+        LEFT JOIN REQUISITOS_BASE r ON er.requisito_base_id = r.id
+        LEFT JOIN CLAUSULAS c ON r.clausula_id = c.id
+        WHERE er.workspace_id = ?
+          AND nc.estado_validacion = 'Acepto'
+          ${clauseFilter}
+      `, params);
+    } catch (_) {
+      eficienciaResult = [[{ total_aceptadas: 0, resueltas: 0 }]];
+    }
+
+    const eficienciaRows = Array.isArray(eficienciaResult?.[0]) && eficienciaResult[0].length
+      ? eficienciaResult[0]
+      : [{ total_aceptadas: 0, resueltas: 0 }];
+
+    const totalAceptadas = Number(eficienciaRows[0]?.total_aceptadas || 0);
+    const resueltas = Number(eficienciaRows[0]?.resueltas || 0);
+    const eficiencia = totalAceptadas > 0
+      ? ((resueltas / totalAceptadas) * 100).toFixed(1)
+      : '0.0';
+
+    return {
+      promedio_resolucion: `${promedioDias} días`,
+      eficiencia_proceso: `${eficiencia}%`,
+      csat: '0 / 5.0'
+    };
   }
-  const resolucionRows = Array.isArray(resolucionResult?.[0]) && resolucionResult[0].length ? resolucionResult[0] : [{ promedio_dias: null }];
-
-  const promedioDias = resolucionRows[0]?.promedio_dias
-    ? Number(resolucionRows[0].promedio_dias).toFixed(1)
-    : 0;
-
-  const kpiResult = await pool.execute(`
-    SELECT
-      COUNT(*) as total_cerradas,
-      SUM(CASE WHEN nc.estado_validacion = 'Acepto' THEN 1 ELSE 0 END) as aceptadas
-    FROM AUDITORIA_NC nc
-    JOIN EVALUACION_REQUISITO er ON nc.evaluacion_requisito_id = er.id
-    WHERE er.workspace_id = ? AND nc.estado_flujo = 'Cerrada'
-  `, [workspaceId]);
-  const kpiRows = Array.isArray(kpiResult?.[0]) && kpiResult[0].length ? kpiResult[0] : [{ total_cerradas: 0, aceptadas: 0 }];
-  
-  const eficiencia = kpiRows[0].total_cerradas > 0
-    ? ((kpiRows[0].aceptadas / kpiRows[0].total_cerradas) * 100).toFixed(1)
-    : 0;
-
-  const csat = '0 / 5.0';
 
   const pendResult = await pool.execute(`
     SELECT COUNT(*) as pendientes
@@ -131,55 +163,16 @@ async function buildComplianceDashboard(workspaceId) {
 
   const tareasPendientes = Number(pendRows[0]?.pendientes || 0);
   const proximaAuditoria = '—';
+  const csat = '0 / 5.0';
 
-  async function kpisPorClausula(numClausula) {
-    let resResult
-    try {
-      resResult = await pool.execute(`
-        SELECT AVG(DATEDIFF(nc.fecha_ultima_edicion, ach.fecha_accion)) as promedio_dias
-        FROM AUDITORIA_NC nc
-        JOIN EVALUACION_REQUISITO er ON nc.evaluacion_requisito_id = er.id
-        JOIN REQUISITOS_BASE r ON er.requisito_base_id = r.id
-        JOIN CLAUSULAS c ON r.clausula_id = c.id
-        LEFT JOIN (
-          SELECT auditoria_nc_id, MIN(fecha_accion) as fecha_accion
-          FROM ACCIONES_CORRECTIVAS
-          GROUP BY auditoria_nc_id
-        ) ach ON ach.auditoria_nc_id = nc.id
-        WHERE er.workspace_id = ? AND nc.estado_flujo = 'Cerrada' AND c.numero_clausula = ?
-      `, [workspaceId, numClausula])
-    } catch (_) {
-      resResult = [[{ promedio_dias: null }]]
-    }
-    const resRows = Array.isArray(resResult?.[0]) && resResult[0].length ? resResult[0] : [{ promedio_dias: null }];
-    const prom = resRows[0]?.promedio_dias ? Number(resRows[0].promedio_dias).toFixed(1) : 0;
-
-    const efResult = await pool.execute(`
-      SELECT
-        COUNT(*) as total_cerradas,
-        SUM(CASE WHEN nc.estado_validacion = 'Acepto' THEN 1 ELSE 0 END) as aceptadas
-      FROM AUDITORIA_NC nc
-      JOIN EVALUACION_REQUISITO er ON nc.evaluacion_requisito_id = er.id
-      JOIN REQUISITOS_BASE r ON er.requisito_base_id = r.id
-      JOIN CLAUSULAS c ON r.clausula_id = c.id
-      WHERE er.workspace_id = ? AND nc.estado_flujo = 'Cerrada' AND c.numero_clausula = ?
-    `, [workspaceId, numClausula]);
-    const efRows = Array.isArray(efResult?.[0]) && efResult[0].length ? efResult[0] : [{ total_cerradas: 0, aceptadas: 0 }];
-
-    const ef = efRows[0].total_cerradas > 0
-      ? ((efRows[0].aceptadas / efRows[0].total_cerradas) * 100).toFixed(1)
-      : 0;
-
-    return {
-      promedio_resolucion: `${prom} días`,
-      eficiencia_proceso: `${ef}%`,
-      csat: '0 / 5.0'
-    };
-  }
-
+  const resolucionGlobal = await obtenerMetricasResolucion(workspaceId);
+  const kpisGlobales = {
+    ...resolucionGlobal,
+    csat
+  };
   const kpisClausulas = {};
   await Promise.all(clausulasInteres.map(async (n) => {
-    kpisClausulas[n] = await kpisPorClausula(n);
+    kpisClausulas[n] = await obtenerMetricasResolucion(workspaceId, n);
   }));
 
   return {
@@ -197,11 +190,7 @@ async function buildComplianceDashboard(workspaceId) {
       proxima_auditoria: proximaAuditoria,
       tareas_pendientes: tareasPendientes
     },
-    kpis_globales: {
-      promedio_resolucion: `${promedioDias} días`,
-      eficiencia_proceso: `${eficiencia}%`,
-      csat
-    },
+    kpis_globales: kpisGlobales,
     grafico_global: {
       labels: porClausula.map(c => `Cláusula ${c.clausula}`),
       actual: porClausula.map(c => c.porcentaje),
