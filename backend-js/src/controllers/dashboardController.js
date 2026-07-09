@@ -11,6 +11,7 @@ function buildFilters(req, prefix) {
   let sql = '';
   const params = [];
   
+  // Evidently, prefix is expected to be a string like 'nc' or 'er' that corresponds to the table alias in the SQL query.
   if (req.query.startDate && req.query.endDate) {
     sql += ` AND ${prefix}.fecha_ultima_edicion BETWEEN ? AND ?`;
     params.push(req.query.startDate, req.query.endDate);
@@ -305,14 +306,11 @@ async function getEvaluatorDashboard(req, res) {
         CONCAT('NC-', YEAR(nc.fecha_ultima_edicion), '-', LPAD(nc.id, 3, '0')) as id_visual,
         CONCAT('Cláusula ', c.numero_clausula) as clausula,
         r.descripcion_normativa as descripcion,
-        IFNULL(u.nombre, 'Sin asignar') as responsable,
         nc.estado_flujo as estado
       FROM AUDITORIA_NC nc
       JOIN EVALUACION_REQUISITO er ON nc.evaluacion_requisito_id = er.id
       JOIN REQUISITOS_BASE r ON er.requisito_base_id = r.id
       JOIN CLAUSULAS c ON r.clausula_id = c.id
-      LEFT JOIN AUDITORIA_NC_RESPONSABLES ncr ON ncr.auditoria_nc_id = nc.id
-      LEFT JOIN USUARIOS u ON ncr.usuario_id = u.id
       WHERE er.workspace_id = ? AND nc.estado_flujo = 'Verificación' ${filters.sql}
     `, wsParams);
 

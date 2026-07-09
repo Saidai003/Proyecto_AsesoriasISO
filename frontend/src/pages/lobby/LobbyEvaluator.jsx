@@ -59,19 +59,18 @@ export default function LobbyEvaluator(){
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left">
-            <thead className="bg-surface-container"><tr><th className="px-6 py-3">ID</th><th>Cláusula</th><th>Descripción</th><th>Responsable</th><th>Estado</th></tr></thead>
+            <thead className="bg-surface-container"><tr><th className="px-6 py-3">ID</th><th>Cláusula</th><th>Descripción</th><th>Estado</th></tr></thead>
             <tbody>
               {porVerificar.map((req, i) => (
                 <tr key={i} className="odd:bg-surface-container-low">
                   <td className="px-6 py-4">{req.id_visual}</td>
                   <td>{req.clausula}</td>
                   <td className="truncate max-w-xs">{req.descripcion}</td>
-                  <td>{req.responsable}</td>
                   <td>{req.estado}</td>
                 </tr>
               ))}
               {porVerificar.length === 0 && (
-                <tr><td colSpan="5" className="px-6 py-4 text-center text-gray-500">No hay requerimientos pendientes por verificar.</td></tr>
+                <tr><td colSpan="4" className="px-6 py-4 text-center text-gray-500">No hay requerimientos pendientes por verificar.</td></tr>
               )}
             </tbody>
           </table>
