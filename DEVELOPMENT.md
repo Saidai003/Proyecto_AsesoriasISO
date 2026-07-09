@@ -4,7 +4,7 @@
 
 ## Usuarios de demostración
 
-Los seeds crean cuentas de demostración:
+Los seeds crean cuentas de demostración (Las contrasenas no son estas... obviamente, de lo contrario, que seguridad tendria la plataforma?):
 
 | Email | Contraseña | Rol |
 |-------|-----------|-----|

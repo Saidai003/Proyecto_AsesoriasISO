@@ -78,18 +78,17 @@ export default function LobbyAdmin(){
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left">
-            <thead className="bg-surface-container-low"><tr><th className="px-6 py-3">Empresa</th><th>Responsable</th><th>Estado</th><th>%</th></tr></thead>
+            <thead className="bg-surface-container-low"><tr><th className="px-6 py-3">Empresa</th><th>Estado</th><th>%</th></tr></thead>
             <tbody>
               {empresas.map((emp, i) => (
                 <tr key={i} className="odd:bg-surface-container-low">
                   <td className="px-6 py-4">{emp.empresa}</td>
-                  <td>{emp.responsable}</td>
                   <td>{emp.estado}</td>
                   <td>{emp.avance}</td>
                 </tr>
               ))}
               {empresas.length === 0 && (
-                <tr><td colSpan="4" className="px-6 py-4 text-center text-gray-500">No hay empresas activas</td></tr>
+                <tr><td colSpan="3" className="px-6 py-4 text-center text-gray-500">No hay empresas activas</td></tr>
               )}
             </tbody>
           </table>

@@ -21,3 +21,7 @@ docs/informe-de-avances.pdf
 
 #Informe de avances
 informe-de-avances.tex
+
+# Script local para backups de base de datos (no versionado)
+backend-js/scripts/dbBackup.js
+backend-js/backups/

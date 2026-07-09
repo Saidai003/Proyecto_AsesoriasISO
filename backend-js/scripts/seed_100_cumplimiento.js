@@ -103,10 +103,11 @@ async function run() {
       const req = requisitos[i];
 
       // 1. Crear EVALUACION_REQUISITO con "Cumple"
+      const createdDaysAgo = requisitos.length - i + 20;
       const [erResult] = await conn.execute(
         `INSERT INTO EVALUACION_REQUISITO (requisito_base_id, workspace_id, estado_cumplimiento, ultima_edicion_por, fecha_ultima_edicion)
          VALUES (?, ?, 'Cumple', ?, NOW() - INTERVAL ? DAY)`,
-        [req.id, WORKSPACE_ID, EVALUADOR_ID, requisitos.length - i]
+        [req.id, WORKSPACE_ID, EVALUADOR_ID, createdDaysAgo]
       );
       const evaluacionId = erResult.insertId;
 
@@ -117,21 +118,23 @@ async function run() {
       await conn.execute(
         `INSERT INTO EVIDENCIAS (evaluacion_requisito_id, usuario_carga_id, nombre_archivo, url_archivo, tipo_formato, estado_validacion_archivo, comentario_evidencia, fecha_carga)
          VALUES (?, ?, ?, ?, 'pdf', 'Aceptado', ?, NOW() - INTERVAL ? DAY)`,
-        [evaluacionId, RESPONSABLE_ID, `evidencia_${req.id}_01.pdf`, `drive://seed_ev_${req.id}_01`, comentario1, requisitos.length - i + 5]
+        [evaluacionId, RESPONSABLE_ID, `evidencia_${req.id}_01.pdf`, `drive://seed_ev_${req.id}_01`, comentario1, createdDaysAgo + 4]
       );
       await conn.execute(
         `INSERT INTO EVIDENCIAS (evaluacion_requisito_id, usuario_carga_id, nombre_archivo, url_archivo, tipo_formato, estado_validacion_archivo, comentario_evidencia, fecha_carga)
          VALUES (?, ?, ?, ?, 'docx', 'Aceptado', ?, NOW() - INTERVAL ? DAY)`,
-        [evaluacionId, RESPONSABLE_ID, `registro_${req.id}_02.docx`, `drive://seed_ev_${req.id}_02`, comentario2, requisitos.length - i + 2]
+        [evaluacionId, RESPONSABLE_ID, `registro_${req.id}_02.docx`, `drive://seed_ev_${req.id}_02`, comentario2, createdDaysAgo + 2]
       );
       totalEvidencias += 2;
 
       // 3. Insertar 1 brecha cerrada con historial
       const brecha = BRECHAS_CERRADAS[i % BRECHAS_CERRADAS.length];
+      const ncCreatedDaysAgo = createdDaysAgo + 5;
+      const actionDaysAgo = Math.max(1, createdDaysAgo - 3);
       const [ncResult] = await conn.execute(
         `INSERT INTO AUDITORIA_NC (evaluacion_requisito_id, evaluador_id, estado_flujo, estado_validacion, comentario_nc, titulo, descripcion, ultima_edicion_por, fecha_ultima_edicion)
          VALUES (?, ?, 'Cerrada', 'Acepto', ?, ?, ?, ?, NOW() - INTERVAL ? DAY)`,
-        [evaluacionId, EVALUADOR_ID, brecha.comentario, brecha.titulo, brecha.desc, EVALUADOR_ID, requisitos.length - i]
+        [evaluacionId, EVALUADOR_ID, brecha.comentario, brecha.titulo, brecha.desc, EVALUADOR_ID, ncCreatedDaysAgo]
       );
       const ncId = ncResult.insertId;
       totalBrechas++;
@@ -158,7 +161,7 @@ async function run() {
       await conn.execute(
         `INSERT INTO ACCIONES_CORRECTIVAS (auditoria_nc_id, autor_id, tipo_autor, nc, accion, estado_accion, fecha_accion)
          VALUES (?, ?, 'Responsable SGC', ?, 'Se implementaron las correcciones necesarias y se verificó su eficacia', 'Eficaz', NOW() - INTERVAL ? DAY)`,
-        [ncId, RESPONSABLE_ID, brecha.desc, requisitos.length - i + 1]
+        [ncId, RESPONSABLE_ID, brecha.desc, actionDaysAgo]
       );
       totalAcciones++;
 

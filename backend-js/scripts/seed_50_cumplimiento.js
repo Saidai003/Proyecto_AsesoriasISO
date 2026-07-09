@@ -219,10 +219,11 @@ async function run() {
       else estado = 'Parcial';
 
       // 1. Crear EVALUACION_REQUISITO
+      const evaluacionCreatedDaysAgo = daysAgo + randInt(8, 25);
       const [erResult] = await conn.execute(
         `INSERT INTO EVALUACION_REQUISITO (requisito_base_id, workspace_id, estado_cumplimiento, ultima_edicion_por, fecha_ultima_edicion)
          VALUES (?, ?, ?, ?, NOW() - INTERVAL ? DAY)`,
-        [req.id, WORKSPACE_ID, estado, EVALUADOR_ID, daysAgo]
+        [req.id, WORKSPACE_ID, estado, EVALUADOR_ID, evaluacionCreatedDaysAgo]
       );
       const evaluacionId = erResult.insertId;
 
@@ -307,10 +308,12 @@ async function run() {
 
         const brechaData = estadoFlujo === 'Cerrada' ? pick(BRECHAS_CERRADAS) : pick(BRECHAS_ABIERTAS);
 
+        const ncCreatedDaysAgo = evaluacionCreatedDaysAgo + randInt(2, 10);
+        const actionDaysAgo = Math.max(1, ncCreatedDaysAgo - randInt(1, 6));
         const [ncResult] = await conn.execute(
           `INSERT INTO AUDITORIA_NC (evaluacion_requisito_id, evaluador_id, estado_flujo, estado_validacion, comentario_nc, titulo, descripcion, ultima_edicion_por, fecha_ultima_edicion)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW() - INTERVAL ? DAY)`,
-          [evaluacionId, EVALUADOR_ID, estadoFlujo, estadoValidacion, comentarioNc, brechaData.titulo, brechaData.desc, EVALUADOR_ID, daysAgo - randInt(0, 5)]
+          [evaluacionId, EVALUADOR_ID, estadoFlujo, estadoValidacion, comentarioNc, brechaData.titulo, brechaData.desc, EVALUADOR_ID, ncCreatedDaysAgo]
         );
         const ncId = ncResult.insertId;
         totalBrechas++;
@@ -376,7 +379,7 @@ async function run() {
           await conn.execute(
             `INSERT INTO ACCIONES_CORRECTIVAS (auditoria_nc_id, autor_id, tipo_autor, nc, accion, estado_accion, fecha_accion)
              VALUES (?, ?, ?, ?, ?, ?, NOW() - INTERVAL ? DAY)`,
-            [ncId, RESPONSABLE_ID, pick(['Responsable SGC', 'Evaluador']), brechaData.desc, textoAccion, estadoAccion, daysAgo - randInt(0, 10)]
+            [ncId, RESPONSABLE_ID, pick(['Responsable SGC', 'Evaluador']), brechaData.desc, textoAccion, estadoAccion, actionDaysAgo]
           );
           totalAcciones++;
         }

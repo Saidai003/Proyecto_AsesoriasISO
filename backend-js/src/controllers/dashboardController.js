@@ -90,7 +90,7 @@ async function buildComplianceDashboard(workspaceId) {
     let resolucionResult;
     try {
       resolucionResult = await pool.execute(`
-        SELECT AVG(DATEDIFF(nc.fecha_cierre, ach.fecha_accion)) AS promedio_dias
+        SELECT ROUND(AVG(GREATEST(0, DATEDIFF(nc.fecha_cierre, ach.fecha_accion))), 0) AS promedio_dias
         FROM AUDITORIA_NC nc
         JOIN EVALUACION_REQUISITO er ON nc.evaluacion_requisito_id = er.id
         LEFT JOIN REQUISITOS_BASE r ON er.requisito_base_id = r.id
@@ -115,8 +115,8 @@ async function buildComplianceDashboard(workspaceId) {
       : [{ promedio_dias: null }];
 
     const promedioDias = resolucionRows[0]?.promedio_dias != null && !Number.isNaN(Number(resolucionRows[0].promedio_dias))
-      ? Number(resolucionRows[0].promedio_dias).toFixed(1)
-      : '0.0';
+      ? Math.max(0, Math.round(Number(resolucionRows[0].promedio_dias)))
+      : 0;
 
     let eficienciaResult;
     try {
@@ -246,7 +246,6 @@ async function getAdminDashboard(req, res) {
       SELECT 
         et.id,
         et.nombre_cliente as empresa,
-        (SELECT u.nombre FROM USUARIOS u LEFT JOIN ROLES r ON u.role_id = r.id WHERE u.workspace_id = et.id AND r.nombre = 'responsable' LIMIT 1) as responsable,
         COUNT(nc.id) as total_nc,
         SUM(CASE WHEN nc.estado_flujo = 'Cerrada' THEN 1 ELSE 0 END) as nc_cerradas
       FROM ESPACIO_TRABAJO et
@@ -264,12 +263,13 @@ async function getAdminDashboard(req, res) {
       const p = emp.total_nc > 0 ? Math.round((emp.nc_cerradas / emp.total_nc) * 100) : 0;
       let estado = 'Fase Documental';
       
+      // Este criterio podria ser cambiado en el futuro para reflejar mejor
+      // el estado de la empresa según el porcentaje de NC cerradas.
       if (p > 80) estado = 'Fase de Auditoría';
       else if (p > 30) estado = 'Plan de Acción';
       
       return {
         empresa: emp.empresa,
-        responsable: emp.responsable || 'Sin asignar',
         estado: estado,
         avance: `${p}%`
       };
