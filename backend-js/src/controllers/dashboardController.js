@@ -232,7 +232,7 @@ async function getAdminDashboard(req, res) {
     const filters = buildFilters(req, 'nc');
 
     const [totalRows] = await pool.execute(`
-      SELECT COUNT(nc.id) as total_nc 
+      SELECT COUNT(DISTINCT nc.id) as total_nc 
       FROM AUDITORIA_NC nc
       LEFT JOIN EVALUACION_REQUISITO er ON nc.evaluacion_requisito_id = er.id
       LEFT JOIN REQUISITOS_BASE r ON er.requisito_base_id = r.id
@@ -246,7 +246,7 @@ async function getAdminDashboard(req, res) {
       SELECT 
         et.id,
         et.nombre_cliente as empresa,
-        COUNT(nc.id) as total_nc,
+        COUNT(DISTINCT nc.id) as total_nc,
         SUM(CASE WHEN nc.estado_flujo = 'Cerrada' THEN 1 ELSE 0 END) as nc_cerradas
       FROM ESPACIO_TRABAJO et
       LEFT JOIN EVALUACION_REQUISITO er ON er.workspace_id = et.id
@@ -373,7 +373,7 @@ async function getOperativeDashboard(req, res) {
 
     const conteoResult = await pool.execute(`
       SELECT 
-        COUNT(*) as identificadas,
+        COUNT(DISTINCT nc.id) as identificadas,
         SUM(CASE WHEN nc.estado_flujo IN ('Análisis', 'Ejecución') THEN 1 ELSE 0 END) as en_progreso
       FROM AUDITORIA_NC nc
       JOIN EVALUACION_REQUISITO er ON nc.evaluacion_requisito_id = er.id
