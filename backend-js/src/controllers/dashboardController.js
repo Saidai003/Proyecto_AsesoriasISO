@@ -326,7 +326,6 @@ async function getEvaluatorDashboard(req, res) {
     res.json({
       kpis: compliance.kpis_globales,
       metricas: compliance.metricas,
-      kpis_globales: compliance.kpis_globales,
       grafico_global: compliance.grafico_global,
       clausulas: compliance.clausulas,
       kpis_por_clausula: compliance.kpis_por_clausula,
@@ -349,7 +348,7 @@ async function getResponsibleDashboard(req, res) {
 
     res.json({
       metricas: compliance.metricas,
-      kpis_globales: compliance.kpis_globales,
+      kpis: compliance.kpis_globales,
       grafico_global: compliance.grafico_global,
       clausulas: compliance.clausulas,
       kpis_por_clausula: compliance.kpis_por_clausula

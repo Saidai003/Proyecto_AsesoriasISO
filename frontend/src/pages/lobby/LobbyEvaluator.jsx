@@ -20,7 +20,7 @@ export default function LobbyEvaluator(){
         })
         if (response.ok) {
           const data = await response.json()
-          setKpis(data.kpis)
+          setKpis(data.kpis || data.kpis_globales || { promedio_resolucion: '0 días', eficiencia_proceso: '0%', csat: '0 / 5.0' })
           setPorVerificar(data.por_verificar)
           setPendientesRevision(data.pendientes_revision)
         }
@@ -57,9 +57,9 @@ export default function LobbyEvaluator(){
             <p className="text-xs text-on-surface-variant">Lista de puntos de control pendientes de validación técnica.</p>
           </div>
         </div>
-        <div className="overflow-x-auto">
+        <div className={`overflow-x-auto ${porVerificar.length > 10 ? 'max-h-[420px] overflow-y-auto' : ''}`}>
           <table className="w-full text-left">
-            <thead className="bg-surface-container"><tr><th className="px-6 py-3">ID</th><th>Cláusula</th><th>Descripción</th><th>Estado</th></tr></thead>
+            <thead className="bg-surface-container sticky top-0 z-10"><tr><th className="px-6 py-3">ID</th><th>Cláusula</th><th>Descripción</th><th>Estado</th></tr></thead>
             <tbody>
               {porVerificar.map((req, i) => (
                 <tr key={i} className="odd:bg-surface-container-low">
@@ -84,9 +84,9 @@ export default function LobbyEvaluator(){
             <p className="text-xs text-on-surface-variant">Archivos cargados esperando aprobación o rechazo.</p>
           </div>
         </div>
-        <div className="overflow-x-auto">
+        <div className={`overflow-x-auto ${pendientesRevision.length > 10 ? 'max-h-[420px] overflow-y-auto' : ''}`}>
           <table className="w-full text-left">
-            <thead className="bg-surface-container"><tr><th className="px-6 py-3">ID Evidencia</th><th>Nombre del Archivo</th><th>Fecha de Carga</th></tr></thead>
+            <thead className="bg-surface-container sticky top-0 z-10"><tr><th className="px-6 py-3">ID Evidencia</th><th>Nombre del Archivo</th><th>Fecha de Carga</th></tr></thead>
             <tbody>
               {pendientesRevision.map((ev, i) => (
                 <tr key={i} className="odd:bg-surface-container-low">

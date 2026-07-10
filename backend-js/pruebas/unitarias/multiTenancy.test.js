@@ -414,8 +414,23 @@ describe('Multi-tenancy isolation', () => {
       expect(res.status).toHaveBeenCalledWith(404);
     });
 
-    test('getEvidenceHistory returns 404 for evidence of another workspace', async () => {
-      pool.query.mockResolvedValueOnce([[]]);
+    test('getEvidenceHistory returns logs for a deleted evidence when the current user is linked to the audit trail', async () => {
+      pool.query
+        .mockResolvedValueOnce([[]])
+        .mockResolvedValueOnce([[{ usuario_id: 2, workspace_id: 1 }]])
+        .mockResolvedValueOnce([[{ id: 1, evidencia_id: 999, usuario_id: 2, tipo_accion: 'DELETE', nombre_archivo: 'x.txt', detalle: 'deleted', fecha_accion: '2026-01-01' }]]);
+      const req = {
+        params: { id: '999' },
+        user: { workspace_id: 1, role: 'Responsable SGC', id: 2 }
+      };
+      const res = mockRes();
+      await getEvidenceHistory(req, res);
+      expect(res.status).not.toHaveBeenCalledWith(404);
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ logs: expect.any(Array) }));
+    });
+
+    test('getEvidenceHistory returns 404 for evidence of another workspace when there is no audit trail', async () => {
+      pool.query.mockResolvedValueOnce([[]]).mockResolvedValueOnce([[]]).mockResolvedValueOnce([[]]);
       const req = {
         params: { id: '999' },
         user: { workspace_id: 1, role: 'Admin', id: 1 }
@@ -562,7 +577,6 @@ describe('Multi-tenancy isolation', () => {
         .mockResolvedValueOnce([{ promedio_dias: null }])
         .mockResolvedValueOnce([[]])
         .mockResolvedValueOnce([[]])
-        .mockResolvedValueOnce([[]])
         .mockResolvedValueOnce([[]]);
 
       const req = {
@@ -575,6 +589,32 @@ describe('Multi-tenancy isolation', () => {
         expect.stringContaining('WHERE er.workspace_id = ?'),
         expect.arrayContaining([1])
       );
+    });
+
+    test('getEvaluatorDashboard returns canonical kpis payload', async () => {
+      pool.execute
+        .mockResolvedValueOnce([[]])
+        .mockResolvedValueOnce([[]])
+        .mockResolvedValueOnce([{ promedio_dias: null }])
+        .mockResolvedValueOnce([[]])
+        .mockResolvedValueOnce([[]])
+        .mockResolvedValueOnce([[]]);
+
+      const req = {
+        user: { id: 1, workspace_id: 1, role: 'Evaluador' },
+        query: {}
+      };
+      const res = mockRes();
+      await getEvaluatorDashboard(req, res);
+      const payload = res.json.mock.calls[0][0];
+      expect(payload).toEqual(expect.objectContaining({
+        kpis: expect.objectContaining({
+          promedio_resolucion: expect.any(String),
+          eficiencia_proceso: expect.any(String),
+          csat: expect.any(String)
+        })
+      }));
+      expect(payload).not.toHaveProperty('kpis_globales');
     });
 
     test('getResponsibleDashboard queries only user workspace', async () => {

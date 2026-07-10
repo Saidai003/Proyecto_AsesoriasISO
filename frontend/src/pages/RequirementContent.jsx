@@ -41,6 +41,7 @@ export default function RequirementContent({ node, onRequestCreateNc, onStatusCh
   const [evidenceHistoryLogs, setEvidenceHistoryLogs] = useState([])
   const [evidenceHistoryTarget, setEvidenceHistoryTarget] = useState(null)
   const [evidenceNotifs, setEvidenceNotifs] = useState({})
+  const [deletingEvidenceIds, setDeletingEvidenceIds] = useState({})
   const [ncGlobalHistoryOpen, setNcGlobalHistoryOpen] = useState(false)
   const [ncGlobalHistoryLogs, setNcGlobalHistoryLogs] = useState([])
   const [ncGlobalHistoryLoading, setNcGlobalHistoryLoading] = useState(false)
@@ -788,46 +789,60 @@ export default function RequirementContent({ node, onRequestCreateNc, onStatusCh
                     <div className="mt-1 text-[11px] text-slate-700 truncate" title={ev.nombre_archivo}>{ev.nombre_archivo}</div>
                   </button>
                   <div className="mt-1 flex flex-wrap items-center gap-1">
-                    {canDownloadEvidence(ev) && (
-                      <button
-                        onClick={(e)=>{ e.stopPropagation(); downloadEvidence(ev) }}
-                        className="px-1.5 py-0.5 rounded bg-blue-600 text-white text-[10px]"
-                      >
-                        Descargar
-                      </button>
-                    )}
-                    {canUpdateEvidence(ev) && (
-                      <button
-                        onClick={(e)=>{ e.stopPropagation(); requestUpdateEvidence(ev) }}
-                        className="px-1.5 py-0.5 rounded bg-slate-800 text-white text-[10px]"
-                      >
-                        Cambiar
-                      </button>
-                    )}
-                    {canDeleteEvidence(ev) && (
-                      <button
-                        onClick={(e)=>{
-                          e.stopPropagation()
-                          setConfirmTitle('Eliminar evidencia')
-                          setConfirmMessage('Confirmar eliminacion de la evidencia? Esta accion no se puede deshacer.')
-                          setConfirmCallback(()=>async ()=>{
-                            try{
-                              const res = await fetchWithAuth(`/api/evidencias/${ev.id}`, { method: 'DELETE' })
-                              if(!res.ok){ const j = await res.json().catch(()=>({})); alert('No se pudo eliminar: ' + (j.error || res.statusText)); return }
-                              try{
-                                if(blobUrls && blobUrls[ev.id]){ try{ URL.revokeObjectURL(blobUrls[ev.id]) }catch(_){ } setBlobUrls(prev => { const next = { ...prev }; delete next[ev.id]; return next }) }
-                              }catch(_){ }
-                              setEvidences(prev => prev.filter(x => x.id !== ev.id))
-                              try{ if(hasRole(user, 'responsable')) window.dispatchEvent(new CustomEvent('notifications:new', { detail: { requisito_base_id: node && node.id ? Number(node.id) : null, evidencia_id: ev.id } })) }catch(_){ }
-                            }catch(e){ console.error('delete evidence', e); alert('Error eliminando evidencia') }
-                          })
-                          setConfirmOpen(true)
-                        }}
-                        className="px-1.5 py-0.5 rounded bg-red-600 text-white text-[10px]"
-                        aria-label="Eliminar evidencia"
-                      >
-                        Eliminar
-                      </button>
+                    {ev.deleted ? (
+                      <span className="px-1.5 py-0.5 rounded bg-slate-400 text-white text-[10px]">Eliminada</span>
+                    ) : (
+                      <>
+                        {canDownloadEvidence(ev) && (
+                          <button
+                            onClick={(e)=>{ e.stopPropagation(); downloadEvidence(ev) }}
+                            className="px-1.5 py-0.5 rounded bg-blue-600 text-white text-[10px]"
+                          >
+                            Descargar
+                          </button>
+                        )}
+                        {canUpdateEvidence(ev) && (
+                          <button
+                            onClick={(e)=>{ e.stopPropagation(); requestUpdateEvidence(ev) }}
+                            className="px-1.5 py-0.5 rounded bg-slate-800 text-white text-[10px]"
+                          >
+                            Cambiar
+                          </button>
+                        )}
+                        {canDeleteEvidence(ev) && (
+                          <button
+                            onClick={(e)=>{
+                              e.stopPropagation()
+                              if(deletingEvidenceIds[ev.id]) return
+                              setConfirmTitle('Eliminar evidencia')
+                              setConfirmMessage('Confirmar eliminacion de la evidencia? Esta accion no se puede deshacer.')
+                              setConfirmCallback(()=>async ()=>{
+                                setDeletingEvidenceIds(prev => ({ ...prev, [ev.id]: true }))
+                                try{
+                                  const res = await fetchWithAuth(`/api/evidencias/${ev.id}`, { method: 'DELETE' })
+                                  if(!res.ok){ const j = await res.json().catch(()=>({})); alert('No se pudo eliminar: ' + (j.error || res.statusText)); return }
+                                  try{
+                                    if(blobUrls && blobUrls[ev.id]){ try{ URL.revokeObjectURL(blobUrls[ev.id]) }catch(_){ } setBlobUrls(prev => { const next = { ...prev }; delete next[ev.id]; return next }) }
+                                  }catch(_){ }
+                                  setEvidences(prev => prev.map(x => x.id === ev.id ? { ...x, deleted: true, deletedAt: new Date().toISOString() } : x))
+                                  setEvidenceHistoryTarget(null)
+                                  setEvidenceHistoryLogs([])
+                                  setEvidenceHistoryOpen(false)
+                                  window.dispatchEvent(new CustomEvent('toast:show', { detail: { title: 'Evidencia eliminada', message: 'El historial de cambios se conserva.', type: 'success', ttl: 4000 } }))
+                                  try{ if(hasRole(user, 'responsable')) window.dispatchEvent(new CustomEvent('notifications:new', { detail: { requisito_base_id: node && node.id ? Number(node.id) : null, evidencia_id: ev.id } })) }catch(_){ }
+                                }catch(e){ console.error('delete evidence', e); alert('Error eliminando evidencia') }
+                                finally{ setDeletingEvidenceIds(prev => { const next = { ...prev }; delete next[ev.id]; return next }) }
+                              })
+                              setConfirmOpen(true)
+                            }}
+                            className="px-1.5 py-0.5 rounded bg-red-600 text-white text-[10px] disabled:opacity-60"
+                            aria-label="Eliminar evidencia"
+                            disabled={!!deletingEvidenceIds[ev.id]}
+                          >
+                            {deletingEvidenceIds[ev.id] ? 'Eliminando...' : 'Eliminar'}
+                          </button>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>

@@ -504,7 +504,7 @@ async function deleteEvidence(req, res){
     const uid = req.user && req.user.id ? req.user.id : null
     const canDelete = role === 'Admin' || _toNumber(existing.usuario_carga_id) === _toNumber(uid)
     if(!canDelete) return res.status(403).json({ error: 'forbidden' })
-    // Insert delete log before removing the evidence row so FK constraints do not fail
+    // Insert delete log before removing the evidence row so history is preserved.
     try{
       await pool.query('INSERT INTO EVIDENCIAS_LOG (evidencia_id, usuario_id, ev_id, tipo_accion, nombre_archivo, detalle) VALUES (?,?,?,?,?,?)', [id, uid, existing.ev_id || null, 'DELETE', existing.nombre_archivo || '', `Evidencia eliminada: ${existing.nombre_archivo || ''}`])
     }catch(err){ console.error('failed to insert evidencias log on delete', err) }
@@ -529,9 +529,62 @@ async function deleteEvidence(req, res){
 async function getEvidenceHistory(req, res){
   const id = Number(req.params.id) || 0
   try{
+    if(!id) return res.status(400).json({ error: 'invalid_evidence_id' })
+    const user = req.user || {}
+    if(!user.id && user.role !== 'Admin'){
+      return res.status(401).json({ error: 'unauthorized' })
+    }
+
+    const normalizeRows = (result) => {
+      if(Array.isArray(result)){
+        if(result.length === 0) return []
+        if(Array.isArray(result[0])) return result[0]
+        return result
+      }
+      return []
+    }
+
     const lookup = await getEvidenceInWorkspace(id, req)
-    if(lookup.error) return res.status(lookup.status).json({ error: lookup.error })
-    const [rows] = await pool.query(`SELECT l.*, u.nombre as usuario_nombre, e.estado_validacion_archivo FROM EVIDENCIAS_LOG l LEFT JOIN USUARIOS u ON u.id = l.usuario_id LEFT JOIN EVIDENCIAS e ON e.id = l.evidencia_id WHERE l.evidencia_id = ? ORDER BY l.fecha_accion DESC`, [id])
+    if(lookup.error){
+      if(lookup.status !== 404){
+        return res.status(lookup.status).json({ error: lookup.error })
+      }
+
+      const userId = req.user && req.user.id ? Number(req.user.id) : null
+      const workspaceId = resolveWorkspaceId(req)
+      const isAdmin = req.user && req.user.role === 'Admin'
+      const [deletedEvidenceLogRows] = await pool.query(`
+        SELECT l.usuario_id, u.workspace_id
+        FROM EVIDENCIAS_LOG l
+        LEFT JOIN USUARIOS u ON u.id = l.usuario_id
+        WHERE l.evidencia_id = ?
+        ORDER BY l.fecha_accion DESC
+        LIMIT 5
+      `, [id])
+      const hasAuditTrail = Array.isArray(deletedEvidenceLogRows) && deletedEvidenceLogRows.length > 0
+      const canAccessDeletedHistory = hasAuditTrail && (isAdmin || (userId != null && deletedEvidenceLogRows.some((row) => Number(row.usuario_id) === userId || (workspaceId != null && Number(row.workspace_id) === workspaceId))))
+      if(!canAccessDeletedHistory){
+        return res.status(404).json({ error: 'not_found' })
+      }
+    }
+
+    const rows = normalizeRows(await pool.query(`
+      SELECT l.*, u.nombre as usuario_nombre, e.estado_validacion_archivo
+      FROM EVIDENCIAS_LOG l
+      LEFT JOIN USUARIOS u ON u.id = l.usuario_id
+      LEFT JOIN EVIDENCIAS e ON e.id = l.evidencia_id
+      WHERE l.evidencia_id = ?
+      ORDER BY l.fecha_accion DESC
+    `, [id]))
+
+    // If there is no log row and the evidence row is gone, return an empty history instead of failing.
+    if(!rows || rows.length === 0){
+      const existing = normalizeRows(await pool.query('SELECT id FROM EVIDENCIAS WHERE id = ?', [id]))
+      if(!existing || existing.length === 0){
+        return res.json({ logs: [] })
+      }
+    }
+
     // Attempt robust normalization for common mojibake patterns.
     // Strategy: if string contains typical mojibake markers (Ã), try interpreting
     // the original bytes as latin1 and convert to utf8. Fallback to binary->utf8.

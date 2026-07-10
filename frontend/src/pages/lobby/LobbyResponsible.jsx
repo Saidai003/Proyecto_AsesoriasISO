@@ -18,7 +18,7 @@ export default function LobbyResponsible(){
         })
         if (response.ok) {
           const data = await response.json()
-          setKpis(data.kpis_globales || { promedio_resolucion: '0 días', eficiencia_proceso: '0%', csat: '0 / 5.0' })
+          setKpis(data.kpis || data.kpis_globales || { promedio_resolucion: '0 días', eficiencia_proceso: '0%', csat: '0 / 5.0' })
         }
       } catch (error) {
         console.error("Error fetching responsible dashboard:", error)
