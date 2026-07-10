@@ -616,6 +616,24 @@ describe('Multi-tenancy isolation', () => {
       expect(payload).not.toHaveProperty('kpis_globales');
     });
 
+    test('getEvaluatorDashboard uses latest eficacia action for promedio de resolución', async () => {
+      pool.execute.mockResolvedValue([[]]);
+
+      const req = {
+        user: { id: 1, workspace_id: 1, role: 'Evaluador' },
+        query: {}
+      };
+      const res = mockRes();
+      await getEvaluatorDashboard(req, res);
+
+      const usedQuery = pool.execute.mock.calls
+        .map(call => call[0])
+        .find(sql => typeof sql === 'string' && sql.includes('MAX(fecha_accion)'));
+
+      expect(usedQuery).toBeDefined();
+      expect(usedQuery).toContain("SUM(CASE WHEN estado_accion <> 'Eficaz' THEN 1 ELSE 0 END) = 0");
+    });
+
     test('getResponsibleDashboard queries only user workspace', async () => {
       pool.execute
         .mockResolvedValueOnce([[]])

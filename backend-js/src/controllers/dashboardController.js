@@ -96,10 +96,11 @@ async function buildComplianceDashboard(workspaceId) {
         JOIN EVALUACION_REQUISITO er ON nc.evaluacion_requisito_id = er.id
         LEFT JOIN REQUISITOS_BASE r ON er.requisito_base_id = r.id
         LEFT JOIN CLAUSULAS c ON r.clausula_id = c.id
-        LEFT JOIN (
-          SELECT auditoria_nc_id, MIN(fecha_accion) AS fecha_accion
+        JOIN (
+          SELECT auditoria_nc_id, MAX(fecha_accion) AS fecha_accion
           FROM ACCIONES_CORRECTIVAS
           GROUP BY auditoria_nc_id
+          HAVING SUM(CASE WHEN estado_accion <> 'Eficaz' THEN 1 ELSE 0 END) = 0
         ) ach ON ach.auditoria_nc_id = nc.id
         WHERE er.workspace_id = ?
           AND nc.estado_flujo = 'Cerrada'
