@@ -359,76 +359,8 @@ async function getResponsibleDashboard(req, res) {
   }
 }
 
-// Dashboard operativo
-async function getOperativeDashboard(req, res) {
-  try {
-    const authUser = await getAuthUser(req, res);
-    if (!authUser) return;
-
-    const filters = buildFilters(req, 'nc');
-    const wsParams = [authUser.workspace_id, ...filters.params];
-
-    const conteoResult = await pool.execute(`
-      SELECT 
-        COUNT(DISTINCT nc.id) as identificadas,
-        SUM(CASE WHEN nc.estado_flujo IN ('Análisis', 'Ejecución') THEN 1 ELSE 0 END) as en_progreso
-      FROM AUDITORIA_NC nc
-      JOIN EVALUACION_REQUISITO er ON nc.evaluacion_requisito_id = er.id
-      JOIN REQUISITOS_BASE r ON er.requisito_base_id = r.id
-      JOIN CLAUSULAS c ON r.clausula_id = c.id
-      WHERE er.workspace_id = ? ${filters.sql}
-    `, wsParams);
-    const conteoRows = Array.isArray(conteoResult?.[0]) && conteoResult[0].length ? conteoResult[0] : [{ identificadas: 0, en_progreso: 0 }];
-
-    const operativoResult = await pool.execute(`
-      SELECT 
-        CONCAT('NC-', YEAR(nc.fecha_ultima_edicion), '-', LPAD(nc.id, 3, '0')) as id_visual,
-        CONCAT('Cláusula ', c.numero_clausula) as origen,
-        nc.estado_flujo as estado,
-        IFNULL(u.nombre, 'Sin asignar') as responsable
-      FROM AUDITORIA_NC nc
-      JOIN EVALUACION_REQUISITO er ON nc.evaluacion_requisito_id = er.id
-      JOIN REQUISITOS_BASE r ON er.requisito_base_id = r.id
-      JOIN CLAUSULAS c ON r.clausula_id = c.id
-      LEFT JOIN AUDITORIA_NC_RESPONSABLES ncr ON ncr.auditoria_nc_id = nc.id
-      LEFT JOIN USUARIOS u ON ncr.usuario_id = u.id
-      WHERE er.workspace_id = ? 
-      ORDER BY nc.estado_flujo ASC, nc.fecha_ultima_edicion DESC
-    `, [authUser.workspace_id]);
-    const operativoRows = Array.isArray(operativoResult?.[0]) && operativoResult[0].length ? operativoResult[0] : [];
-
-    const mapProgreso = { 
-      'Abierta': '10%', 
-      'Análisis': '30%', 
-      'Ejecución': '60%', 
-      'Verificación': '90%', 
-      'Cerrada': '100%' 
-    };
-
-    const tablaOperativa = operativoRows.map(row => ({
-      id_visual: row.id_visual,
-      origen: row.origen,
-      estado: row.estado || 'Abierta',
-      responsable: row.responsable,
-      progreso: mapProgreso[row.estado || 'Abierta']
-    }));
-
-    res.json({
-      metricas: {
-        nc_identificadas: conteoRows[0].identificadas || 0,
-        en_progreso: conteoRows[0].en_progreso || 0
-      },
-      tabla_operativa: tablaOperativa
-    });
-  } catch (e) { 
-    console.error('getOperativeDashboard error', e); 
-    res.status(500).json({ error: 'internal' }); 
-  }
-}
-
 module.exports = { 
   getAdminDashboard, 
   getEvaluatorDashboard, 
-  getResponsibleDashboard, 
-  getOperativeDashboard 
+  getResponsibleDashboard 
 };

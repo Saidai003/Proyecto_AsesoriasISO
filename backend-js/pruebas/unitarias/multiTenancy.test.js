@@ -38,8 +38,7 @@ const { getMessages, postMessage } = require('../../src/controllers/chatControll
 const {
   getAdminDashboard,
   getEvaluatorDashboard,
-  getResponsibleDashboard,
-  getOperativeDashboard
+  getResponsibleDashboard
 } = require('../../src/controllers/dashboardController');
 const { listNotifications, markRead, clearForRequisito } = require('../../src/controllers/notificationsController');
 
@@ -636,22 +635,6 @@ describe('Multi-tenancy isolation', () => {
       );
     });
 
-    test('getOperativeDashboard queries only user workspace', async () => {
-      pool.execute
-          .mockResolvedValueOnce([[]])
-        .mockResolvedValueOnce([[]])
-        .mockResolvedValueOnce([[]]);
 
-      const req = {
-          user: { id: 1, workspace_id: 1, role: 'Operativo' },
-        query: {}
-      };
-      const res = mockRes();
-      await getOperativeDashboard(req, res);
-      expect(pool.execute).toHaveBeenCalledWith(
-        expect.stringContaining('WHERE er.workspace_id = ?'),
-        expect.arrayContaining([1])
-      );
-    });
   });
 });

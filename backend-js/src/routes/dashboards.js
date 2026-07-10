@@ -15,7 +15,4 @@ router.get('/evaluator', requireRoles('Evaluador', 'Admin'), dashboardController
 // GET /api/dashboards/responsible
 router.get('/responsible', requireRoles('Responsable SGC', 'Admin'), dashboardController.getResponsibleDashboard);
 
-// GET /api/dashboards/operative
-router.get('/operative', requireRoles('Operativo', 'Responsable SGC', 'Evaluador', 'Admin'), dashboardController.getOperativeDashboard);
-
 module.exports = router;
