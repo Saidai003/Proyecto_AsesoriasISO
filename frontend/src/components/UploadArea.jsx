@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react'
 import { useAuth } from '../AuthContext'
 import fetchWithAuth from '../lib/api'
+import { showToast } from '../lib/ui'
 
 export default function UploadArea({ evaluacionId, onUploaded }){
   const { user } = useAuth()
@@ -8,9 +9,7 @@ export default function UploadArea({ evaluacionId, onUploaded }){
   const [uploading, setUploading] = useState(false)
   const fileRef = useRef(null)
 
-  const showToast = (detail) => {
-    try{ window.dispatchEvent(new CustomEvent('toast:show', { detail })) }catch(_){ }
-  }
+  // use shared showToast helper
 
   const readAsDataURL = (file) => new Promise((resolve, reject) => {
     const fr = new FileReader()

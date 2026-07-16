@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import fetchWithAuth from '../lib/api'
 import { useAuth } from '../AuthContext'
+import { showToast } from '../lib/ui'
 import { useNavigate } from 'react-router-dom'
 
 export default function Chat({ requisitoId, evaluacionId, evidences = [], ncList = [] }){
@@ -222,11 +223,7 @@ export default function Chat({ requisitoId, evaluacionId, evidences = [], ncList
           if(findAndFlash([`nc-${ncId}`], 3000)) return
           return navigate(`/nc/${ncId}`)
         }
-        try{
-          window.dispatchEvent(new CustomEvent('toast:show', {
-            detail: { title: 'No disponible', message: 'No se encontró la acción o su NC asociado en esta vista.', type: 'info', ttl: 4000 }
-          }))
-        }catch(_){ }
+        try{ showToast('No disponible', 'No se encontró la acción o su NC asociado en esta vista.', 'info', 4000) }catch(_){ }
         return
       }
 

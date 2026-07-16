@@ -8,7 +8,8 @@ jest.mock('../../src/services/driveService', () => ({
   deleteFile: jest.fn(),
   getFileMeta: jest.fn(),
   downloadFile: jest.fn(),
-  generateAuthUrl: jest.fn()
+  generateAuthUrl: jest.fn(),
+  getDriveRootFolderId: jest.fn().mockResolvedValue('root')
 }))
 
 const { pool } = require('../../src/db')
@@ -83,5 +84,39 @@ describe('updateEvidence permissions and basic flow', () => {
     expect(arg).toHaveProperty('evidence')
     expect(arg.evidence.id).toBe(2)
     expect(arg.evidence.estado_validacion_archivo).toBe('Aceptado')
+  })
+
+  test('Replacing a file preserves the previous Drive file and updates the evidence reference', async () => {
+    const existing = { id: 5, usuario_carga_id: 1, evaluacion_requisito_id: 1, ev_id: 1, nombre_archivo: 'old.pdf', drive_file_id: 'old-drive-id', url_archivo: 'drive://old-drive-id', comentario_evidencia: 'old' }
+    const updated = { ...existing, nombre_archivo: 'new.pdf', drive_file_id: 'new-drive-id', url_archivo: 'drive://new-drive-id' }
+
+    const driveService = require('../../src/services/driveService')
+    driveService.uploadBuffer.mockResolvedValue({ id: 'new-drive-id' })
+
+    pool.query
+      .mockResolvedValueOnce([ [existing] ]) // workspace lookup
+      .mockResolvedValueOnce([ [{ nombre_cliente: 'workspace-1' }] ]) // workspace metadata lookup
+      .mockResolvedValueOnce([{}]) // UPDATE
+      .mockResolvedValueOnce([{}]) // INSERT LOG
+      .mockResolvedValueOnce([ [updated] ]) // final SELECT
+
+    const req = {
+      params: { id: '5' },
+      body: {
+        fileData: 'data:application/pdf;base64,AA==',
+        nombre_archivo: 'new.pdf',
+        force_delete_before_upload: true
+      },
+      user: { id: 1, role: 'Admin', workspace_id: 1 }
+    }
+    const res = { status: jest.fn().mockReturnThis(), json: jest.fn() }
+
+    await controller.updateEvidence(req, res)
+
+    expect(driveService.deleteFile).not.toHaveBeenCalled()
+    expect(res.json).toHaveBeenCalled()
+    const arg = res.json.mock.calls[0][0]
+    expect(arg.evidence.drive_file_id).toBe('new-drive-id')
+    expect(arg.evidence.url_archivo).toBe('drive://new-drive-id')
   })
 })

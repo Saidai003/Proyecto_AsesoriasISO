@@ -185,7 +185,20 @@ async function updateFile(fileId, { buffer, mimeType }){
   if(!ok) throw new Error('no_saved_token')
   const drive = google.drive({ version: 'v3', auth: client })
   const passthrough = new stream.PassThrough(); passthrough.end(buffer)
-  return drive.files.update({ fileId, media: { mimeType, body: passthrough } })
+  // Keep the new Drive revision so the previous version remains available as history.
+  const updated = await drive.files.update({
+    fileId,
+    media: { mimeType, body: passthrough },
+    keepRevisionForever: true
+  })
+  const revisions = await drive.revisions.list({
+    fileId,
+    fields: 'revisions(id, keepForever, modifiedTime)'
+});
+
+console.log(JSON.stringify(revisions.data, null, 2));
+
+  return updated
 }
 
 async function getFileMeta(fileId, fields='id, webViewLink, webContentLink, name'){

@@ -7,6 +7,17 @@ import ConfirmDialog from '../components/ConfirmDialog'
 import EvidenceHistoryModal from '../components/EvidenceHistoryModal'
 import { hasRole } from '../lib/userUtils'
 import UploadArea from '../components/UploadArea'
+import { showToast, notifyResponsable } from '../lib/ui'
+import { placeholderThumbnail } from '../lib/utils'
+
+const ACTION_LABELS = {
+  UPLOAD: 'Subida',
+  DELETE: 'Eliminacion',
+  UPDATE: 'Actualizacion',
+  REPLACE: 'Reemplazo',
+  APPROVAL: 'Aprobacion',
+  BULK_DELETE: 'Eliminacion masiva'
+}
 
 export default function RequirementContent({ node, onRequestCreateNc, onStatusChange }){
   const navigate = useNavigate()
@@ -195,8 +206,8 @@ export default function RequirementContent({ node, onRequestCreateNc, onStatusCh
   const onUpdateFileChosen = async (e)=>{
     const file = e.target.files && e.target.files[0]
     if(!file) return
-    setConfirmTitle('Reemplazar archivo')
-    setConfirmMessage('Se eliminara el archivo actual en Drive y se subira el nuevo. Continuar?')
+    setConfirmTitle('Actualizar archivo')
+    setConfirmMessage('Se actualizará la referencia a la nueva versión y la versión anterior quedará conservada en Drive. Continuar?')
     setConfirmCallback(()=>async ()=>{
       const ev = pendingUpdateEv
       const fileLocal = file
@@ -212,15 +223,20 @@ export default function RequirementContent({ node, onRequestCreateNc, onStatusCh
         const res = await fetchWithAuth(`/api/evidencias/${ev.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
         if(!res.ok){
           const j = await res.json().catch(()=>({}))
-          window.dispatchEvent(new CustomEvent('toast:show', { detail: { title: 'Error', message: 'No se pudo actualizar evidencia: ' + (j.error || res.statusText), type: 'error', ttl: 6000 } }))
+          showToast('Error', 'No se pudo actualizar evidencia: ' + (j.error || res.statusText), 'error', 6000)
           return
         }
         const json = await res.json()
         const updated = json && json.evidence ? json.evidence : json
         const fd = json && json.forceDeleteResult ? json.forceDeleteResult : null
         if(fd){
-          if(fd.ok) window.dispatchEvent(new CustomEvent('toast:show', { detail: { title: 'Eliminado', message: 'Archivo anterior eliminado.', type: 'info', ttl: 2500 } }))
-          else window.dispatchEvent(new CustomEvent('toast:show', { detail: { title: 'Advertencia', message: `No se pudo eliminar archivo anterior: ${fd.error}`, type: 'warning', ttl: 5000 } }))
+          if(fd.preserved){
+            showToast('Versión conservada', fd.message || 'La versión anterior se mantuvo en Drive.', 'info', 3500)
+          } else if(fd.ok){
+            showToast('Actualizado', 'Archivo actualizado.', 'success', 2500)
+          } else {
+            showToast('Advertencia', `No se pudo actualizar el archivo: ${fd.error}`, 'warning', 5000)
+          }
         }
         if(updated){
           setEvidences(prev => prev.map(x => x.id===ev.id ? { ...x, ...updated } : x))
@@ -243,18 +259,18 @@ export default function RequirementContent({ node, onRequestCreateNc, onStatusCh
               })()
             }
           }catch(e){ console.error('preview refresh', e) }
-          window.dispatchEvent(new CustomEvent('toast:show', { detail: { title: 'Evidencia actualizada', message: updated.nombre_archivo || fileLocal.name, type: 'success', ttl: 3500 } }))
+          showToast('Evidencia actualizada', updated.nombre_archivo || fileLocal.name, 'success', 3500)
           try{
             if(hasRole(user, 'responsable')){
-              window.dispatchEvent(new CustomEvent('notifications:new', { detail: { requisito_base_id: node && node.id ? Number(node.id) : null, evidencia_id: updated.id || ev.id } }))
+              notifyResponsable(node && node.id ? Number(node.id) : null, updated.id || ev.id)
             }
           }catch(_){ }
         }else{
-          window.dispatchEvent(new CustomEvent('toast:show', { detail: { title: 'Error', message: 'Actualizacion fallida', type: 'error', ttl: 5000 } }))
+          showToast('Error', 'Actualizacion fallida', 'error', 5000)
         }
       }catch(err){
         console.error('update evidence', err)
-        window.dispatchEvent(new CustomEvent('toast:show', { detail: { title: 'Error', message: 'Error actualizando evidencia', type: 'error', ttl: 5000 } }))
+          showToast('Error', 'Error actualizando evidencia', 'error', 5000)
       }
     })
     setConfirmOpen(true)
@@ -277,7 +293,7 @@ export default function RequirementContent({ node, onRequestCreateNc, onStatusCh
     ;(async ()=>{
       try{
         const res = await fetchWithAuth(`/api/evidencias/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ comentario_evidencia: comment }) })
-        if(!res.ok){ const j = await res.json().catch(()=>({})); alert('No se pudo guardar: ' + (j.error || res.statusText)); return }
+        if(!res.ok){ const j = await res.json().catch(()=>({})); showToast('Error', 'No se pudo guardar: ' + (j.error || res.statusText), 'error', 5000); return }
         const json = await res.json()
         const updated = json && json.evidence ? json.evidence : json
         setEvidences(prev => prev.map(e => e.id === id ? { ...e, ...(updated || {}) } : e))
@@ -290,14 +306,7 @@ export default function RequirementContent({ node, onRequestCreateNc, onStatusCh
   if(!node) return <div className="p-4">No encontrado</div>
   const children = node.children || []
 
-  const ACTION_LABELS = {
-    UPLOAD: 'Subida',
-    DELETE: 'Eliminacion',
-    UPDATE: 'Actualizacion',
-    REPLACE: 'Reemplazo',
-    APPROVAL: 'Aprobacion',
-    BULK_DELETE: 'Eliminacion masiva'
-  }
+  
 
   const filteredEvidences = useMemo(() => {
     const query = (evidenceSearch || '').toLowerCase().trim()
@@ -315,6 +324,37 @@ export default function RequirementContent({ node, onRequestCreateNc, onStatusCh
       return haystack.includes(query)
     })
   },[evidences, evidenceSearch, evidenceStatusFilter, evidenceTypeFilter])
+
+  // Memoized filtered NC list (apply same filters pattern as inline filter)
+  const filteredNcList = useMemo(() => {
+    return (ncList || []).filter(nc => {
+      const matchesText = !ncFilterText || 
+        (nc.titulo || '').toLowerCase().includes(ncFilterText.toLowerCase()) || 
+        (nc.descripcion || '').toLowerCase().includes(ncFilterText.toLowerCase());
+      const matchesFlujo = !ncFilterFlujo || nc.estado_flujo === ncFilterFlujo;
+      const matchesValidacion = !ncFilterValidacion || nc.estado_validacion === ncFilterValidacion;
+
+      let matchesDate = true;
+      if (ncFilterStartDate || ncFilterEndDate) {
+        const dStr = nc.fecha_verificacion_eficacia;
+        if (dStr) {
+          const ncTime = new Date(dStr).getTime();
+          if (ncFilterStartDate) {
+            const startTime = new Date(ncFilterStartDate + 'T00:00:00').getTime();
+            if (ncTime < startTime) matchesDate = false;
+          }
+          if (ncFilterEndDate) {
+            const endTime = new Date(ncFilterEndDate + 'T23:59:59').getTime();
+            if (ncTime > endTime) matchesDate = false;
+          }
+        } else {
+          matchesDate = false;
+        }
+      }
+
+      return matchesText && matchesFlujo && matchesValidacion && matchesDate;
+    })
+  }, [ncList, ncFilterText, ncFilterFlujo, ncFilterValidacion, ncFilterStartDate, ncFilterEndDate])
 
   const filteredHistory = useMemo(() => {
     const query = (historySearch || '').toLowerCase().trim()
@@ -584,19 +624,19 @@ export default function RequirementContent({ node, onRequestCreateNc, onStatusCh
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ estado_cumplimiento: newEstado })
       })
-      if (res.ok) {
-        setManualNA(!manualNA)
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}))
+        showToast('Error', j.error || res.statusText || 'No se pudo actualizar estado', 'error', 5000)
+        return
       }
-    } catch (e) { console.error('toggleNA error', e) }
+      setManualNA(!manualNA)
+    } catch (e) {
+      console.error('toggleNA error', e)
+      showToast('Error', 'No se pudo cambiar el estado NA', 'error', 5000)
+    }
   }
 
-  const canDeleteEvidence = (ev) => {
-    if(!user) return false
-    if(hasRole(user, 'admin')) return true
-    return user.id === ev.usuario_carga_id
-  }
-
-  const canUpdateEvidence = (ev) => {
+  const canModifyEvidence = (ev) => {
     if(!user) return false
     if(hasRole(user, 'admin')) return true
     return user.id === ev.usuario_carga_id
@@ -607,11 +647,7 @@ export default function RequirementContent({ node, onRequestCreateNc, onStatusCh
     return hasRole(user, 'evaluador')
   }
 
-  const canEditComment = (ev) => {
-    if(!user) return false
-    if(hasRole(user, 'admin')) return true
-    return user.id === ev.usuario_carga_id
-  }
+  const canEditComment = (ev) => canModifyEvidence(ev)
 
   const canDownloadEvidence = () => {
     if(!user) return false
@@ -625,18 +661,18 @@ export default function RequirementContent({ node, onRequestCreateNc, onStatusCh
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ estado_validacion_archivo: status })
       })
-      if(!res.ok){
+        if(!res.ok){
         const j = await res.json().catch(()=>({}))
-        window.dispatchEvent(new CustomEvent('toast:show', { detail: { title: 'Error', message: j.error || res.statusText || 'No se pudo actualizar estado', type: 'error', ttl: 5000 } }))
+        showToast('Error', j.error || res.statusText || 'No se pudo actualizar estado', 'error', 5000)
         return
       }
       const json = await res.json()
       const updated = json && json.evidence ? json.evidence : json
       setEvidences(prev => prev.map(e => e.id === ev.id ? { ...e, ...(updated || {}) } : e))
-      window.dispatchEvent(new CustomEvent('toast:show', { detail: { title: 'Estado actualizado', message: status, type: 'success', ttl: 2500 } }))
+      showToast('Estado actualizado', status, 'success', 2500)
     }catch(e){
       console.error('update evidence status', e)
-      window.dispatchEvent(new CustomEvent('toast:show', { detail: { title: 'Error', message: 'Error actualizando estado', type: 'error', ttl: 5000 } }))
+      showToast('Error', 'Error actualizando estado', 'error', 5000)
     }
   }
 
@@ -646,7 +682,7 @@ export default function RequirementContent({ node, onRequestCreateNc, onStatusCh
       if(!res.ok){
         const j = await res.json().catch(()=>({}))
         const msg = j.error || res.statusText || 'No se pudo descargar'
-        window.dispatchEvent(new CustomEvent('toast:show', { detail: { title: 'Error', message: msg, type: 'error', ttl: 5000 } }))
+        showToast('Error', msg, 'error', 5000)
         return
       }
       const blob = await res.blob()
@@ -660,7 +696,7 @@ export default function RequirementContent({ node, onRequestCreateNc, onStatusCh
       URL.revokeObjectURL(url)
     }catch(e){
       console.error('download evidence error', e)
-      window.dispatchEvent(new CustomEvent('toast:show', { detail: { title: 'Error', message: 'Error descargando evidencia', type: 'error', ttl: 5000 } }))
+      showToast('Error', 'Error descargando evidencia', 'error', 5000)
     }
   }
 
@@ -724,14 +760,13 @@ export default function RequirementContent({ node, onRequestCreateNc, onStatusCh
           ) : !isEvaluador ? (
             <UploadArea evaluacionId={evaluacionId} onUploaded={(newEv)=>{
               setEvidences(prev => [newEv, ...prev])
-              try{ if(hasRole(user, 'responsable')) window.dispatchEvent(new CustomEvent('notifications:new', { detail: { requisito_base_id: node && node.id ? Number(node.id) : null, evidencia_id: newEv.id } })) }catch(_){ }
+              try{ if(hasRole(user, 'responsable')) notifyResponsable(node && node.id ? Number(node.id) : null, newEv.id) }catch(_){ }
             }} />
           ) : null}
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
             {filteredEvidences && filteredEvidences.length>0 ? filteredEvidences.map(ev => {
               const isImage = /\.(jpe?g|png|gif|webp)$/i.test(ev.nombre_archivo || '')
-              const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='120' height='90'><rect width='100%' height='100%' fill='%23e2e8f0'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-size='12' fill='%234a5568'>${ev.nombre_archivo}</text></svg>`
-              const dataUrl = `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`
+              const dataUrl = placeholderThumbnail(ev.nombre_archivo)
               const status = ev.estado_validacion_archivo || 'Pendiente'
 
               return (
@@ -801,7 +836,7 @@ export default function RequirementContent({ node, onRequestCreateNc, onStatusCh
                             Descargar
                           </button>
                         )}
-                        {canUpdateEvidence(ev) && (
+                        {canModifyEvidence(ev) && (
                           <button
                             onClick={(e)=>{ e.stopPropagation(); requestUpdateEvidence(ev) }}
                             className="px-1.5 py-0.5 rounded bg-slate-800 text-white text-[10px]"
@@ -809,7 +844,7 @@ export default function RequirementContent({ node, onRequestCreateNc, onStatusCh
                             Cambiar
                           </button>
                         )}
-                        {canDeleteEvidence(ev) && (
+                        {canModifyEvidence(ev) && (
                           <button
                             onClick={(e)=>{
                               e.stopPropagation()
@@ -828,8 +863,8 @@ export default function RequirementContent({ node, onRequestCreateNc, onStatusCh
                                   setEvidenceHistoryTarget(null)
                                   setEvidenceHistoryLogs([])
                                   setEvidenceHistoryOpen(false)
-                                  window.dispatchEvent(new CustomEvent('toast:show', { detail: { title: 'Evidencia eliminada', message: 'El historial de cambios se conserva.', type: 'success', ttl: 4000 } }))
-                                  try{ if(hasRole(user, 'responsable')) window.dispatchEvent(new CustomEvent('notifications:new', { detail: { requisito_base_id: node && node.id ? Number(node.id) : null, evidencia_id: ev.id } })) }catch(_){ }
+                                  showToast('Evidencia eliminada', 'El historial de cambios se conserva.', 'success', 4000)
+                                  try{ if(hasRole(user, 'responsable')) notifyResponsable(node && node.id ? Number(node.id) : null, ev.id) }catch(_){ }
                                 }catch(e){ console.error('delete evidence', e); alert('Error eliminando evidencia') }
                                 finally{ setDeletingEvidenceIds(prev => { const next = { ...prev }; delete next[ev.id]; return next }) }
                               })
@@ -964,37 +999,9 @@ export default function RequirementContent({ node, onRequestCreateNc, onStatusCh
                     </tr>
                   </thead>
                   <tbody>
-                    {ncList
+                    {filteredNcList
                       /* SÚPER FILTRO COMBINADO EN TIEMPO REAL */
-                      .filter(nc => {
-                        const matchesText = !ncFilterText || 
-                          (nc.titulo || '').toLowerCase().includes(ncFilterText.toLowerCase()) || 
-                          (nc.descripcion || '').toLowerCase().includes(ncFilterText.toLowerCase());
-                        
-                        const matchesFlujo = !ncFilterFlujo || nc.estado_flujo === ncFilterFlujo;
-                        
-                        const matchesValidacion = !ncFilterValidacion || nc.estado_validacion === ncFilterValidacion;
-                        
-                        let matchesDate = true;
-                        if (ncFilterStartDate || ncFilterEndDate) {
-                          const dStr = nc.fecha_verificacion_eficacia;
-                          if (dStr) {
-                            const ncTime = new Date(dStr).getTime();
-                            if (ncFilterStartDate) {
-                              const startTime = new Date(ncFilterStartDate + 'T00:00:00').getTime();
-                              if (ncTime < startTime) matchesDate = false;
-                            }
-                            if (ncFilterEndDate) {
-                              const endTime = new Date(ncFilterEndDate + 'T23:59:59').getTime();
-                              if (ncTime > endTime) matchesDate = false;
-                            }
-                          } else {
-                            matchesDate = false; // Ocultar si se filtra por fecha pero la NC no tiene fecha asignada
-                          }
-                        }
-
-                        return matchesText && matchesFlujo && matchesValidacion && matchesDate;
-                      })
+                      
                       .map(nc => (
                       <tr id={`nc-${nc.id}`} ref={el => { try{ ncRowRefs.current[nc.id] = el }catch(_){} }} key={nc.id} className="border-b border-slate-100 bg-white text-left hover:bg-slate-50/80 transition-colors">
                         <td className="p-2.5 text-slate-500">#{nc.id}</td>
@@ -1040,10 +1047,10 @@ export default function RequirementContent({ node, onRequestCreateNc, onStatusCh
                                     const res = await fetchWithAuth(`/api/nc/${nc.id}`, { method: 'DELETE' });
                                     if (res.ok) {
                                       setNcList(prev => prev.filter(item => item.id !== nc.id));
-                                      window.dispatchEvent(new CustomEvent('toast:show', { detail: { title: 'Eliminada', message: 'Brecha eliminada correctamente.', type: 'success', ttl: 3000 } }));
+                                      showToast('Eliminada', 'Brecha eliminada correctamente.', 'success', 3000);
                                     } else {
                                       const err = await res.json().catch(()=>({}));
-                                      window.dispatchEvent(new CustomEvent('toast:show', { detail: { title: 'Error', message: err.error || 'No se pudo eliminar.', type: 'error', ttl: 5000 } }));
+                                      showToast('Error', err.error || 'No se pudo eliminar.', 'error', 5000);
                                     }
                                   } catch (e) {
                                     console.error('Error al eliminar brecha:', e);

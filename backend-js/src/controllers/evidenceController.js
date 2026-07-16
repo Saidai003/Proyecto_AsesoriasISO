@@ -139,6 +139,49 @@ async function downloadEvidence(req, res){
 const fs = require('fs').promises
 const driveService = require('../services/driveService')
 
+// Sanitize a title into a filesystem/Drive-friendly name fragment
+function sanitizeForFolderName(s){
+  if(!s) return ''
+  try{
+    return String(s)
+      .normalize('NFKD')
+      .replace(/[\u0300-\u036f]/g, '') // strip diacritics
+      .replace(/[^\w\s.-]/g, '') // remove non word/space/dot/dash
+      .trim()
+      .replace(/\s+/g, '-')
+      .slice(0,60)
+  }catch(_){ return String(s).replace(/[^\w\s.-]/g,'').replace(/\s+/g,'-').slice(0,60) }
+}
+
+// Build a numeric hierarchical folder name for a requisito from evaluacion_requisito id
+// Produces names like "4-1" or "4-1-1" (clauseNumber - requisitoIndex - subIndex...)
+async function buildRequisitoFolderNameByEvaluacionId(evaluacionId){
+  try{
+    if(!evaluacionId) return `evaluacion-${evaluacionId}`
+    const qres = await pool.query(
+      'SELECT er.requisito_base_id, rb.descripcion_normativa FROM EVALUACION_REQUISITO er LEFT JOIN REQUISITOS_BASE rb ON er.requisito_base_id = rb.id WHERE er.id = ?',
+      [evaluacionId]
+    )
+    const rows = Array.isArray(qres) && qres[0] ? qres[0] : []
+    if(!rows || !rows.length) return `evaluacion-${evaluacionId}`
+    const r = rows[0]
+    const desc = r.descripcion_normativa ? String(r.descripcion_normativa).trim() : ''
+    if(!desc) return `evaluacion-${evaluacionId}`
+
+    let folderName = desc
+      .normalize('NFKD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^\w\s.,;:\-()/]/g, '')
+      .trim()
+      .replace(/\s+/g, '-')
+      .slice(0, 80)
+
+    return folderName || `evaluacion-${evaluacionId}`
+  }catch(err){
+    return `evaluacion-${evaluacionId}`
+  }
+}
+
 // Permission helpers for updateEvidence
 function _toNumber(v){ return v === null || v === undefined ? null : Number(v) }
 
@@ -257,7 +300,7 @@ async function createEvidence(req, res){
       try{
         let uploaded = null // basically, what was 'uploaded' to Drive, containing at least the new file id and name
         if(workspaceFolderId){ //this is to ensure that evidence files are stored in subfolders per workspace
-          const requisitoName = evaluacion_requisito_id ? String(evaluacion_requisito_id) : 'unknown'
+          const requisitoName = await buildRequisitoFolderNameByEvaluacionId(evaluacion_requisito_id)
           const requisitoFolderId = await driveService.ensureFolder(workspaceFolderId, requisitoName)
           const existingFile = await driveService.findFileInFolder(requisitoFolderId, filename)
           if(existingFile && existingFile.id){
@@ -344,38 +387,41 @@ async function updateEvidence(req, res){
 
     // handle file update if provided
     let fileAction = null
-    // support force-delete-before-upload workflow: delete existing Drive file first
+    // Preserve the previous Drive file and only update the evidence reference to the new file.
     let forceDeleteResult = null
     if(payload && payload.force_delete_before_upload && existing.drive_file_id){
-      try{
-        await driveService.deleteFile(existing.drive_file_id)
-        // log deletion
-        try{ await pool.query('INSERT INTO EVIDENCIAS_LOG (evidencia_id, usuario_id, ev_id, tipo_accion, nombre_archivo) VALUES (?,?,?,?,?)', [id, uid, existing.ev_id || null, 'DELETE', existing.nombre_archivo || '']) }catch(_){ }
-        forceDeleteResult = { ok: true }
-      }catch(err){
-        console.error('force delete from drive failed', err)
-        forceDeleteResult = { ok: false, error: String(err && err.message || err) }
+      forceDeleteResult = {
+        ok: true,
+        preserved: true,
+        message: 'Se conserva el archivo anterior en Drive y se actualiza la referencia de la evidencia al nuevo archivo.'
       }
     }
 
     if(Object.prototype.hasOwnProperty.call(payload, 'fileData')){
       const matches = String(payload.fileData).match(/^data:(.+);base64,(.+)$/)
       if(matches){
-        const mime = matches[1]
+        let mime = matches[1]
         const b64 = matches[2]
-        // Validate that the new file's extension matches the existing evidence's extension
+        // Normalize MIME type if it contains parameters like charset
+        mime = String(mime).split(';')[0].trim().toLowerCase()
         const existingName = existing.nombre_archivo || ''
         const existingExt = path.extname(existingName).toLowerCase()
-        // Determine extension from MIME type or provided nombre_archivo
+        // Determine extension from provided nombre_archivo or MIME type when name does not include one.
         let newExt = ''
         if(payload.nombre_archivo){
           newExt = path.extname(payload.nombre_archivo).toLowerCase()
-        } else if(mime){
-          const mimeExt = mime.split('/')
-          if(mimeExt[1]) newExt = '.' + mimeExt[1].toLowerCase()
         }
-        if(existingExt && newExt && existingExt !== newExt){
-          return res.status(400).json({ error: 'extension_mismatch', detail: `Existing extension ${existingExt} does not match new ${newExt}` })
+        if(!newExt && mime){
+          const mimeExt = mime.split('/')
+          if(mimeExt[1]){
+            newExt = '.' + mimeExt[1].split('+')[0].toLowerCase()
+          }
+        }
+        // If Drive can determine extension from name or MIME, do not reject updates on strict mismatch.
+        // Keep this validation conservative to avoid false negatives from Drive's file extension heuristics.
+        if(existingExt && newExt && existingExt !== newExt && payload.nombre_archivo){
+          // Only warn or log; do not block in case Drive infers the extension correctly.
+          console.warn(`updateEvidence: extension differs but continuing: existing=${existingExt} new=${newExt} mime=${mime}`)
         }
 
         const buf = Buffer.from(b64, 'base64')
@@ -395,29 +441,22 @@ async function updateEvidence(req, res){
               const [wrows] = await pool.query('SELECT * FROM ESPACIO_TRABAJO WHERE id = ?', [workspaceIdForDrive])
               const workspaceName = (wrows && wrows[0] && (wrows[0].nombre_cliente || `workspace-${workspaceIdForDrive}`)) || `workspace-${workspaceIdForDrive}`
               const workspaceFolderId = await driveService.ensureFolder(driveRootId, workspaceName)
-            const requisitoName = existing.evaluacion_requisito_id ? String(existing.evaluacion_requisito_id) : (payload.evaluacion_requisito_id ? String(payload.evaluacion_requisito_id) : 'unknown')
-            const requisitoFolderId = await driveService.ensureFolder(workspaceFolderId, requisitoName)
-            const filename = payload.nombre_archivo || existing.nombre_archivo || `evidence-${Date.now()}`
-            const existingFile = await driveService.findFileInFolder(requisitoFolderId, filename)
-            if(existingFile && existingFile.id){
-              // if we performed a force-delete earlier, the existingFile may not exist anymore; prefer update if present
-              try{
-                await driveService.updateFile(existingFile.id, { buffer: buf, mimeType: mime })
-                fileAction = 'REPLACE'
-                // update DB fields to reflect same id
-                fields.push('drive_file_id = ?'); values.push(existingFile.id)
-                fields.push('url_archivo = ?'); values.push(`drive://${existingFile.id}`)
-              }catch(e){
-                // fallback to upload if update fails
-                const uploaded = await driveService.uploadBuffer({ buffer: buf, mimeType: mime, name: filename, parents: [requisitoFolderId] })
-                if(uploaded && uploaded.id){
-                  fields.push('drive_file_id = ?'); values.push(uploaded.id)
-                  fields.push('url_archivo = ?'); values.push(`drive://${uploaded.id}`)
-                  fileAction = existing.drive_file_id ? 'REPLACE' : 'UPLOAD'
-                }
-              }
+            const requisitoIdToUse = existing.evaluacion_requisito_id ? existing.evaluacion_requisito_id : (payload.evaluacion_requisito_id ? payload.evaluacion_requisito_id : null)
+            let requisitoName
+            if(workspaceFolderId){
+              requisitoName = await buildRequisitoFolderNameByEvaluacionId(requisitoIdToUse)
             }else{
-              const uploaded = await driveService.uploadBuffer({ buffer: buf, mimeType: mime, name: filename, parents: [requisitoFolderId] })
+              requisitoName = requisitoIdToUse ? String(requisitoIdToUse) : 'unknown'
+            }
+            const requisitoFolderId = await driveService.ensureFolder(workspaceFolderId, requisitoName)
+            const existingFile = await driveService.findFileInFolder(requisitoFolderId, payload.nombre_archivo || existing.nombre_archivo || `evidence-${Date.now()}`)
+            if(existingFile && existingFile.id){
+              await driveService.updateFile(existingFile.id, { buffer: buf, mimeType: mime })
+              fields.push('drive_file_id = ?'); values.push(existingFile.id)
+              fields.push('url_archivo = ?'); values.push(`drive://${existingFile.id}`)
+              fileAction = 'REPLACE'
+            } else {
+              const uploaded = await driveService.uploadBuffer({ buffer: buf, mimeType: mime, name: payload.nombre_archivo || existing.nombre_archivo || `evidence-${Date.now()}`, parents: [requisitoFolderId] })
               if(uploaded && uploaded.id){
                 fields.push('drive_file_id = ?'); values.push(uploaded.id)
                 fields.push('url_archivo = ?'); values.push(`drive://${uploaded.id}`)

@@ -6,6 +6,7 @@ import fetchWithAuth from '../lib/api'
 import RequirementContent from './RequirementContent'
 import { useAuth } from '../AuthContext'
 import { hasRole } from '../lib/userUtils'
+import { showToast } from '../lib/ui'
 
 export default function RequirementView(){
   const { id } = useParams()
@@ -95,7 +96,7 @@ export default function RequirementView(){
   const createNc = async ()=>{
     if(!node) return
     if(!ncForm.titulo.trim()){
-      window.dispatchEvent(new CustomEvent('toast:show', { detail: { title: 'Brecha', message: 'El título es obligatorio', type: 'warning', ttl: 4000 } }))
+      showToast('Brecha', 'El título es obligatorio', 'warning', 4000)
       return
     }
     try{
@@ -110,18 +111,18 @@ export default function RequirementView(){
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       })
-      if(!res.ok){
+        if(!res.ok){
         const err = await res.json().catch(()=>({}))
-        window.dispatchEvent(new CustomEvent('toast:show', { detail: { title: 'Error', message: err.error || 'No se pudo crear NC', type: 'error', ttl: 6000 } }))
+        showToast('Error', err.error || 'No se pudo crear NC', 'error', 6000)
         return
       }
       const created = await res.json()
-      window.dispatchEvent(new CustomEvent('toast:show', { detail: { title: 'Brecha creada', message: payload.titulo, type: 'success', ttl: 5000 } }))
+      showToast('Brecha creada', payload.titulo, 'success', 5000)
       window.dispatchEvent(new CustomEvent('nc:created', { detail: { requisito_base_id: node.id, nc_id: created.id, responsables: selectedResponsables } }))
       setNcModalOpen(false)
     }catch(e){
       console.error('create NC error', e)
-      window.dispatchEvent(new CustomEvent('toast:show', { detail: { title: 'Error', message: 'Error creando NC', type: 'error', ttl: 6000 } }))
+      showToast('Error', 'Error creando NC', 'error', 6000)
     }
   }
 
@@ -137,15 +138,15 @@ export default function RequirementView(){
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(editForm)
       });
-      if(res.ok) {
+        if(res.ok) {
         const updated = await res.json();
         setNode(updated);
         setEditModalOpen(false);
-        window.dispatchEvent(new CustomEvent('toast:show', { detail: { title: 'Requisito actualizado', message: 'Los cambios se guardaron con éxito.', type: 'success', ttl: 4000 } }));
+        showToast('Requisito actualizado', 'Los cambios se guardaron con éxito.', 'success', 4000);
       }
     } catch(e) {
       console.error('Error updating requirement', e);
-      window.dispatchEvent(new CustomEvent('toast:show', { detail: { title: 'Error', message: 'Error actualizando requisito', type: 'error', ttl: 4000 } }));
+      showToast('Error', 'Error actualizando requisito', 'error', 4000);
     }
   };
 
@@ -158,13 +159,13 @@ export default function RequirementView(){
       const res = await fetchWithAuth(`/api/isos/requisitos/${id}`, {
         method: 'DELETE'
       });
-      if(res.ok) {
+        if(res.ok) {
         navigate(-1);
-        window.dispatchEvent(new CustomEvent('toast:show', { detail: { title: 'Requisito eliminado', message: 'El requisito fue eliminado.', type: 'success', ttl: 4000 } }));
+        showToast('Requisito eliminado', 'El requisito fue eliminado.', 'success', 4000);
       }
     } catch(e) {
       console.error('Error deleting requirement', e);
-      window.dispatchEvent(new CustomEvent('toast:show', { detail: { title: 'Error', message: 'Error eliminando requisito', type: 'error', ttl: 4000 } }));
+      showToast('Error', 'Error eliminando requisito', 'error', 4000);
     } finally {
       setConfirmOpen(false);
     }
