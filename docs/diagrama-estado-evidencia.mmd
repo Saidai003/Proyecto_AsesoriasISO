@@ -1,0 +1,16 @@
+stateDiagram-v2
+    [*] --> Pendiente : Evidencia subida
+
+    Pendiente --> Aceptado : Evaluador aprueba
+    Pendiente --> Rechazado : Evaluador rechaza
+    
+    Aceptado --> Rechazado : Cambio de decisión
+    Rechazado --> Aceptado : Reconsideración
+    Rechazado --> Pendiente : Nueva versión subida
+
+    Aceptado --> [*]
+
+    note right of Pendiente
+        Solo el Evaluador o Admin
+        pueden aprobar o rechazar.
+    end note

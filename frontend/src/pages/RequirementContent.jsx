@@ -80,6 +80,15 @@ export default function RequirementContent({ node, onRequestCreateNc, onStatusCh
     return [...new Set(ncList.map(nc => nc.estado_validacion).filter(Boolean))]
   }, [ncList])
 
+  const syncRequirementStatus = async (evId) => {
+    if (!evId) return
+    try {
+      await fetchWithAuth(`/api/evaluaciones/${evId}/auto-estado`, { method: 'POST' })
+    } catch (e) {
+      console.error('sync requirement status error', e)
+    }
+  }
+
   // keep ref in sync for cleanup on unmount
   useEffect(()=>{ blobUrlsRef.current = blobUrls },[blobUrls])
 
@@ -130,19 +139,19 @@ export default function RequirementContent({ node, onRequestCreateNc, onStatusCh
   useEffect(()=>{
     let mounted = true
     async function loadNCs(){
-      if(!node || !node.id) return
+      if(!node || !node.id) return null
       try{
         const r = await fetchWithAuth(`/api/evaluaciones/requisito/${node.id}`)
-        if(!r.ok) return
+        if(!r.ok) return null
         const json = await r.json()
         const evId = json.id
-        if(!mounted) return
+        if(!mounted) return null
         setEvaluacionId(evId)
         if(json.estado_cumplimiento === 'NA') setManualNA(true)
         const ncr = await fetchWithAuth(`/api/nc/evaluacion/${evId}`)
-        if(!ncr.ok) return
+        if(!ncr.ok) return evId
         const list = await ncr.json()
-        if(!mounted) return
+        if(!mounted) return evId
         setNcList(list || [])
         // clear unread notifications related to this requisito (delete in DB)
         ;(async ()=>{
@@ -153,15 +162,17 @@ export default function RequirementContent({ node, onRequestCreateNc, onStatusCh
             }
           }catch(e){ console.error('clear notifications for requisito error', e) }
         })()
-      }catch(e){ console.error('load NCs', e) }
+        return evId
+      }catch(e){ console.error('load NCs', e); return null }
     }
     loadNCs()
-    const handler = (e) => {
+    const handler = async (e) => {
       const detail = e.detail || {}
       if(detail.requisito_base_id == node.id){
         // remember created id to allow scroll+flash after refresh
         if(detail.nc_id) setLastCreatedNcId(detail.nc_id)
-        loadNCs()
+        const evId = await loadNCs()
+        if (evId) syncRequirementStatus(evId)
       }
     }
     window.addEventListener('nc:created', handler)
@@ -240,6 +251,7 @@ export default function RequirementContent({ node, onRequestCreateNc, onStatusCh
         }
         if(updated){
           setEvidences(prev => prev.map(x => x.id===ev.id ? { ...x, ...updated } : x))
+          syncRequirementStatus(evaluacionId)
           try{
             const isImage = (/\.(jpe?g|png|gif|webp)$/i).test(updated.nombre_archivo || fileLocal.name)
             if(blobUrls && blobUrls[ev.id]){
@@ -630,6 +642,9 @@ export default function RequirementContent({ node, onRequestCreateNc, onStatusCh
         return
       }
       setManualNA(!manualNA)
+      if (newEstado !== 'NA') {
+        syncRequirementStatus(evaluacionId)
+      }
     } catch (e) {
       console.error('toggleNA error', e)
       showToast('Error', 'No se pudo cambiar el estado NA', 'error', 5000)
@@ -670,6 +685,7 @@ export default function RequirementContent({ node, onRequestCreateNc, onStatusCh
       const updated = json && json.evidence ? json.evidence : json
       setEvidences(prev => prev.map(e => e.id === ev.id ? { ...e, ...(updated || {}) } : e))
       showToast('Estado actualizado', status, 'success', 2500)
+      syncRequirementStatus(evaluacionId)
     }catch(e){
       console.error('update evidence status', e)
       showToast('Error', 'Error actualizando estado', 'error', 5000)
@@ -760,6 +776,7 @@ export default function RequirementContent({ node, onRequestCreateNc, onStatusCh
           ) : !isEvaluador ? (
             <UploadArea evaluacionId={evaluacionId} onUploaded={(newEv)=>{
               setEvidences(prev => [newEv, ...prev])
+              syncRequirementStatus(evaluacionId)
               try{ if(hasRole(user, 'responsable')) notifyResponsable(node && node.id ? Number(node.id) : null, newEv.id) }catch(_){ }
             }} />
           ) : null}
@@ -860,6 +877,7 @@ export default function RequirementContent({ node, onRequestCreateNc, onStatusCh
                                     if(blobUrls && blobUrls[ev.id]){ try{ URL.revokeObjectURL(blobUrls[ev.id]) }catch(_){ } setBlobUrls(prev => { const next = { ...prev }; delete next[ev.id]; return next }) }
                                   }catch(_){ }
                                   setEvidences(prev => prev.map(x => x.id === ev.id ? { ...x, deleted: true, deletedAt: new Date().toISOString() } : x))
+                                  syncRequirementStatus(evaluacionId)
                                   setEvidenceHistoryTarget(null)
                                   setEvidenceHistoryLogs([])
                                   setEvidenceHistoryOpen(false)
@@ -1048,6 +1066,7 @@ export default function RequirementContent({ node, onRequestCreateNc, onStatusCh
                                     if (res.ok) {
                                       setNcList(prev => prev.filter(item => item.id !== nc.id));
                                       showToast('Eliminada', 'Brecha eliminada correctamente.', 'success', 3000);
+                                      syncRequirementStatus(evaluacionId)
                                     } else {
                                       const err = await res.json().catch(()=>({}));
                                       showToast('Error', err.error || 'No se pudo eliminar.', 'error', 5000);

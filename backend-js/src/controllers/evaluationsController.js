@@ -82,4 +82,82 @@ async function updateEvaluacionEstado(req, res){
   }
 }
 
-module.exports = { getOrCreateEvaluacion, updateEvaluacionEstado };
+// Auto update requirement compliance status based on evidences and non-conformities
+async function autoUpdateEstado(req, res){
+  try {
+    const id = Number(req.params.id);
+    if(!id) return res.status(400).json({ error: 'id required' });
+    const user = req.user || {};
+    const workspaceId = user.workspace_id || null;
+
+    let evalQuery = 'SELECT id, estado_cumplimiento FROM EVALUACION_REQUISITO WHERE id = ?';
+    let evalParams = [id];
+    if (user.role !== 'Admin' || workspaceId !== null) {
+      evalQuery += ' AND workspace_id = ?';
+      evalParams.push(workspaceId);
+    }
+    const [rows] = await pool.execute(evalQuery, evalParams);
+    if(!rows || !rows.length) return res.status(404).json({ error: 'not_found' });
+
+    const currentEstado = rows[0].estado_cumplimiento;
+    if(currentEstado === 'NA') {
+      return res.json({ ok: true, estado_cumplimiento: 'NA', changed: false });
+    }
+
+    // Consult evidences
+    const [evidences] = await pool.execute(
+      'SELECT estado_validacion_archivo FROM EVIDENCIAS WHERE evaluacion_requisito_id = ?',
+      [id]
+    );
+
+    // Consult NCs
+    const [ncs] = await pool.execute(
+      'SELECT estado_flujo FROM AUDITORIA_NC WHERE evaluacion_requisito_id = ?',
+      [id]
+    );
+
+    const totalEvidencias = evidences.length;
+    const evidenciasAceptadas = evidences.filter(ev => ev.estado_validacion_archivo === 'Aceptado').length;
+    const evidenciasRechazadas = evidences.filter(ev => ev.estado_validacion_archivo === 'Rechazado').length;
+
+    const totalBrechas = ncs.length;
+    const brechasCerradas = ncs.filter(nc => nc.estado_flujo === 'Cerrada').length;
+    const brechasAbiertas = totalBrechas - brechasCerradas;
+
+    let calculado = 'No cumple'; // default / No Evaluado
+    if (totalEvidencias === 0 && totalBrechas === 0) {
+      calculado = 'No cumple'; // No Evaluado maps to No cumple
+    } else if (totalEvidencias > 0 && evidenciasAceptadas === totalEvidencias && brechasAbiertas === 0) {
+      calculado = 'Cumple';
+    } else if (brechasAbiertas > 0 || evidenciasRechazadas > 0) {
+      calculado = 'No cumple';
+    } else {
+      calculado = 'Parcial'; // En Revisión
+    }
+
+    let changed = false;
+    if (calculado !== currentEstado) {
+      await pool.execute(
+        'UPDATE EVALUACION_REQUISITO SET estado_cumplimiento = ?, ultima_edicion_por = ?, fecha_ultima_edicion = NOW() WHERE id = ?',
+        [calculado, user.id, id]
+      );
+      // Insert history
+      try {
+        await pool.execute(
+          'INSERT INTO EVALUACION_REQUISITO_HIST (ev_id, estado_cumplimiento, ultima_edicion_por, fecha_snapshot, accion) VALUES (?, ?, ?, NOW(), ?)',
+          [id, calculado, user.id, `Estado auto-calculado: ${calculado}`]
+        );
+      } catch (e) {
+        console.error('insert eval auto-hist error', e);
+      }
+      changed = true;
+    }
+
+    return res.json({ ok: true, estado_cumplimiento: calculado, changed });
+  } catch (err) {
+    console.error('autoUpdateEstado error', err);
+    return res.status(500).json({ error: 'internal_error' });
+  }
+}
+
+module.exports = { getOrCreateEvaluacion, updateEvaluacionEstado, autoUpdateEstado };

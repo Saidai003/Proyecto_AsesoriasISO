@@ -1,0 +1,23 @@
+stateDiagram-v2
+    [*] --> Abierta : Brecha creada
+
+    state "Flujo del Responsable" as rsgc {
+        Abierta --> Análisis : Inicia análisis
+        Análisis --> Ejecución : Plan aprobado
+        Ejecución --> Análisis : Retorno
+        Análisis --> Abierta : Retorno
+    }
+
+    state "Flujo del Evaluador" as eval {
+        Abierta --> Verificación : Programa verificación
+        Verificación --> Cerrada : Acciones eficaces
+    }
+
+    Verificación --> Abierta : Reabre por ineficacia
+
+    Cerrada --> [*]
+
+    note right of Verificación
+        Requiere definir una
+        fecha futura de verificación.
+    end note

@@ -1,0 +1,24 @@
+stateDiagram-v2
+    [*] --> Pendiente : Acción creada
+
+    Pendiente --> En_Progreso
+    Pendiente --> Eficaz
+    Pendiente --> No_Eficaz
+
+    En_Progreso --> Pendiente
+    En_Progreso --> Eficaz
+    En_Progreso --> No_Eficaz
+
+    Eficaz --> Pendiente
+    Eficaz --> En_Progreso
+    Eficaz --> No_Eficaz
+
+    No_Eficaz --> Pendiente
+    No_Eficaz --> En_Progreso
+    No_Eficaz --> Eficaz
+
+    note right of Pendiente
+        Transición libre entre estados.
+        Solo Responsable SGC y Admin
+        pueden cambiar el estado.
+    end note

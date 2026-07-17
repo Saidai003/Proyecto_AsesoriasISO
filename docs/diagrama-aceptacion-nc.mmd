@@ -1,0 +1,19 @@
+stateDiagram-v2
+    [*] --> Parcial : Brecha creada (inicial)
+
+    Parcial --> Acepto : Reconoce hallazgo
+    Parcial --> No_Acepto : Rechaza hallazgo
+    
+    Acepto --> Parcial : Revisión
+    Acepto --> No_Acepto : Cambio de opinión
+    
+    No_Acepto --> Acepto : Mediación / Resolución
+    No_Acepto --> Parcial : Negociación parcial
+
+    Acepto --> [*]
+
+    note right of Parcial
+        El estado puede cambiar libremente
+        según el acuerdo entre
+        el auditor y el evaluado.
+    end note

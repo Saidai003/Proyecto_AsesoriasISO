@@ -1,0 +1,24 @@
+stateDiagram-v2
+    [*] --> NA : Evaluación creada (inicial)
+
+    state "Evaluación Activa" as activa {
+        [*] --> No_cumple : Inicial (Sin evidencias ni brechas)
+        
+        No_cumple --> Cumple : Se suben evidencias aceptadas (0 brechas abiertas)
+        No_cumple --> Parcial : Se suben evidencias pendientes (0 brechas abiertas)
+        
+        Parcial --> Cumple : Todas las evidencias aprobadas
+        Parcial --> No_cumple : Brecha registrada o evidencia rechazada
+        
+        Cumple --> Parcial : Nueva evidencia cargada (pasa a pendiente)
+        Cumple --> No_cumple : Brecha registrada o evidencia rechazada
+    }
+
+    NA --> activa : Quitar "No Aplica" (Toggle)
+    activa --> NA : Marcar "No Aplica" (Toggle)
+
+    note right of activa
+        La transición entre estados activos
+        es calculada automáticamente
+        por el sistema ante cualquier mutación.
+    end note
