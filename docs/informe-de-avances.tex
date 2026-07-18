@@ -1,293 +1,483 @@
-\documentclass[10pt]{article}
-\usepackage[spanish]{babel}
-\usepackage[utf8]{inputenc}
-\usepackage{graphicx}
-\usepackage{hyperref}
-\usepackage[lmargin=2cm, rmargin=2cm, top=2cm, bottom=2 cm]{geometry}
-\usepackage{fancyhdr}
-\pagestyle{fancy}
-\setlength{\headheight}{26pt}
+% Informe de Taller Profesional - Asesorías ISO RCR SpA
+% Documento generado combinando el formato de la plantilla oficial udpthesis
+% con el contenido final del informe (GAP Análisis ISO 9001:2015).
+%
+% NOTA: Los campos marcados con [COMPLETAR: ...] deben ser completados
+% manualmente por el autor antes de compilar/entregar la versión final,
+% ya que esa información no estaba disponible en el documento de origen.
 
+\documentclass[final]{udpthesis}
+
+% Establecemos el sistema para uso del español
+% Babel ya esta cargado dentro de udpthesis
+\usepackage[T1]{fontenc}%    output
+\usepackage[utf8]{inputenc}% input
+\usepackage{lmodern}
+
+% Leyendas
+\usepackage[font=footnotesize,labelfont=bf,labelsep=period]{caption}
+
+% Matemáticas
+\usepackage{amsmath}
+
+% Gráficos
+\usepackage{graphicx}
+\usepackage[font=footnotesize,labelformat=simple]{subfig}
+\captionsetup{labelsep=period,labelfont=bf}
+\renewcommand\thesubfigure{(\alph{subfigure})}
+\renewcommand\thesubtable{(\alph{subtable})}
+\newcommand{\subfigureautorefname}{\figureautorefname}
+
+% Paquetes adicionales requeridos por el contenido del informe
 \usepackage[table,xcdraw]{xcolor}
-\fancyhead{}
-\fancyhead[R]{Facultad de Ingeniería y Ciencias \\ Instituto de Ciencias Básicas}
-\fancyhead[L]{\includegraphics[width=3.2cm]{img/udp_logo.png}}
-\usepackage{animate}
-\usepackage{enumerate}
+\usepackage{array}
+\usepackage{tabularx}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\setlength{\tabcolsep}{4pt}
+\usepackage{longtable}
 \usepackage{float}
 \usepackage{url}
-\usepackage{karnaugh-map}
-\usepackage{array}
-\usepackage{longtable}
-\usepackage{pdflscape}
 
-\fancyfoot{}
-\fancyfoot[R]{Página \thepage \hspace{0.02 cm}}
-\renewcommand{\headrulewidth}{0.9pt}
-\renewcommand{\footrulewidth}{0.5pt}
+% Referencias (ordena y comprime las referencias numéricas si se usa \cite)
+\usepackage{cite}
 
-\usepackage{listings}
-\usepackage{xcolor}
+% Glosario de acrónimos
+\usepackage[toc,acronym,nopostdot]{glossaries}
+\makeglossaries
 
-%New colors defined below
-\definecolor{codegreen}{rgb}{0,0.6,0}
-\definecolor{codegray}{rgb}{0.5,0.5,0.5}
-\definecolor{codepurple}{rgb}{0.58,0,0.82}
-\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+% Establecemos el tema a utilizar (Escuela de Informática y Telecomunicaciones)
+\udptheme{EIT}
 
-%Code listing style named "mystyle"
-\lstdefinestyle{mystyle}{
-  backgroundcolor=\color{backcolour},   commentstyle=\color{codegreen},
-  keywordstyle=\color{magenta},
-  numberstyle=\tiny\color{codegray},
-  stringstyle=\color{codepurple},
-  basicstyle=\ttfamily\footnotesize,
-  breakatwhitespace=false,         
-  breaklines=true,                 
-  captionpos=b,                    
-  keepspaces=true,                 
-  numbers=left,                    
-  numbersep=5pt,                  
-  showspaces=false,                
-  showstringspaces=false,
-  showtabs=false,                  
-  tabsize=2
-}
+\newacronym{saas}{SaaS}{Software como Servicio}
+\newacronym{sgc}{SGC}{Sistema de Gestión de Calidad}
+\newacronym{srs}{SRS}{Documento de Especificación de Requisitos de Software}
+\newacronym{adr}{ADR}{Architecture Decision Record}
+\newacronym{api}{API}{Interfaz de Programación de Aplicaciones}
+\newacronym{rest}{REST}{Representational State Transfer}
+\newacronym{jwt}{JWT}{JSON Web Token}
+\newacronym{uat}{UAT}{Pruebas de Aceptación de Usuario}
+\newacronym{llm}{LLM}{Modelo de Lenguaje de Gran Tamaño}
+\newacronym{e2e}{E2E}{Pruebas de extremo a extremo}
+\newacronym{idor}{IDOR}{Insecure Direct Object Reference}
+\newacronym{iso}{ISO}{International Organization for Standardization}
+\newacronym{foda}{FODA}{Fortalezas, Oportunidades, Debilidades y Amenazas}
+\newacronym{pest}{PEST}{Político, Económico, Social y Tecnológico}
+\newacronym{amef}{AMEF}{Análisis de Modo y Efecto de Falla}
+\newacronym{pqrsf}{PQRSF}{Peticiones, Quejas, Reclamos, Sugerencias y Felicitaciones}
+\newacronym{sgsst}{SGSST}{Sistema de Gestión de Seguridad y Salud en el Trabajo}
 
-\lstset{style=mystyle}
 
 \begin{document}
-\pagenumbering{gobble}
-\date{}  
-\begin{titlepage}
-\begin{center}
-    \vspace*{\baselineskip}
-    
-    {
-    \bf\fontsize{19}{0}{\selectfont{UNIVERSIDAD DIEGO PORTALES}}\\[0.5cm]
-    \fontsize{11}{0}{FACULTAD DE INGENIERÍA Y CIENCIAS}
-    }
-    
-    \vspace*{0.5\baselineskip}
-    {
-    \bf\fontsize{11}{0}{\selectfont{ESCUELA DE INFORMÁTICA Y TELECOMUNICACIONES}}\\[0.35cm]
-    }
-    
-    \vspace*{\baselineskip}
-    \includegraphics[scale=0.50]{img/udp_logo.png}
-    \vspace*{3\baselineskip}
-     \hrule height 0.5pt
-    \vspace{1mm}
-    \hrule height 1.5pt
-    \vspace*{1\baselineskip}
-   
-    {
-    \bf\fontsize{15}{0}{\selectfont{Software web de gestión ISO \\[0.3cm] Informe Final -- Taller de titulación}}
-    }
-    \vspace*{1\baselineskip}
-    \hrule height 0.5pt
-    \vspace{1mm}
-    \hrule height 1.5pt
-    
-    
-    \vspace*{4.5\baselineskip}
-    
-    {
-     \bf\fontsize{14}{0}{\selectfont{Profesor:\\[0.3cm]
-}}
-
-\bf\fontsize{14}{0}{\selectfont{Jorge Elliott Sotomayor\\[0.5cm]
-}}
-
-
-   
-
-   \bf\fontsize{14}{0}{\selectfont{Estudiante:\\[0.3cm]}}
-   \bf\fontsize{14}{0}{\selectfont{Maximiliano Esteban Abascal Fredes}}
-   }
-    
-    \vfill
-    Santiago, Chile \hfill 01 de julio de 2026
-    
-\end{center}
-\end{titlepage}
-\pagenumbering{roman}
-\vspace*{\baselineskip}
-\tableofcontents 
-\thispagestyle{empty}
-\newpage
+%% Inicio de la portada
+\frontmatter
 \pagenumbering{arabic}
 
+% Título del tema (no más de 12 palabras)
+\title{Plataforma Web de Gestión ISO 9001:2015}
+% Subtítulo con el detalle específico del proyecto
+\subtitle{Ejecución de GAP Análisis y Gestión de Evidencias por Cláusulas para Asesorías ISO RCR SpA}
 
-\section{Introducción}
+% Autor de la tesis/memoria
+\author{Maximiliano Esteban Abascal Fredes}
+\email{maximiliano.abascal@mail.udp.cl}
 
-Asesorías ISO RCR SpA es una empresa chilena de consultoría y capacitación enfocada en apoyar a organizaciones en la implementación, auditoría y certificación de Sistemas de Gestión bajo normas internacionales ISO. Dentro de su operación actual, la empresa realiza diagnósticos de brecha, acompaña procesos de auditoría y entrega herramientas de control para que sus clientes puedan avanzar hacia la certificación, especialmente bajo la norma ISO 9001:2015 y extendiéndose a otras normativas ISO.
+% Fecha a aparecer en la tesis
+\date{2026}
+
+% Profesor guía
+\professor{Jorge Elliot Sotomayor}
+% Comité
+\committee{Sebastián Alvarado}{}
+
+% Dedicatoria
+\dedicatory{[COMPLETAR: dedicatoria personal del autor]}
+
+% Agradecimientos
+\acknowledgment{[COMPLETAR: nota de agradecimiento. Sugerencia de borrador: se agradece a Ricardo Candia, CEO de Asesorías ISO RCR SpA, por la contraparte ejecutiva y la visión de negocio aportada al proyecto; a María, consultora especialista en sistemas de gestión ISO, por su apoyo en la validación funcional, normativa y metodológica de los flujos del GAP Análisis; y al profesor guía por su acompañamiento durante el desarrollo del Taller Profesional.]}
+
+% Abstract en inglés
+\abstract{%<- evita nueva linea en el abstract
+This report presents the development of a functional prototype for a web platform commissioned by Asesorías ISO RCR SpA, a Chilean consulting firm specialized in the implementation, auditing and certification of ISO Management Systems. The platform digitizes the GAP Analysis process for ISO 9001:2015, replacing spreadsheets and shared folders with a centralized, multi-tenant web service that manages requirements, evidence, gaps and corrective actions across role-based workspaces. The system was built with a React/Vite frontend, an Express.js/Node.js backend, a MySQL relational database and Google Drive for evidence storage, and includes real-time chat over WebSockets, an internal notification worker, and analytics dashboards with per-clause compliance radar charts. Development followed an agile methodology supported by Kanban and Jira, and produced supporting technical documentation including a Software Requirements Specification, C4 architecture diagrams, Architecture Decision Records and a technical debt log. Of the 275 estimated hours, 254 were completed (92.4\%), with unit and integration tests passing successfully; formal multi-tenancy isolation testing and User Acceptance Testing remain scheduled for project closure. The result is a functional, partially validated prototype that establishes a concrete technical and methodological foundation for evolving the tool into a full SaaS platform for ISO management.}
+
+% Resumen
+\resumen{%<- evita nueva linea en el resumen
+Este informe presenta el desarrollo de un prototipo funcional de plataforma web para Asesorías ISO RCR SpA, empresa chilena de consultoría dedicada a la implementación, auditoría y certificación de Sistemas de Gestión ISO. El proyecto digitaliza el proceso de GAP Análisis para ISO 9001:2015, reemplazando planillas de cálculo y carpetas compartidas por un servicio web centralizado y multi-cliente que gestiona requisitos, evidencias, brechas y acciones correctivas mediante espacios de trabajo segregados por rol. El sistema se construyó con frontend en React/Vite, backend en Express.js/Node.js, base de datos relacional MySQL y almacenamiento de evidencias en Google Drive, e incorpora chat contextual en tiempo real mediante WebSockets, un worker de notificaciones internas y dashboards analíticos con gráficos radar de cumplimiento por cláusula. El desarrollo siguió una metodología ágil apoyada en Kanban y Jira, y generó documentación técnica de respaldo que incluye un Documento de Especificación de Requisitos de Software, diagramas de arquitectura C4, Architecture Decision Records y un registro de deuda técnica. De las 275 horas estimadas, se completaron 254 (92,4\%), con pruebas unitarias y de integración ejecutadas exitosamente; las pruebas formales de aislamiento multi-tenancy y las pruebas de aceptación de usuario quedan pendientes para el cierre del proyecto. El resultado es un prototipo funcional y parcialmente validado que establece una base técnica y metodológica concreta para evolucionar la herramienta hacia una plataforma SaaS completa de gestión ISO.}
+
+% Generamos la portada
+\makecover
+
+% Indices y listas
+\tableofcontents% tabla de contenido
+\listoftables%    índice de tablas
+\listoffigures%   índice de figuras
+\glsaddall[types=\acronymtype]
+\printglossary[type=\acronymtype,title={Acrónimos}]
+
+
+% Inicio del contenido
+\mainmatter
+
+\chapter{Introducción}
+
+Asesorías ISO RCR SpA es una empresa chilena de consultoría y capacitación enfocada en apoyar a organizaciones en la implementación, auditoría y certificación de Sistemas de Gestión bajo normas internacionales ISO. Dentro de su operación actual, la empresa realiza diagnósticos de brecha, acompaña procesos de auditoría y entrega herramientas de control para que sus clientes puedan avanzar hacia la certificación, especialmente bajo la norma ISO 9001:2015 \cite{iso9001} y extendiéndose a otras normativas ISO.
 
 El proyecto presentado en este reporte corresponde al desarrollo de una plataforma web para ejecutar GAP Análisis y gestionar evidencias asociadas a cláusulas de ISO 9001:2015. El GAP Análisis es una auditoría preliminar que compara el estado actual de una organización con los requisitos de una norma, permitiendo identificar incumplimientos, evidencias faltantes y acciones necesarias para avanzar hacia la certificación.
 
-Actualmente, el proceso de diagnóstico y seguimiento se apoya fuertemente en hojas de cálculo, carpetas compartidas y comunicación manual entre consultores, evaluadores y responsables del Sistema de Gestión de Calidad (SGC). Esta forma de trabajo dificulta la trazabilidad, aumenta el riesgo de pérdida o duplicación de información y limita la segregación de datos entre clientes. Por ello, el proyecto busca sentar las bases de un servicio web tipo SaaS que permita estandarizar el diagnóstico, centralizar evidencias y controlar el avance de No Conformidades (NC) de forma segura.
+Actualmente, el proceso de diagnóstico y seguimiento se apoya fuertemente en hojas de cálculo, carpetas compartidas y comunicación manual entre consultores, evaluadores y responsables del Sistema de Gestión de Calidad (SGC). Esta forma de trabajo dificulta la trazabilidad, aumenta el riesgo de pérdida o duplicación de información y limita la segregación de datos entre clientes. Por ello, el proyecto busca sentar las bases de un servicio web tipo SaaS que permita estandarizar el diagnóstico, centralizar evidencias y controlar el avance de brechas detectadas durante el GAP Análisis de forma segura.
 
-El presente informe consolida el estado final del proyecto, incorporando la información existente del reporte preliminar de junio, el Documento de Especificación de Requisitos de Software (SRS) versión 3.1, la hoja de seguimiento de tareas, los ajustes de alcance definidos para el MVP y la documentación técnica generada durante el desarrollo: 11 Architecture Decision Records (ADR), registro de deuda técnica, diagramas C4 detallados en Mermaid, documento de componentes críticos y plan de pruebas E2E. El proyecto se ejecutó en una planificación de seis semanas de desarrollo tras el trabajo inicial de levantamiento de requerimientos y diseño, totalizando aproximadamente 210 horas de implementación.
+El presente informe consolida el estado final del proyecto, incorporando la información existente del reporte preliminar de junio, el Documento de Especificación de Requisitos de Software (SRS) versión 3.2, la hoja de seguimiento de tareas, los ajustes de alcance definidos para el prototipo funcional y la documentación técnica generada durante el desarrollo: Architecture Decision Records (ADR), registro de deuda técnica, diagramas C4 detallados en Mermaid, documento de componentes críticos y plan de pruebas E2E. El proyecto se ejecutó en una planificación de seis semanas de desarrollo tras el trabajo inicial de levantamiento de requerimientos y diseño, totalizando 254 horas de trabajo registradas sobre 275 horas estimadas.
 
-\newpage
-\section{Antecedentes de la empresa}
+\chapter{Antecedentes de la empresa}
 
 Asesorías ISO RCR SpA presta servicios de consultoría, capacitación y acompañamiento a organizaciones que requieren implementar o mejorar sus Sistemas de Gestión. Su propuesta de valor se relaciona con traducir requisitos normativos en planes de trabajo prácticos, auditables y sostenibles para cada cliente. En este contexto, la digitalización del GAP Análisis no solo mejora la operación interna de la consultora, sino que también habilita una oferta de servicio más escalable y trazable.
 
 El rubro de la consultoría ISO requiere mantener consistencia metodológica, control documental y evidencia verificable. En particular, ISO 9001:2015 exige demostrar cumplimiento mediante registros, documentos, responsabilidades y seguimiento de acciones. Cuando estos elementos se administran manualmente, la consultora depende de archivos dispersos y controles externos que no siempre aseguran integridad, versionamiento ni separación adecuada entre clientes.
 
-La estrategia comercial y metodológica actual de Asesorías ISO RCR SpA se apoya en la metodología \textit{Sprint ISO}, presentada por la empresa como un camino desde la planificación hasta la certificación en pasos simples. Esta metodología considera seis etapas: diagnóstico inicial, planificación, implementación, capacitación, auditoría interna y certificación. El proyecto se alinea con esta forma de trabajo porque digitaliza componentes centrales del servicio: diagnóstico GAP, gestión de evidencias, responsables, No Conformidades y trazabilidad de avance.
+La estrategia comercial y metodológica actual de Asesorías ISO RCR SpA se apoya en la metodología \textit{Sprint ISO}, presentada por la empresa como un camino desde la planificación hasta la certificación en pasos simples \cite{entrevista-maria}. Esta metodología considera seis etapas: diagnóstico inicial, planificación, implementación, capacitación, auditoría interna y certificación. El proyecto se alinea con esta forma de trabajo porque digitaliza componentes centrales del servicio: diagnóstico GAP, gestión de evidencias, responsables, brechas detectadas y trazabilidad de avance.
 
 \begin{table}[H]
 \centering
-\begin{tabular}{|p{3.2cm}|p{6.1cm}|p{5.1cm}|}
+\small
+\begin{tabularx}{\textwidth}{|L{2.8cm}|Y|Y|}
 \hline
-\rowcolor{gray!20}\textbf{Etapa Sprint ISO} & \textbf{Propósito en la metodología de la empresa} & \textbf{Relación con el MVP} \\ \hline
+\rowcolor{gray!20}\textbf{Etapa Sprint ISO} & \textbf{Propósito en la metodología de la empresa} & \textbf{Relación con el prototipo funcional} \\ \hline
 Diagnóstico inicial & Evaluar brechas mediante auditoría GAP y definir un alcance acotado. & Motor GAP, requisitos ISO y registro de cumplimiento. \\ \hline
 Planificación & Definir tiempos, responsables y documentación requerida. & Espacios de trabajo, usuarios, roles y seguimiento de estados. \\ \hline
-Implementación & Aplicar procesos y herramientas prácticas en la operación del cliente. & Gestión de evidencias, acciones correctivas y seguimiento de No Conformidades. \\ \hline
+Implementación & Aplicar procesos y herramientas prácticas en la operación del cliente. & Gestión de evidencias, acciones correctivas y seguimiento de brechas. \\ \hline
 Capacitación & Preparar al equipo del cliente para adoptar la norma y mantener buenas prácticas. & Interfaz centralizada y estructura comprensible para responsables del SGC. \\ \hline
-Auditoría interna & Revisar cumplimiento y corregir hallazgos antes de la certificación. & Revisión de evidencias, validación, historial y estados de No Conformidades. \\ \hline
+Auditoría interna & Revisar cumplimiento y corregir hallazgos antes de la certificación. & Revisión de evidencias, validación, historial y estados de brechas. \\ \hline
 Certificación & Acompañar la auditoría externa y respaldar el cumplimiento. & Trazabilidad documental y consolidación de información para auditoría. \\ \hline
-\end{tabular}
-\caption{Relación entre la metodología Sprint ISO y el alcance del MVP.}
+\end{tabularx}
+\normalsize
+\caption{Relación entre la metodología Sprint ISO y el alcance del prototipo funcional.}
 \label{tab:sprint-iso-mvp}
 \end{table}
 
 El proyecto impacta directamente en la operación de Asesorías ISO RCR SpA, ya que transforma un proceso de diagnóstico y seguimiento actualmente manual en un flujo web centralizado. A su vez, afecta positivamente a los clientes, quienes podrán revisar requisitos, evidencias, estados y observaciones dentro de un espacio de trabajo propio.
 
-\subsection{Equipo de trabajo}
+\section{Equipo de trabajo}
 
-El equipo de trabajo del proyecto está compuesto por Maximiliano Esteban Abascal Fredes, quien cumple el rol de diseñador del sistema y desarrollador lead del MVP; Ricardo Candia, CEO de Asesorías ISO RCR SpA, quien actúa como contraparte ejecutiva y orienta la visión de negocio del producto; y María, supervisora del proyecto y consultora especialista en sistemas de gestión ISO, quien apoya la validación funcional, normativa y metodológica de los flujos asociados al GAP Análisis, evidencias y No Conformidades. Esta composición permite combinar desarrollo técnico, dirección estratégica y conocimiento especializado en sistemas de gestión ISO.
+El equipo de trabajo del proyecto está compuesto por Maximiliano Esteban Abascal Fredes, quien cumple el rol de diseñador del sistema y desarrollador lead del prototipo funcional; Ricardo Candia, CEO de Asesorías ISO RCR SpA, quien actúa como contraparte ejecutiva y orienta la visión de negocio del producto; y María, supervisora del proyecto y consultora especialista en sistemas de gestión ISO, quien apoya la validación funcional, normativa y metodológica de los flujos asociados al GAP Análisis, evidencias y brechas de cumplimiento. Esta composición permite combinar desarrollo técnico, dirección estratégica y conocimiento especializado en sistemas de gestión ISO.
 
-\section{Formulación del problema}
+\chapter{Formulación del problema}
 
-El problema central consiste en que la gestión actual de diagnósticos GAP, evidencias y No Conformidades se realiza mediante herramientas fragmentadas que no fueron diseñadas para asegurar trazabilidad normativa, segregación multi-cliente ni control de estados. Esta situación genera cuatro dificultades principales:
+El problema central consiste en que la gestión actual de diagnósticos GAP, evidencias y brechas de cumplimiento se realiza mediante herramientas fragmentadas que no fueron diseñadas para asegurar trazabilidad normativa, segregación multi-cliente ni control de estados. Esta situación genera cuatro dificultades principales:
 
 \begin{enumerate}
     \item \textbf{Baja trazabilidad:} las decisiones, cambios de estado y reemplazos de evidencias pueden quedar repartidos entre planillas, correos o conversaciones externas.
     \item \textbf{Riesgo de mezcla de información:} al trabajar con múltiples clientes, es necesario asegurar que cada organización acceda únicamente a sus propios datos.
-    \item \textbf{Seguimiento manual de No Conformidades (NC):} las No Conformidades requieren pasar por estados definidos, comentarios, revisión y cierre, pero el control manual dificulta conocer el avance real.
-    \item \textbf{Falta de vista centralizada de evidencias:} no existe una vista única que permita revisar, comparar y validar rápidamente las evidencias asociadas a requisitos, clientes o No Conformidades.
+    \item \textbf{Seguimiento manual de brechas:} las brechas detectadas durante el diagnóstico GAP requieren pasar por estados definidos, comentarios, revisión y cierre, pero el control manual dificulta conocer el avance real.
+    \item \textbf{Falta de vista centralizada de evidencias:} no existe una vista única que permita revisar, comparar y validar rápidamente las evidencias asociadas a requisitos, clientes o brechas.
     \item \textbf{Escalabilidad limitada:} mientras más clientes y auditorías existan, mayor es el costo operativo de mantener archivos, versiones y validaciones sin una plataforma común.
 \end{enumerate}
 
-La relevancia del proyecto para la empresa radica en que el sistema propuesto reduce errores operacionales, estandariza la metodología de diagnóstico y genera una base tecnológica comercializable. El alcance se concentra en un MVP para ISO 9001:2015, priorizando el núcleo de valor: motor de evaluación GAP, gestión de requisitos, evidencias, usuarios, espacios de trabajo y flujo básico de No Conformidades.
+\section{Disponibilidad de métricas y línea base}
 
-\section{Objetivos}
+En una entrevista realizada mediante mensajería instantánea el 17 de julio de 2026, María Patiño, consultora especialista en sistemas de gestión ISO, indicó que Asesorías ISO RCR SpA no dispone todavía de indicadores históricos propios sobre tiempo dedicado a buscar información, horas de retrabajo, duplicidad de registros, cantidad de herramientas utilizadas, tiempos de respuesta o pérdida de clientes \cite{entrevista-whatsapp-maria}. La empresa se encuentra iniciando la implementación de estas mediciones y, por ello, no es posible calcular de manera retrospectiva un ahorro económico atribuible al prototipo sin inventar una línea base.
 
-\subsection{Objetivo general}
+La ausencia de estos datos se reconoce como una limitación del proyecto y, al mismo tiempo, permite definir una línea base para mediciones posteriores. La especialista identificó como indicadores pertinentes el tiempo promedio destinado a buscar información, las horas de retrabajo por errores o duplicidad, la cantidad de planillas o herramientas utilizadas en un mismo proceso, el tiempo de respuesta al cliente y el cumplimiento de plazos o acuerdos de nivel de servicio. Estos indicadores deberán medirse antes y después de introducir la plataforma para evaluar empíricamente su impacto.
 
-Diseñar e implementar un MVP de plataforma web para Asesorías ISO RCR SpA que permita ejecutar GAP Análisis de ISO 9001:2015, gestionar evidencias por requisito y controlar el flujo de No Conformidades mediante roles, espacios de trabajo y trazabilidad básica.
+En consecuencia, la justificación actual del proyecto no se fundamenta en una reducción económica ya demostrada, sino en la necesidad cualitativamente validada de centralizar información, establecer trazabilidad, separar datos entre clientes y construir una base tecnológica propia. La relevancia del sistema radica en estandarizar el seguimiento del diagnóstico y generar una plataforma extensible para la operación futura de la empresa. El alcance se concentra en un prototipo funcional para ISO 9001:2015, priorizando el núcleo de valor: motor de evaluación GAP, gestión de requisitos, evidencias, usuarios, espacios de trabajo y flujo básico de brechas.
 
-\subsection{Objetivos específicos}
+\chapter{Objetivos}
+
+\section{Objetivo general}
+
+Disponer, al cierre del Taller Profesional, de un prototipo funcional documentado que centralice el diagnóstico GAP de ISO 9001:2015, la gestión de evidencias y el seguimiento de brechas de Asesorías ISO RCR SpA, con el propósito de demostrar la viabilidad técnica de reemplazar el uso fragmentado de planillas y carpetas por una plataforma propia, trazable y segregada por cliente.
+
+\section{Objetivos específicos}
 
 \begin{enumerate}
-    \item Definir la arquitectura funcional del sistema a partir del SRS, separando roles, permisos y espacios de trabajo por cliente.
-    \item Implementar autenticación, autorización y administración CRUD de usuarios y espacios de trabajo.
-    \item Cargar la estructura de requisitos de ISO 9001:2015 mediante seeding de base de datos para evitar cargas manuales en el MVP.
-    \item Desarrollar el motor GAP para registrar cumplimiento, abrir No Conformidades, gestionar Acciones Correctivas y calcular indicadores de avance.
-    \item Implementar la gestión de evidencias asociadas a requisitos, incluyendo carga, visualización, revisión e historial de versiones.
-    \item Validar el sistema mediante pruebas unitarias, pruebas de integración, pruebas de aislamiento multi-tenancy y pruebas UAT con la contraparte.
+    \item Contar, al finalizar el proyecto, con tres perfiles operativos---Administrador, Evaluador y Responsable del SGC---y espacios de trabajo diferenciados por cliente, para delimitar responsabilidades y reducir el riesgo de acceso cruzado a la información.
+    \item Incorporar en el prototipo la totalidad de los requisitos de ISO 9001:2015 considerados en el alcance definido, para permitir la ejecución estructurada y reproducible del diagnóstico GAP.
+    \item Disponer de un flujo trazable que relacione requisitos, estados de cumplimiento, brechas y acciones correctivas, incluyendo historial de cambios, para facilitar el seguimiento del diagnóstico y sus decisiones.
+    \item Centralizar el ciclo de vida de las evidencias por requisito---carga, consulta, revisión, actualización e historial---mediante una integración real con Google Drive, para conservar trazabilidad documental y evitar referencias dispersas.
+    \item Presentar indicadores de cumplimiento general, cumplimiento por cláusula, resolución y eficiencia, definidos mediante fórmulas explícitas, para entregar una visión cuantitativa del estado registrado en cada espacio de trabajo.
+    \item Obtener, antes del cierre del Taller, evidencia técnica reproducible del funcionamiento de los módulos implementados mediante las pruebas unitarias y de integración disponibles, dejando la aceptación de usuario y la validación exhaustiva multi-cliente como condiciones posteriores para evolucionar el prototipo hacia un producto validado.
 \end{enumerate}
 
 \begin{table}[H]
 \centering
-\begin{tabular}{|p{7.2cm}|p{7.2cm}|}
+\small
+\begin{tabularx}{\textwidth}{|Y|Y|}
 \hline
 \rowcolor{gray!20}\textbf{Objetivo específico} & \textbf{Evidencia o estado de cumplimiento en el informe} \\ \hline
-Definir arquitectura funcional, roles, permisos y espacios por cliente. & SRS v3.1, definición de roles, modelo multi-tenancy y diagramas C4. \\ \hline
-Implementar autenticación, autorización y CRUD de usuarios y espacios. & Módulos implementados de login, JWT, usuarios, roles y espacios de trabajo. \\ \hline
-Cargar requisitos ISO 9001:2015 mediante seeding. & Población inicial de requisitos ISO mediante scripts de seeding. \\ \hline
-Desarrollar motor GAP, No Conformidades, Acciones Correctivas e indicadores. & Motor GAP funcional, apertura y seguimiento de No Conformidades, acciones correctivas y cálculo de cumplimiento. \\ \hline
-Implementar gestión de evidencias con revisión e historial. & Carga, visualización, revisión, vinculación e historial de evidencias. \\ \hline
-Validar mediante pruebas unitarias, integración, multi-tenancy y UAT. & Pruebas unitarias e integración ejecutadas; pruebas multi-tenancy y UAT pendientes según cronograma. \\ \hline
-\end{tabular}
+Disponer de tres perfiles y espacios segregados por cliente. & Roles Administrador, Evaluador y Responsable del SGC, autorización y espacios de trabajo implementados. \\ \hline
+Incorporar los requisitos ISO definidos en el alcance. & Estructura de ISO 9001:2015 disponible de forma reproducible en el prototipo. \\ \hline
+Relacionar requisitos, cumplimiento, brechas y acciones. & Motor GAP, flujos de estados e historiales implementados y documentados. \\ \hline
+Centralizar el ciclo de vida de evidencias. & Integración real con Google Drive para carga, consulta, actualización, revisión e historial. \\ \hline
+Presentar indicadores formalmente definidos. & Fórmulas de cumplimiento, resolución, eficiencia y avance incluidas en el marco conceptual. \\ \hline
+Obtener evidencia técnica reproducible. & Pruebas unitarias y de integración ejecutadas; UAT y validación multi-cliente se declaran como trabajo futuro. \\ \hline
+\end{tabularx}
+\normalsize
 \caption{Relación entre objetivos específicos y evidencia de avance.}
 \label{tab:objetivos-evidencia}
 \end{table}
 
-\section{Marco conceptual}
+\chapter{Marco conceptual}
 
-\subsection{ISO 9001:2015 y Sistema de Gestión de Calidad}
+\section{ISO 9001:2015 y Sistema de Gestión de Calidad}
 
-ISO 9001:2015 es una norma internacional orientada a Sistemas de Gestión de Calidad. Su aplicación exige que la organización demuestre capacidad para entregar productos o servicios conformes, gestionar riesgos, controlar procesos y mejorar continuamente. En el contexto del proyecto, la norma funciona como estructura base para evaluar requisitos, registrar evidencias y determinar brechas de cumplimiento.
+ISO 9001:2015 es una norma internacional orientada a Sistemas de Gestión de Calidad \cite{iso9001}. Su aplicación exige que la organización demuestre capacidad para entregar productos o servicios conformes, gestionar riesgos, controlar procesos y mejorar continuamente. En el contexto del proyecto, la norma funciona como estructura base para evaluar requisitos, registrar evidencias y determinar brechas de cumplimiento.
 
-\subsection{GAP Análisis}
+\section{GAP Análisis}
 
-El GAP Análisis es un diagnóstico comparativo entre la situación actual de una organización y el estado requerido por una norma. Su resultado permite clasificar requisitos, identificar brechas, priorizar acciones y generar evidencia para futuras auditorías. En la plataforma, este concepto se traduce en un motor que permite revisar cláusulas, registrar estados de cumplimiento y abrir No Conformidades cuando corresponde junto a sus Acciones Correctivas asociadas según sea el caso.
+El GAP Análisis es un diagnóstico comparativo entre la situación actual de una organización y el estado requerido por una norma. Su resultado permite clasificar requisitos, identificar brechas, priorizar acciones y generar evidencia para futuras auditorías. En la plataforma, este concepto se traduce en un motor que permite revisar cláusulas, registrar estados de cumplimiento y crear brechas cuando corresponde, junto con sus acciones correctivas asociadas según sea el caso.
 
-\subsection{No Conformidad}
+Según la experiencia profesional informada por María Patiño, un GAP Análisis inicial requiere aproximadamente una hora, porque corresponde a una revisión preliminar de la documentación disponible y su comparación con la estructura general de la norma, sin examinar todavía cada documento en detalle. Una auditoría interna puede extenderse aproximadamente tres jornadas de ocho horas, aunque su duración se define previamente en un plan de auditoría y depende del alcance y nivel de detalle acordado entre las partes \cite{entrevista-whatsapp-maria}. Por lo tanto, el valor principal del prototipo no se concentra exclusivamente en reducir la duración de la revisión inicial, sino en sostener el proceso posterior de evidencias, brechas, acciones correctivas, historial y seguimiento.
 
-Una No Conformidad corresponde a una desviación respecto de un requisito normativo o procedimiento definido. Para el MVP, su flujo se simplifica a estados operativos: Abierta, Análisis, Implementación, Verificación y Cerrada. Esta simplificación reemplaza modelos jerárquicos de acciones correctivas padre/hijo y permite concentrar el desarrollo en un seguimiento claro, verificable y alcanzable. También se cuenta con un estado de aceptación de la No Conformidad por parte del Responsable del SGC, cuyo objetivo es confirmar que la desviación fue recibida, comprendida y asumida por el área responsable antes de iniciar el análisis de causa y la implementación de acciones correctivas.
+\section{Brechas y No Conformidades}
 
-\textbf{Nota terminológica:} En la interfaz de usuario del sistema se utiliza el término ``Brecha Detectada en GAP Analysis'' o simplemente ``Brecha'' en lugar de ``No Conformidad'', con el propósito de hacer más comprensible el concepto para clientes que no poseen experiencia previa con terminología ISO. El presente informe mantiene el término ``No Conformidad'' por ser el vocablo normativo estándar definido en ISO 9001:2015.
+Durante el desarrollo se realizó una reunión diaria de seguimiento en la que se presentaron los avances del sistema a María, supervisora y consultora especialista en sistemas de gestión ISO, y a Ricardo Candia, CEO de Asesorías ISO RCR SpA. En esa instancia se determinó que los hallazgos generados por el diagnóstico GAP del prototipo funcional no debían denominarse ``No Conformidades'', sino ``brechas''. La razón es que, dentro del contexto metodológico trabajado con la empresa, las No Conformidades se asocian específicamente a los incumplimientos tratados en las cláusulas 8.7 y 10.2 de ISO 9001:2015, mientras que el GAP Análisis identifica diferencias de cumplimiento más amplias a lo largo de la norma.
 
-\subsection{Multi-tenancy y segregación de datos}
+Por lo tanto, una brecha corresponde a una diferencia entre el estado actual de cumplimiento de una organización y el estado esperado para un requisito evaluado durante el diagnóstico. Para el prototipo funcional, su flujo se modela con estados operativos: Abierta, Análisis, Ejecución, Verificación y Cerrada. El sistema también registra el grado de aceptación del hallazgo mediante los estados Acepto, Parcial y No Acepto, lo que permite distinguir el avance operativo de la brecha de la conformidad expresada por los participantes del espacio de trabajo.
 
-La plataforma se diseña para operar con múltiples clientes dentro de un mismo sistema. Por ello, cada espacio de trabajo representa a una organización cliente y debe aislar usuarios, requisitos, evidencias, No Conformidades, Acciones Correctivas e historial. La segregación de datos es un requisito crítico, ya que evita accesos cruzados y mantiene confidencialidad entre clientes.
+\textbf{Nota terminológica:} En versiones tempranas de la documentación y del backend se utilizó la sigla ``NC'' como término interno heredado del levantamiento inicial. Sin embargo, la interfaz de usuario y el presente informe adoptan el término ``Brecha Detectada en GAP Analysis'' o simplemente ``Brecha'', por ser más preciso para el alcance del prototipo funcional y más comprensible para clientes que no poseen experiencia previa con terminología ISO.
 
-\subsection{MVP y reducción de alcance}
+\section{Estados, transiciones y cálculo de cumplimiento}
 
-El Producto Mínimo Viable se entiende como la versión inicial que entrega el núcleo de valor con la menor complejidad posible. En este proyecto, el MVP se acota a ISO 9001:2015, gestión GAP, evidencias, NC (y sus Acciones Correctivas) y roles esenciales. La reducción de alcance elimina funcionalidades de alta complejidad técnica o bajo valor inmediato para asegurar una entrega sólida en 210 horas.
+El prototipo funcional organiza el seguimiento del diagnóstico mediante cinco flujos relacionados: validación de evidencias, avance de brechas, aceptación de brechas, avance de acciones correctivas y estado de cumplimiento de cada requisito. Esta separación evita interpretar un único estado como representación de todo el proceso. Por ejemplo, una brecha puede encontrarse en ejecución y, al mismo tiempo, mantener una aceptación parcial por parte del responsable.
 
+\subsection{Validación de evidencias}
 
-\subsection{Soluciones y metodologías existentes}
+Toda evidencia comienza en estado Pendiente y debe ser revisada por un Evaluador. Como resultado de esta revisión puede quedar Aceptada, cuando demuestra adecuadamente el cumplimiento del requisito, o Rechazada, cuando es insuficiente o no corresponde. El usuario que aportó el archivo conserva la posibilidad de actualizar sus antecedentes, mientras que la decisión de aceptación o rechazo queda reservada al Evaluador o al Administrador. Cada modificación relevante se registra en el historial de evidencias, permitiendo conocer quién realizó el cambio y cuál fue su resultado. La Figura \ref{fig:flujo-aceptacion-evidencia} resume este proceso.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.82\textwidth]{img/flujo-aceptacion-evidencia.png}
+    \caption{Flujo de validación de una evidencia.}
+    \label{fig:flujo-aceptacion-evidencia}
+\end{figure}
+
+\subsection{Avance y aceptación de brechas}
+
+Las brechas se crean en estado Abierta. El Responsable del SGC puede conducirlas por las etapas de Análisis y Ejecución, mientras que el Evaluador interviene en la Verificación y el Cierre. Para ingresar a Verificación debe definirse una fecha futura de comprobación de eficacia; esta fecha permite programar un recordatorio para el Evaluador. Las modificaciones quedan registradas en el historial y se comunican a los responsables asociados. La Figura \ref{fig:flujo-brecha} representa las transiciones operativas y las responsabilidades de cada rol.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.88\textwidth]{img/flujo-brecha.png}
+    \caption{Flujo operativo de una brecha y responsabilidades por rol.}
+    \label{fig:flujo-brecha}
+\end{figure}
+
+El grado de aceptación se registra de manera independiente mediante los estados Parcial, Acepto y No Acepto. Parcial es el valor inicial y refleja que el hallazgo todavía puede requerir revisión o conversación; Acepto indica reconocimiento del hallazgo, y No Acepto expresa una discrepancia que debe quedar documentada. Cualquier participante autenticado del espacio de trabajo puede registrar esta valoración, manteniéndose la trazabilidad del cambio y la notificación a los responsables. Este flujo se presenta en la Figura \ref{fig:flujo-aceptacion-brecha}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.80\textwidth]{img/flujo-aceptacion-brecha.png}
+    \caption{Flujo de aceptación de una brecha.}
+    \label{fig:flujo-aceptacion-brecha}
+\end{figure}
+
+\subsection{Acciones correctivas}
+
+Las acciones correctivas permiten responder a las causas de una brecha y avanzan entre Pendiente, En Progreso, Eficaz y No Eficaz. El Responsable del SGC administra su ejecución, mientras que el Administrador mantiene acceso general. Una acción declarada No Eficaz puede señalar la necesidad de una nueva brecha, pero esta decisión se mantiene bajo control del usuario y no crea registros automáticamente. Cada cambio de estado o contenido genera historial y comunica el avance a los responsables relacionados. La Figura \ref{fig:flujo-accion-correctiva} muestra este ciclo.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.84\textwidth]{img/flujo-accion-correctiva.png}
+    \caption{Flujo de avance de una acción correctiva.}
+    \label{fig:flujo-accion-correctiva}
+\end{figure}
+
+\subsection{Determinación automática del estado de un requisito}
+
+El estado de cumplimiento de cada requisito se mantiene sincronizado con sus evidencias y brechas. Esta lógica clasifica un requisito individual en Cumple, Parcial, No cumple o NA; no calcula un porcentaje. La clasificación se ejecuta cuando se crea, modifica, aprueba o elimina una evidencia, y también cuando se crea o elimina una brecha. De esta forma, el resultado visible no depende únicamente de una actualización manual. La regla preserva, sin embargo, la decisión de exclusión: si el requisito está marcado como NA (No Aplica), el cálculo automático no modifica ese valor.
+
+Para un requisito no excluido, sean $E$ el conjunto de evidencias asociadas y $B_{ab}$ el conjunto de brechas abiertas. La expresión $|E|$ representa la cantidad de evidencias y $|B_{ab}|$ la cantidad de brechas abiertas. Además, $R_E$ indica que existe al menos una evidencia rechazada, $P_E$ que existe al menos una evidencia pendiente y $A_E$ que hay evidencias y todas fueron aceptadas. La determinación se aplica con el siguiente orden de prioridad:
+
+\begin{equation}
+Estado =
+\begin{cases}
+\text{No cumple}, & (|E|=0 \land |B_{ab}|=0) \,\lor\, |B_{ab}|>0 \,\lor\, R_E,\\
+\text{Cumple}, & A_E \,\land\, |B_{ab}|=0,\\
+\text{Parcial}, & |E|>0 \,\land\, P_E \,\land\, \neg R_E \,\land\, |B_{ab}|=0.
+\end{cases}
+\label{eq:estado-requisito}
+\end{equation}
+
+En términos operativos, una evidencia rechazada o una brecha abierta prevalecen y producen el estado No cumple. El requisito solo alcanza Cumple cuando dispone de evidencia, todas las evidencias fueron aceptadas y no existen brechas abiertas. Si aún hay evidencias pendientes, sin rechazos ni brechas abiertas, queda Parcial o En Revisión. El Evaluador puede modificar manualmente el estado cuando el contexto de auditoría lo requiera, incluido el marcado NA; el Responsable del SGC puede consultar la evaluación, pero no cambiar directamente su estado. Toda actualización genera un registro histórico con el estado, autor, fecha y acción realizada. La Figura \ref{fig:flujo-estado-evaluacion-requisito} sintetiza esta lógica.
+
+La regla anterior fue presentada a la especialista de la empresa, quien confirmó por escrito que la clasificación automática propuesta representa correctamente la relación entre evidencias, brechas y cumplimiento de un requisito \cite{entrevista-whatsapp-maria}. Esta confirmación constituye una validación conceptual de la regla de negocio; no demuestra todavía su aceptación mediante casos UAT ni reemplaza las pruebas técnicas de su implementación.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.90\textwidth]{img/flujo-estado-evaluacion-requisito.png}
+    \caption{Determinación automática del estado de cumplimiento de un requisito.}
+    \label{fig:flujo-estado-evaluacion-requisito}
+\end{figure}
+
+La trazabilidad se conserva en historiales diferenciados para evidencias, brechas, acciones correctivas y evaluaciones de requisitos. Los cambios de brechas y acciones generan avisos a los responsables relacionados; en cambio, la aprobación de evidencias y la actualización del cumplimiento quedan registradas en sus historiales, pero no generan una notificación automática. Esta distinción evita atribuir al prototipo comportamientos que todavía no han sido implementados.
+
+\section{Indicadores y filtros del dashboard}
+
+El dashboard trabaja en un nivel distinto: toma los estados individuales ya determinados para varios requisitos y los agrega para producir porcentajes e indicadores de seguimiento. Por lo tanto, las fórmulas de esta sección no deciden si un requisito particular Cumple o No cumple; resumen el conjunto de evaluaciones registradas. Para que estos resultados sean interpretables, los cálculos aplican criterios comunes de alcance y tiempo. El usuario puede seleccionar un rango de fechas y una cláusula específica; si no define fechas, el sistema considera por defecto los registros actualizados durante los últimos seis meses. Este criterio concentra la visualización en información reciente, sin eliminar el historial almacenado.
+
+\subsection{Cumplimiento general y por cláusula}
+
+El porcentaje de cumplimiento considera únicamente requisitos aplicables. Los requisitos en estado Cumple aportan su valor completo, los que se encuentran Parcial aportan la mitad y los marcados NA quedan excluidos tanto del numerador como del denominador. Sean $C$ la cantidad de requisitos que cumplen, $P$ la cantidad con cumplimiento parcial y $A$ el total de requisitos aplicables, con $A>0$. El indicador general se define como:
+
+\begin{equation}
+Cumplimiento\ general =
+\operatorname{round}\left(\frac{C + 0{,}5P}{A}\times 100\right).
+\label{eq:cumplimiento-general}
+\end{equation}
+
+El total aplicable corresponde al total de requisitos menos aquellos marcados NA. Esta exclusión evita que un requisito justificadamente no aplicable aumente o disminuya artificialmente el resultado. Para una cláusula $c$ se utiliza la misma regla, pero considerando solo sus requisitos:
+
+\begin{equation}
+Cumplimiento_c =
+\operatorname{round}\left(\frac{C_c + 0{,}5P_c}{A_c}\times 100\right),
+\qquad A_c>0.
+\label{eq:cumplimiento-clausula}
+\end{equation}
+
+Esta segmentación permite identificar las cláusulas con mayor avance y aquellas que concentran las principales brechas, lo que orienta la priorización del trabajo de consultoría.
+
+\subsection{Resolución y eficiencia de brechas}
+
+El promedio de días de resolución se calcula únicamente sobre brechas cerradas que poseen fecha de cierre y acciones correctivas eficaces. Para cada brecha $i$, se mide la diferencia entre su fecha de cierre y la fecha de la última acción correctiva eficaz, evitando resultados negativos:
+
+\begin{equation}
+D_{promedio} =
+\operatorname{round}\left(\frac{1}{n}\sum_{i=1}^{n}
+\max\left(0,\, fechaCierre_i-fechaUltimaAccion_i\right)\right).
+\label{eq:promedio-resolucion}
+\end{equation}
+
+Este indicador representa el tiempo promedio requerido para cerrar formalmente una brecha después de completar sus acciones correctivas. Puede filtrarse por cláusula para comparar áreas normativas.
+
+La eficiencia del proceso considera solamente brechas cuyo hallazgo fue aceptado. Sean $N_{ca}$ la cantidad de brechas cerradas y aceptadas y $N_a$ el total de brechas aceptadas. Cuando $N_a>0$, se calcula:
+
+\begin{equation}
+Eficiencia = \frac{N_{ca}}{N_a}\times 100.
+\label{eq:eficiencia-proceso}
+\end{equation}
+
+El resultado se presenta con un decimal y expresa qué proporción de las brechas reconocidas por la organización ha logrado cerrarse.
+
+\subsection{Indicadores administrativos por empresa}
+
+Para el Administrador, cada espacio de trabajo representa una empresa cliente. Su avance corresponde a la proporción de brechas cerradas respecto del total registrado en ese espacio:
+
+\begin{equation}
+Avance_{empresa} =
+\operatorname{round}\left(\frac{B_{cerradas,empresa}}
+{B_{total,empresa}}\times 100\right).
+\label{eq:avance-empresa}
+\end{equation}
+
+A partir de este porcentaje se genera una clasificación descriptiva para facilitar la lectura ejecutiva del dashboard:
+
+\begin{equation}
+Estado_{empresa}=
+\begin{cases}
+\text{Fase de Auditoría}, & Avance>80\%,\\
+\text{Plan de Acción}, & 30\%<Avance\leq80\%,\\
+\text{Fase Documental}, & Avance\leq30\%.
+\end{cases}
+\label{eq:fase-empresa}
+\end{equation}
+
+Esta clasificación no reemplaza el juicio profesional del consultor; funciona como una síntesis automática del avance registrado. Finalmente, el avance global consolida todos los espacios de trabajo:
+
+\begin{equation}
+Avance\ global =
+\frac{\sum B_{cerradas}}{\sum B_{totales}}\times 100.
+\label{eq:avance-global}
+\end{equation}
+
+En conjunto, estos indicadores permiten observar cumplimiento normativo, velocidad de resolución, eficiencia del proceso y avance por cliente. Su interpretación debe considerar los filtros aplicados y la calidad de los datos registrados, ya que el dashboard resume la información disponible en la plataforma y no sustituye la evaluación del especialista ISO.
+
+\section{Multi-tenancy y segregación de datos}
+
+La plataforma se diseña para operar con múltiples clientes dentro de un mismo sistema. Por ello, cada espacio de trabajo representa a una organización cliente y debe aislar usuarios, requisitos, evidencias, brechas, acciones correctivas e historial. La segregación de datos es un requisito crítico, ya que evita accesos cruzados y mantiene confidencialidad entre clientes.
+
+Es importante precisar que esta definición de espacio de trabajo corresponde a una separación lógica de datos y permisos dentro de la aplicación, no a una separación física de infraestructura por cliente. Para el alcance del prototipo funcional no se implementan contenedores, instancias de backend, bases de datos ni despliegues independientes por usuario u organización. Esta decisión reduce la complejidad operacional, evita costos innecesarios de infraestructura y permite concentrar el esfuerzo en validar el flujo funcional principal. La alternativa de aislar clientes mediante infraestructura dedicada se considera una evolución posible para etapas productivas posteriores, especialmente si aparecen requisitos más estrictos de seguridad, cumplimiento normativo o escalabilidad.
+
+\section{Prototipo funcional y reducción de alcance}
+
+El prototipo funcional corresponde a una implementación operativa destinada a demostrar la viabilidad técnica y metodológica del flujo principal, sin afirmar todavía aceptación formal por parte de usuarios finales ni preparación para producción. En este proyecto se acota a ISO 9001:2015, gestión GAP, evidencias, brechas, acciones correctivas y roles esenciales. Su evolución a producto validado requiere completar las pruebas de aceptación y de aislamiento multi-cliente descritas posteriormente.
+
+Durante el desarrollo se evidenció que el alcance inicial incorporaba más capacidades de las necesarias para validar el núcleo de valor del sistema. Por ello, se realizó una reducción de alcance orientada a priorizar las funcionalidades esenciales del flujo GAP, la trazabilidad de evidencias, la gestión de brechas y el seguimiento de acciones correctivas. Esta decisión permitió concentrar el esfuerzo en una base funcional, documentada y verificable, dejando funcionalidades complementarias como trabajo futuro.
+
+\section{Soluciones y metodologías existentes}
 
 Actualmente existen alternativas para abordar la gestión de auditorías, cumplimiento y sistemas de gestión ISO. La primera alternativa, utilizada de forma extendida en operaciones pequeñas o en etapas iniciales, corresponde al uso de planillas Excel, carpetas compartidas en Drive y comunicación manual. Su ventaja principal es el bajo costo inicial y la flexibilidad inmediata; sin embargo, presenta debilidades importantes para el problema tratado: baja trazabilidad, riesgo de duplicidad, dificultad para controlar versiones, poca segregación entre clientes y dependencia de disciplina manual para mantener los registros actualizados.
 
-Una segunda alternativa corresponde a plataformas comerciales especializadas en gestión ISO, auditorías o GRC, tales como ISWO, GOAudits y GRCTools. De acuerdo con la entrevista de validación realizada con María, ISWO es la alternativa que más se aproxima a la visión general de Asesorías ISO RCR SpA. No obstante, también se identificó que estas plataformas pueden resultar complejas para empresas que no tienen experiencia previa con sistemas ISO, ya que requieren comprender metodologías, parametrizaciones y flujos de trabajo antes de obtener valor operativo. En el caso de ISWO, la principal limitación observada es que ciertos procesos requieren parametrizaciones previas engorrosas para acciones que deberían ser simples, como trabajar una matriz FODA. Además, su IA se percibe como una asistencia conversacional que responde preguntas, pero no opera como agente capaz de modificar, completar o actuar sobre los datos del cliente dentro de la plataforma.
+Una segunda alternativa corresponde a plataformas comerciales especializadas en gestión ISO, auditorías o GRC, tales como ISWO, GoAudits y GRC Tools \cite{iswo,goaudits,grctools}. De acuerdo con la entrevista de validación realizada con María, ISWO es la alternativa que más se aproxima a la visión general de Asesorías ISO RCR SpA \cite{entrevista-maria}. No obstante, también se identificó que estas plataformas pueden resultar complejas para empresas que no tienen experiencia previa con sistemas ISO, ya que requieren comprender metodologías, parametrizaciones y flujos de trabajo antes de obtener valor operativo. En el caso de ISWO, la principal limitación observada es que ciertos procesos requieren parametrizaciones previas engorrosas para acciones que deberían ser simples, como trabajar una matriz FODA. Además, su IA se percibe como una asistencia conversacional que responde preguntas, pero no opera como agente capaz de modificar, completar o actuar sobre los datos del cliente dentro de la plataforma.
 
-La tercera alternativa corresponde al desarrollo de una plataforma propia. Aunque el MVP actual es más acotado que las soluciones comerciales existentes, permite construir una base ajustada al flujo específico de Asesorías ISO RCR SpA. El valor estratégico de esta alternativa, validado en entrevista, se relaciona con proteger la información de los clientes, mantener control sobre el sistema, evitar el uso de múltiples herramientas dispersas y entregar un servicio de calidad desde una única plataforma centralizada. Además, permite diseñar una experiencia más simple y entendible para clientes que no dominan la terminología ni la metodología ISO.
+La tercera alternativa corresponde al desarrollo de una plataforma propia. Aunque el prototipo funcional actual es más acotado que las soluciones comerciales existentes, permite construir una base ajustada al flujo específico de Asesorías ISO RCR SpA. El valor estratégico de esta alternativa, validado en entrevista, se relaciona con proteger la información de los clientes, mantener control sobre el sistema, evitar el uso de múltiples herramientas dispersas y entregar un servicio de calidad desde una única plataforma centralizada. Además, permite diseñar una experiencia más simple y entendible para clientes que no dominan la terminología ni la metodología ISO.
 
-El diferenciador del producto completo no se limita a reemplazar planillas o replicar software comercial. La visión final apunta a una plataforma integrada, fácilmente auditable, con historial detallado, funciones inteligentes, IA agente, importación inteligente de datos, reutilización de información entre módulos para evitar registros duplicados, relación entre elementos del sistema y escalabilidad hacia otras normas ISO. En este sentido, el MVP se interpreta como la primera base operativa: es más simple, centralizado y hecho a medida, mientras que el producto final busca convertirse en una plataforma inteligente de gestión ISO adaptable a la metodología de la consultora.
+El diferenciador del producto completo no se limita a reemplazar planillas o replicar software comercial. La visión final apunta a una plataforma integrada, fácilmente auditable, con historial detallado, funciones inteligentes, IA agente, importación inteligente de datos, reutilización de información entre módulos para evitar registros duplicados, relación entre elementos del sistema y escalabilidad hacia otras normas ISO. En este sentido, el prototipo funcional se interpreta como la primera base operativa: es más simple, centralizado y hecho a medida, mientras que el producto final busca convertirse en una plataforma inteligente de gestión ISO adaptable a la metodología de la consultora.
 
 \begin{table}[H]
 \centering
-\begin{tabular}{|p{3.2cm}|p{4cm}|p{4cm}|p{3.4cm}|}
+\small
+\begin{tabularx}{\textwidth}{|L{2.4cm}|Y|Y|Y|}
 \hline
 \rowcolor{gray!20}\textbf{Alternativa} & \textbf{Ventajas} & \textbf{Limitaciones} & \textbf{Encaje con el proyecto} \\ \hline
 Excel/Drive & Bajo costo inicial, rapidez de uso y alta flexibilidad manual. & Baja trazabilidad, duplicidad de registros, control documental débil y riesgo de mezcla entre clientes. & Útil como punto de partida, pero insuficiente para centralizar, auditar y escalar el servicio. \\ \hline
 ISWO, GOAudits y GRCTools & Plataformas maduras para auditoría, cumplimiento, reportabilidad y gestión de procesos. & Mayor complejidad metodológica, parametrización previa y menor adaptación al flujo propio de Asesorías ISO RCR SpA. & Referentes del estado del arte, pero menos alineados con una experiencia simple y hecha a medida para clientes sin dominio ISO. \\ \hline
-Plataforma propia & Control de datos, centralización, simplicidad, auditabilidad, roadmap propio y adaptación a la consultora. & Mayor riesgo técnico inicial y menor cobertura funcional en el MVP. & Mejor alternativa estratégica para evolucionar hacia IA agente, importación inteligente, reutilización de datos y soporte multi-norma. \\ \hline
-\end{tabular}
+Plataforma propia & Control de datos, centralización, simplicidad, auditabilidad, roadmap propio y adaptación a la consultora. & Mayor riesgo técnico inicial y menor cobertura funcional en el prototipo funcional. & Mejor alternativa estratégica para evolucionar hacia IA agente, importación inteligente, reutilización de datos y soporte multi-norma. \\ \hline
+\end{tabularx}
+\normalsize
 \caption{Comparación de alternativas para la gestión GAP e ISO.}
 \label{tab:alternativas}
 \end{table}
 
-\subsection{Producto completo proyectado}
+\section{Producto completo proyectado}
 
 El producto completo se proyecta como una plataforma SaaS de gestión ISO que integre, en un mismo entorno, los procesos principales del Sistema de Gestión: contexto de la organización, planificación, liderazgo, apoyo, operación, evaluación y mejora continua. Según la entrevista, estos ejes deben constituir la estructura funcional de largo plazo, mientras que módulos como productividad, mantenimiento, planes de mejoramiento, PQRSF, proveedores, SGSST o dashboards genéricos no forman parte prioritaria de la propuesta final. La visualización analítica sí se considera relevante, pero enfocada en indicadores útiles para el seguimiento del sistema y no como un conjunto amplio de métricas desconectadas.
 
-El diseño completo debe operar cláusula a cláusula, de manera que requisitos, evidencias, hallazgos, No Conformidades, acciones correctivas, aprobaciones e historial queden relacionados desde el origen. Esta estructura busca evitar duplicidad de información, reducir registros repetidos y permitir que una evidencia o acción tenga impacto en los componentes normativos correspondientes sin tener que ser ingresada varias veces. La trazabilidad esperada incluye quién crea un registro, quién firma, quién aprueba, qué cambios se realizaron, cuál era el estado anterior, cuál es el estado posterior y la fecha de cada modificación.
+El diseño completo debe operar cláusula a cláusula, de manera que requisitos, evidencias, hallazgos, brechas, acciones correctivas, aprobaciones e historial queden relacionados desde el origen. Esta estructura busca evitar duplicidad de información, reducir registros repetidos y permitir que una evidencia o acción tenga impacto en los componentes normativos correspondientes sin tener que ser ingresada varias veces. La trazabilidad esperada incluye quién crea un registro, quién firma, quién aprueba, qué cambios se realizaron, cuál era el estado anterior, cuál es el estado posterior y la fecha de cada modificación.
 
 En términos de escalabilidad normativa, la prioridad futura identificada es avanzar desde ISO 9001:2015 hacia ISO 27001, seguridad en el trabajo y medioambiente, incorporando progresivamente normas adicionales bajo una arquitectura reutilizable. La inteligencia artificial queda como una línea estratégica pendiente de evaluación detallada, pero la visión validada apunta a una IA agente capaz de asistir o ejecutar acciones sobre la plataforma, no solo responder preguntas. Esto permitiría apoyar generación de informes, sugerencia de brechas, clasificación de evidencias e importación inteligente de datos en etapas posteriores.
 
-\section{Diseño metodológico y alcance del MVP}
+\chapter{Diseño metodológico y alcance del prototipo funcional}
 
-La metodología seguida combina especificación de requisitos, diseño de arquitectura, desarrollo iterativo y validación incremental. El SRS v3.1 actúa como documento base para definir actores, requisitos funcionales, requisitos no funcionales, criterios de validación y exclusiones del MVP. A partir de este diseño, la hoja de seguimiento organiza las tareas por módulos, responsables, fechas, horas estimadas y estado.
+La metodología seguida combina especificación de requisitos, diseño de arquitectura, desarrollo iterativo y validación incremental. El SRS v3.2 actúa como documento base para definir actores, requisitos funcionales, requisitos no funcionales, criterios de validación y exclusiones del prototipo funcional. Esta versión actualiza y ordena el SRS con el objetivo de identificar mejor cada requisito funcional mediante IDs claros y consistentes, además de apegarse de forma más fiel a la estructura esperada para un Documento de Especificación de Requisitos de Software. A partir de este diseño, la hoja de seguimiento organiza las tareas por módulos, horas estimadas y estado de avance. No se desagregan responsables ni fechas por tarea, ya que el desarrollo del prototipo funcional fue asumido íntegramente por el estudiante autor del proyecto y el seguimiento se concentró en controlar esfuerzo estimado y progreso funcional.
 
-\subsection{Metodología de trabajo y seguimiento}
+\section{Metodología de trabajo y seguimiento}
 
 En una primera etapa, el proyecto se gestionó mediante una metodología ágil acompañada por una Carta Gantt. Esta combinación permitió ordenar el levantamiento inicial, estimar tiempos y visualizar dependencias generales entre actividades. Sin embargo, durante la ejecución se evidenció que la Carta Gantt introducía un nivel de rigidez poco conveniente para el contexto real del proyecto, especialmente por el tiempo requerido para registrar avances, reprogramar tareas y ajustar continuamente el plan frente a cambios de alcance o descubrimientos técnicos.
 
-Debido a lo anterior, desde el 6 de mayo se optó por una metodología completamente ágil, apoyada principalmente en una tabla Kanban. Este cambio permitió organizar el trabajo por flujo de estados, priorizar tareas de forma más flexible y adaptar el desarrollo a los hallazgos del MVP sin perder visibilidad sobre lo pendiente, lo activo y lo finalizado. La tabla Kanban facilitó una gestión más liviana y práctica, alineada con el tiempo limitado disponible para construir el núcleo funcional.
+Debido a lo anterior, desde el 6 de mayo se optó por una metodología completamente ágil, apoyada principalmente en una tabla Kanban. Este cambio permitió organizar el trabajo por flujo de estados, priorizar tareas de forma más flexible y adaptar el desarrollo a los hallazgos del prototipo funcional sin perder visibilidad sobre lo pendiente, lo activo y lo finalizado. La tabla Kanban facilitó una gestión más liviana y práctica, alineada con el tiempo limitado disponible para construir el núcleo funcional.
 
 A partir de finales de mayo se comenzó a traspasar progresivamente las tareas relevantes a Jira, con el objetivo de profesionalizar el seguimiento, centralizar incidencias y aprender de manera continua el uso de la herramienta. En paralelo, se mantuvo la hoja de cálculo como registro adicional de respaldo, principalmente para conservar una evidencia simple del progreso y contar con una fuente alternativa en caso de requerir comparación o reconstrucción del avance. La proyección es que, en etapas posteriores, el cálculo de progreso y la gestión completa de tareas se realicen directamente en Jira, dejando la planilla solo como apoyo documental si fuese necesario.
 
-\subsection{Justificación de herramientas técnicas}
+Las Figuras \ref{fig:kanban-seguimiento} y \ref{fig:jira-seguimiento} muestran evidencias del seguimiento utilizado durante el desarrollo. El tablero Kanban permitió visualizar el flujo de tareas pendientes, en curso y finalizadas, mientras que Jira apoyó la centralización progresiva de actividades e incidencias en una herramienta profesional de gestión ágil.
 
-La selección tecnológica del MVP busca equilibrar rapidez de desarrollo, mantenibilidad, escalabilidad y disponibilidad de documentación oficial. En la capa de presentación se utiliza una SPA construida con Vite y React, coherente con la estructura del repositorio en la carpeta \texttt{frontend/}. React aporta un modelo de componentes reutilizables que facilita dividir la interfaz en piezas mantenibles y reducir deuda técnica, mientras que Vite entrega un entorno de desarrollo liviano, rápido y adecuado para construir una aplicación web de una sola página. Se incorporan además \texttt{chart.js} con \texttt{react-chartjs-2} para gráficos radar de cumplimiento por cláusula en los dashboards, \texttt{react-hook-form} para formularios sin re-renders innecesarios y \texttt{react-idle-timer} para cierre automático de sesión tras inactividad prolongada. En la capa backend se utiliza Express.js sobre Node.js, organizado en la carpeta \texttt{backend-js/}, lo que permite exponer servicios HTTP de forma simple y mantener una separación clara entre frontend, API y persistencia.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{img/kanban.png}
+    \caption{Tablero Kanban utilizado para seguimiento del desarrollo del prototipo funcional.}
+    \label{fig:kanban-seguimiento}
+\end{figure}
 
-La capa de servicios se organiza mediante una API REST, debido a que este estilo arquitectónico desacopla cliente y servidor usando convenciones HTTP y JSON. Esto permite que el frontend, futuras integraciones, automatizaciones o servicios de IA puedan interactuar con el backend sin depender de una interfaz única. Para persistencia se utiliza MySQL, ya que la empresa cuenta con su propio servidor MySQL y el dominio del sistema contiene relaciones claras entre usuarios, espacios de trabajo, requisitos, evidencias, No Conformidades, acciones correctivas e historial. El enfoque relacional permite mantener integridad y consistencia transaccional mediante propiedades ACID, especialmente relevantes para trazabilidad y auditoría (se considera a futuro aplicar una tecnologia de base de datos distinta y mas robusta). Para el almacenamiento de archivos de evidencia se integra Google Drive mediante su API REST y la librería \texttt{googleapis}, organizando carpetas por workspace y ambiente (Development/Production); cada evidencia en la base de datos almacena una referencia \texttt{drive://\{id\}} que permite recuperar el archivo desde Drive sin duplicar contenido en la base relacional.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{img/Jira.png}
+    \caption{Registro de tareas del proyecto en Jira.}
+    \label{fig:jira-seguimiento}
+\end{figure}
 
-Para las interacciones en tiempo real se utiliza WebSockets mediante la librería \texttt{ws} integrada directamente en el servidor HTTP de Node.js. Esta decisión reconsidera el ajuste de alcance inicial, donde el chat había quedado oficialmente excluido como WebSocket o Socket.io y se planteaba como JSON persistido y actualizado vía CRUD. Durante el desarrollo se identificó que ese enfoque limitaba la inmediatez de las respuestas y la escalabilidad futura de las conversaciones, ya que los mensajes deben poder asociarse a distintos elementos del dominio, tales como evidencias, No Conformidades, acciones correctivas y futuros módulos. Para las notificaciones internas se reutiliza la misma conexión WebSocket del chat, simplificando la arquitectura y reduciendo la sobrecarga de conexiones simultáneas. El sistema cuenta además con un worker de notificaciones programadas que cada 30 segundos convierte registros de \texttt{SCHEDULED\_NOTIFICATIONS} en notificaciones reales cuando llega su fecha de activación.
+\section{Justificación de herramientas técnicas}
 
-En seguridad se adopta JWT para autenticación basada en tokens firmados, siguiendo el estándar RFC 7519. Esta decisión facilita un esquema de autenticación stateless, adecuado para servicios web escalables y separación entre frontend y backend. Para reproducibilidad del entorno se incorporan scripts de seeding, con el fin de cargar la estructura ISO 9001:2015 de forma consistente en desarrollo, pruebas y despliegue. Finalmente, la gestión del proyecto se apoya en Kanban y Jira para limitar trabajo en progreso, visualizar cuellos de botella, mantener trazabilidad de tareas y migrar progresivamente desde la hoja de cálculo hacia una herramienta profesional de gestión ágil.
+La selección tecnológica del prototipo funcional busca equilibrar rapidez de desarrollo, mantenibilidad, escalabilidad y disponibilidad de documentación oficial. En la capa de presentación se utiliza una SPA construida con Vite y React \cite{vite-docs,react-docs}, coherente con la estructura del repositorio en la carpeta \texttt{frontend/}. React aporta un modelo de componentes reutilizables que facilita dividir la interfaz en piezas mantenibles y reducir deuda técnica, mientras que Vite entrega un entorno de desarrollo liviano, rápido y adecuado para construir una aplicación web de una sola página. Se incorporan además \texttt{chart.js} con \texttt{react-chartjs-2} para gráficos radar de cumplimiento por cláusula en los dashboards, \texttt{react-hook-form} para formularios sin re-renders innecesarios y \texttt{react-idle-timer} para cierre automático de sesión tras inactividad prolongada. En la capa backend se utiliza Express.js sobre Node.js \cite{express-docs}, organizado en la carpeta \texttt{backend-js/}, lo que permite exponer servicios HTTP de forma simple y mantener una separación clara entre frontend, API y persistencia.
 
-\subsection{Arquitectura C4}
+La capa de servicios se organiza mediante una API REST, debido a que este estilo arquitectónico desacopla cliente y servidor usando convenciones HTTP y JSON. Esto permite que el frontend, futuras integraciones, automatizaciones o servicios de IA puedan interactuar con el backend sin depender de una interfaz única. Para persistencia se utiliza MySQL, ya que la empresa cuenta con su propio servidor MySQL y el dominio del sistema contiene relaciones claras entre usuarios, espacios de trabajo, requisitos, evidencias, brechas, acciones correctivas e historial. El enfoque relacional permite mantener integridad y consistencia transaccional mediante propiedades ACID, especialmente relevantes para trazabilidad y auditoría (se considera a futuro aplicar una tecnología de base de datos distinta y más robusta). Para el almacenamiento de archivos de evidencia se integra Google Drive mediante su API REST y la librería \texttt{googleapis}, organizando carpetas por workspace y ambiente (Development/Production); cada evidencia en la base de datos almacena una referencia \texttt{drive://\{id\}} que permite recuperar el archivo desde Drive sin duplicar contenido en la base relacional.
 
-Para complementar el diseño técnico del MVP se elaboraron diagramas bajo el modelo C4, con el propósito de representar el sistema desde distintos niveles de abstracción. Estos documentos permiten explicar la relación entre usuarios, plataforma, contenedores principales y componentes internos, facilitando la comunicación del diseño entre el equipo técnico y la contraparte de negocio.
+La integración con Google Drive se diseñó considerando operaciones documentadas por la API oficial: creación de archivos mediante \texttt{files.create}, organización de evidencias en carpetas, descarga o visualización de archivos mediante los mecanismos de \texttt{files.download}, eliminación lógica o física mediante \texttt{files.delete}, actualización de metadatos o contenido mediante \texttt{files.update} y administración de revisiones cuando sea necesario conservar versiones sucesivas de documentos \cite{google-drive-create,google-drive-folders,google-drive-download,google-drive-delete,google-drive-update,google-drive-revisions}. Esta integración es real y constituye el único servicio externo conectado al prototipo: el backend se comunica con Google Drive, crea y consulta archivos y carpetas, y conserva sus identificadores en la base de datos. Por ello, Drive no se utiliza como una simulación ni únicamente como una carpeta compartida manual, sino como el repositorio documental operativo de las evidencias, segregado por espacio de trabajo.
+
+Para las interacciones en tiempo real del chat se utiliza WebSockets mediante la librería \texttt{ws} integrada directamente en el servidor HTTP de Node.js. Esta decisión reconsidera el ajuste de alcance inicial, donde el chat había quedado oficialmente excluido como WebSocket o Socket.io y se planteaba como JSON persistido y actualizado vía CRUD. Durante el desarrollo se identificó que ese enfoque limitaba la inmediatez de las respuestas y la escalabilidad futura de las conversaciones, ya que los mensajes deben poder asociarse a distintos elementos del dominio, tales como evidencias, brechas, acciones correctivas y futuros módulos. En cambio, las notificaciones internas no cuentan con un canal WebSocket propio ni son publicadas desde el backend mediante broadcast; se gestionan principalmente mediante registros persistidos en base de datos, consultas periódicas desde el frontend a la API de notificaciones y eventos locales de interfaz para refrescar vistas específicas. El sistema cuenta además con un worker de notificaciones programadas que cada 30 segundos convierte registros de \texttt{SCHEDULED\_NOTIFICATIONS} en notificaciones reales cuando llega su fecha de activación, quedando disponibles para su consulta posterior por la interfaz.
+
+En seguridad se adopta JWT para autenticación basada en tokens firmados, siguiendo el estándar RFC 7519 \cite{rfc7519}. Esta decisión facilita un esquema de autenticación sin estado, adecuado para servicios web escalables y separación entre frontend y backend. Para reproducibilidad del entorno se incorporan scripts de carga inicial, con el fin de incorporar la estructura ISO 9001:2015 de forma consistente en desarrollo, pruebas y despliegue. Finalmente, la gestión del proyecto se apoya en Kanban y Jira para limitar trabajo en progreso, visualizar cuellos de botella y mantener trazabilidad de tareas \cite{atlassian-kanban}.
+
+\section{Arquitectura C4}
+
+Para complementar el diseño técnico del prototipo funcional se elaboraron diagramas bajo el modelo C4 \cite{c4-model}, con el propósito de representar el sistema desde distintos niveles de abstracción. Estos documentos permiten explicar la relación entre usuarios, plataforma, contenedores principales y componentes internos, facilitando la comunicación del diseño entre el equipo técnico y la contraparte de negocio.
 
 El diagrama de contexto presenta la plataforma como un sistema web utilizado por el Administrador, el Evaluador y el Responsable del SGC, destacando su interacción con los espacios de trabajo y la base de datos del servicio.
 
@@ -298,7 +488,7 @@ El diagrama de contexto presenta la plataforma como un sistema web utilizado por
     \label{fig:c4-contexto}
 \end{figure}
 
-El diagrama de contenedores resume la separación entre frontend, backend API y base de datos MySQL. Además, el backend considera un canal WebSocket para chat contextual y notificaciones internas en tiempo real, reutilizando la misma conexión para reducir complejidad operativa. Esta vista permite visualizar cómo se distribuyen las responsabilidades principales del MVP y cómo se mantiene la segregación de datos por espacios de trabajo.
+El diagrama de contenedores resume la separación entre frontend, backend API y base de datos MySQL. Además, el backend considera un canal WebSocket para chat contextual, mientras que las notificaciones internas se gestionan mediante persistencia en base de datos y consultas periódicas desde la interfaz. Esta vista permite visualizar cómo se distribuyen las responsabilidades principales del prototipo funcional y cómo se mantiene la segregación de datos por espacios de trabajo.
 
 \begin{figure}[H]
     \centering
@@ -307,7 +497,7 @@ El diagrama de contenedores resume la separación entre frontend, backend API y 
     \label{fig:c4-contenedores}
 \end{figure}
 
-A nivel de componentes, se documentaron por separado el frontend y la API backend. El diagrama de frontend muestra el sistema de componentes visuales, enrutamiento y renderizacion de paginas, flujos de navegación y módulos de interacción del usuario, mientras que el diagrama de backend describe los componentes responsables de autenticación, autorización, gestión GAP, evidencias, No Conformidades, historial y persistencia.
+A nivel de componentes, se documentaron por separado el frontend y la API backend. El diagrama de frontend muestra el sistema de componentes visuales, enrutamiento y renderizacion de paginas, flujos de navegación y módulos de interacción del usuario, mientras que el diagrama de backend describe los componentes responsables de autenticación, autorización, gestión GAP, evidencias, brechas, historial y persistencia.
 
 \begin{figure}[H]
     \centering
@@ -323,25 +513,35 @@ A nivel de componentes, se documentaron por separado el frontend y la API backen
     \label{fig:c4-backend}
 \end{figure}
 
-\subsection{Roles del sistema}
+Como complemento al modelo C4, se elaboró un diagrama del núcleo esencial de base de datos utilizado por el flujo GAP del prototipo funcional. Esta vista no representa la totalidad del modelo relacional, sino las tablas principales que sostienen la evaluación de requisitos, la auditoría de brechas, evidencias, acciones correctivas e historiales asociados. En particular, contempla las entidades de evaluación de requisito, \texttt{Auditoria\_NC} como auditoría de brecha y su historial, evidencias junto con su log respectivo, y acciones correctivas con su historial de cambios.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.92\textwidth]{img/DiagramaNucleoBaseDeDatos.png}
+    \caption{Diagrama del núcleo esencial de base de datos para evaluación GAP, evidencias y acciones correctivas.}
+    \label{fig:nucleo-base-datos}
+\end{figure}
+
+\section{Roles del sistema}
 
 \begin{table}[H]
 \centering
-\begin{tabular}{|p{3.2cm}|p{11.2cm}|}
+\small
+\begin{tabularx}{\textwidth}{|L{3cm}|Y|}
 \hline
 \rowcolor{gray!20}\textbf{Rol} & \textbf{Responsabilidad principal} \\ \hline
 Administrador & Gestiona espacios de trabajo, usuarios, roles y configuración inicial del sistema. Asigna contraseñas genéricas y controla la gobernanza general. \\ \hline
-Evaluador & Revisa auditorías, evidencias y No Conformidades (brechas). Puede aprobar, rechazar, comentar y mover estados de revisión sin editar el contenido original. Marca requisitos como No Aplica según ISO 9001 Req 4.3. \\ \hline
-Responsable del SGC & Opera el espacio de su organización, registra información, carga evidencias, responde NC, gestiona acciones correctivas y mantiene actualizados los antecedentes de cumplimiento. \\ \hline
-Operativo & Visualiza el dashboard de cumplimiento de su workspace, consulta requisitos ISO y revisa el estado de No Conformidades y acciones correctivas. Es un rol de solo lectura orientado a mantener visibilidad operativa sin capacidad de modificación. \\ \hline
-\end{tabular}
-\caption{Roles principales definidos para el MVP.}
+Evaluador & Revisa auditorías, evidencias y brechas. Puede aprobar, rechazar, comentar y mover estados de revisión sin editar el contenido original. Marca requisitos como No Aplica según ISO 9001 Req 4.3. \\ \hline
+Responsable del SGC & Opera el espacio de su organización, registra información, carga evidencias, responde brechas, gestiona acciones correctivas y mantiene actualizados los antecedentes de cumplimiento. Además, visualiza el dashboard de cumplimiento de su workspace, consulta requisitos ISO y revisa el estado de brechas y acciones correctivas, combinando atribuciones de consulta y edición según el flujo funcional definido. \\ \hline
+\end{tabularx}
+\normalsize
+\caption{Roles principales definidos para el prototipo funcional.}
 \label{tab:roles}
 \end{table}
 
-\subsection{Funcionalidades incluidas}
+\section{Funcionalidades incluidas}
 
-El alcance vigente del MVP incluye los siguientes módulos:
+El alcance vigente del prototipo funcional incluye los siguientes módulos:
 
 \begin{enumerate}
     \item Administración de usuarios, roles y espacios de trabajo.
@@ -349,80 +549,35 @@ El alcance vigente del MVP incluye los siguientes módulos:
     \item Activación de cuenta en primer ingreso con cambio obligatorio de contraseña.
     \item Cierre automático de sesión por inactividad prolongada (\texttt{react-idle-timer}).
     \item Seeding de requisitos de ISO 9001:2015 en la base de datos mediante script idempotente.
-    \item Navegación por requisitos ISO con árbol jerárquico y apertura de No Conformidades (brechas).
-    \item Gestión de estados de NC: Abierta, Análisis, Ejecución, Verificación y Cerrada.
-    \item Marcado de requisitos como No Aplica (NA) según ISO 9001:2015 Req 4.3, con exclusión automática del cálculo de cumplimiento.
-    \item Gestión de acciones correctivas con estructura de lista enlazada (padre/hijo), tablero Kanban con drag-and-drop, estados (Pendiente, En Progreso, Eficaz, No Eficaz), historial campo por campo y eliminación en cascada.
+    \item Navegación por requisitos ISO con árbol jerárquico y registro de brechas.
+    \item Gestión de estados de brechas: Abierta, Análisis, Ejecución, Verificación y Cerrada.
+    \item Cálculo automático del estado de cada requisito según sus evidencias y brechas abiertas, con preservación del estado No Aplica (NA) y exclusión automática de estos requisitos en los indicadores del dashboard.
+    \item Gestión de acciones correctivas con estructura de lista enlazada, tablero Kanban con drag-and-drop, estados (Pendiente, En Progreso, Eficaz, No Eficaz), historial campo por campo y eliminación en cascada.
     \item Carga, visualización, aprobación, rechazo e historial de evidencias almacenadas en Google Drive con carpetas segregadas por workspace.
-    \item Chat contextual en tiempo real mediante WebSockets, asociado a No Conformidades, evidencias, acciones correctivas y requisitos.
-    \item Notificaciones internas en tiempo real mediante WebSockets, reutilizando la misma conexión del chat, con worker de notificaciones programadas para verificación de eficacia.
-    \item Dashboard analítico con gráficos radar de cumplimiento por cláusula, KPIs de resolución y eficiencia, y vistas diferenciadas por rol (Administrador, Evaluador, Responsable SGC, Operativo).
+    \item Chat contextual en tiempo real mediante WebSockets, asociado a brechas, evidencias, acciones correctivas y requisitos.
+    \item Notificaciones internas persistidas en base de datos, consultadas periódicamente desde el frontend, con worker de notificaciones programadas para verificación de eficacia.
+    \item Dashboard analítico con gráficos radar de cumplimiento por cláusula, KPIs de resolución y eficiencia, y vistas diferenciadas por rol (Administrador, Evaluador y Responsable SGC).
     \item Lobbies diferenciados por rol con métricas y accesos contextualizados.
     \item Pruebas unitarias, de integración y de partición de equivalencia; pruebas multi-tenancy y UAT planificadas.
 \end{enumerate}
 
-\subsection{Funcionalidades excluidas por ajuste de alcance}
+\section{Funcionalidades excluidas por ajuste de alcance}
 
 Para viabilizar el proyecto en seis semanas, se excluyen explícitamente de la Etapa 1 las siguientes capacidades:
 
 \begin{enumerate}
     \item Recuperación de contraseña, onboarding y notificaciones mediante correo electrónico.
-    \item WebSockets o Socket.io para chat en tiempo real; el chat queda como JSON persistido y actualizado vía CRUD (exclusión oficial del ajuste de alcance inicial; posteriormente se reconsidera e implementa mediante WebSockets, ya que se requiere inmediatez y asociación escalable de mensajes con evidencias, No Conformidades, acciones correctivas y futuros elementos del sistema).
+    \item WebSockets o Socket.io para chat en tiempo real; el chat queda como JSON persistido y actualizado vía CRUD (exclusión oficial del ajuste de alcance inicial; posteriormente se reconsidera e implementa mediante WebSockets, ya que se requiere inmediatez y asociación escalable de mensajes con evidencias, brechas, acciones correctivas y futuros elementos del sistema).
     \item Almacenamiento en AWS S3; las evidencias se almacenan en Google Drive como solución intermedia más simple, con carpetas segregadas por workspace y referencias \texttt{drive://\{id\}} en la base de datos.
     \item Carga dinámica de requisitos normativos por CSV; ISO 9001:2015 se carga por script de seeding.
     \item Edición documental en línea e importación flexible de herramientas Excel.
     \item Flujos de aprobación complejos, firma múltiple o evaluadores consecutivos.
-    \item Árbol jerárquico de acciones correctivas padre/hijo (exclusión reconsiderada: se implementó una lista enlazada donde cada acción referencia a su predecesora mediante \texttt{accion\_previa\_id}, permitiendo profundidad ilimitada y visualización en tablero Kanban).
-    \item Historial microscópico de cambios de texto en todas las entidades del sistema; se implementó historial detallado para acciones correctivas (campo por campo) y para estados de No Conformidades y evaluaciones, pero no para todos los campos de texto de la plataforma.
-    \item Soporte multi-norma, automatizaciones de riesgo/FODA, PEST, Cinco Fuerzas de Porter y cualquier herramienta no incluida en el flujo GAP/NC básico.
+    \item Árbol jerárquico completo de acciones correctivas (exclusión reconsiderada: se implementó una lista enlazada donde cada acción referencia a su predecesora mediante \texttt{accion\_previa\_id}, permitiendo secuencias trazables y visualización en tablero Kanban).
+    \item Historial microscópico de cambios en todos los campos y entidades del sistema. El prototipo funcional sí incorpora historiales esenciales para acciones correctivas, evidencias, brechas y evaluaciones, pero no registra una auditoría campo a campo para cada texto o atributo de la plataforma.
+    \item Herramientas avanzadas de gestión no incluidas en el flujo GAP/brechas, tales como FODA, PEST, matriz de responsabilidades y autoridades, AMEF u otros instrumentos complementarios. El soporte multi-norma existe como base funcional, pero no contempla todavía este conjunto de herramientas metodológicas adicionales.
 \end{enumerate}
 
-\section{Estado actual de avance}
-
-De acuerdo con la hoja de seguimiento actualizada a la fecha de cierre, la planificación general contempla 281 unidades de trabajo registradas para el MVP vigente. Respecto del reporte preliminar, se han completado módulos significativos que antes figuraban como pendientes, incluyendo dashboard analítico con gráficos radar, tablero Kanban de acciones correctivas, integración con Google Drive para evidencias, worker de notificaciones programadas, lobbies diferenciados por rol y timeout por inactividad.
-
-\subsection{Resumen cuantitativo}
-
-\begin{table}[H]
-\centering
-\begin{tabular}{|p{4cm}|p{3cm}|p{3cm}|p{5cm}|}
-\hline
-\rowcolor{gray!20}\textbf{Estado} & \textbf{Total} & \textbf{Porcentaje} & \textbf{Observación} \\ \hline
-Completado & 260 & 92,5\% & Incluye todos los módulos del núcleo funcional: autenticación, GAP, NC, acciones correctivas, evidencias, dashboard, Kanban, WebSockets y validaciones base. \\ \hline
-En progreso & 8 & 2,8\% & Incluye ajustes de seguridad IDOR, refactoring de componentes y documentación técnica final. \\ \hline
-Pendiente & 13 & 4,7\% & Incluye pruebas multi-tenancy formales, pruebas UAT, correcciones de deuda técnica menor y cierre documental. \\ \hline
-Total & 281 & 100\% & Plan de trabajo completo registrado en la hoja de avance. \\ \hline
-\end{tabular}
-\caption{Estado actualizado de unidades de trabajo según hoja de seguimiento del proyecto.}
-\label{tab:estado}
-\end{table}
-
-En términos de seguimiento actualizado, la hoja registra 260 unidades completadas, 8 en progreso y 13 pendientes. Esto representa un 92,5\% de avance completado sobre las 281 unidades totales, o un 95,4\% si se consideran como avance las unidades completadas más las actualmente en progreso. Para efectos de gestión, el indicador más conservador es el 92,5\%, ya que solo contabiliza trabajo finalizado. Este incremento de aproximadamente 23 puntos porcentuales respecto al 69,4\% reportado en junio refleja la incorporación de los módulos de dashboard, Kanban, integración Google Drive, evaluaciones NA, notificaciones programadas, corrección de IDOR y refactorización de RequirementContent.jsx, todos los cuales se encontraban pendientes o en progreso en el informe anterior.
-
-Como complemento visual, se incorporan tres documentos de seguimiento: el cronograma general de tareas, el gráfico de distribución de estados y la hoja de avance exportada desde la planilla de control. Estos elementos permiten contrastar el avance textual con evidencia gráfica y documental del seguimiento realizado.
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.95\textwidth]{img/cronograma_de_tareas_proyecto_iso.png}
-    \caption{Cronograma de tareas del Proyecto ISO.}
-    \label{fig:cronograma-tareas}
-\end{figure}
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.75\textwidth]{img/grafico_pastel_proyecto_iso.png}
-    \caption{Distribución de tareas por estado del Proyecto ISO.}
-    \label{fig:grafico-pastel-avance}
-\end{figure}
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.95\textwidth]{img/Avance Proyecto ISO - Hoja 1.pdf}
-    \caption{Hoja de seguimiento de tareas del Proyecto ISO.}
-    \label{fig:hoja-avance-proyecto}
-\end{figure}
-
-\subsection{Módulos completados}
+\chapter{Estado de implementación del prototipo funcional}
 
 Los avances consolidados son los siguientes:
 
@@ -432,43 +587,42 @@ Los avances consolidados son los siguientes:
     \item Gestión de usuarios, roles, contraseñas y activación de cuenta en primer ingreso.
     \item Autenticación, autorización, persistencia de sesión y redirección.
     \item Timeout por inactividad con cierre automático de sesión.
-    \item Sistema de notificaciones internas en tiempo real mediante WebSockets.
+    \item Sistema de notificaciones internas persistidas y consultadas desde la API.
     \item Worker de notificaciones programadas para verificación de eficacia.
     \item Población de datos de ISO 9001:2015 mediante seeding.
     \item Interfaz de navegación e interfaz de requisitos con árbol jerárquico.
-    \item Apertura, respuesta inicial y estados operativos de No Conformidades.
+    \item Registro, respuesta inicial y estados operativos de brechas.
     \item Marcado de requisitos como No Aplica (NA) con exclusión del cálculo de cumplimiento.
     \item Gestión de acciones correctivas con estructura de lista enlazada, tablero Kanban con drag-and-drop e historial campo por campo.
-    \item Verificación y cierre de NC.
+    \item Verificación y cierre de brechas.
     \item Chat contextual implementado con WebSockets para respuestas inmediatas y trazabilidad conversacional.
-    \item Motor de novedades y notificaciones apoyado en la misma conexión WebSocket.
+    \item Motor de novedades y notificaciones apoyado en persistencia y consultas periódicas desde el frontend.
     \item Carga, vinculación, revisión, visualización e historial de evidencias almacenadas en Google Drive.
-    \item Cálculos de cumplimiento con lógica robusta.
+    \item Sincronización automática del cumplimiento de requisitos al crear, modificar, validar o eliminar evidencias y al crear o eliminar brechas, preservando las exclusiones NA.
     \item Dashboard analítico con gráficos radar de cumplimiento por cláusula, KPIs de resolución y vistas diferenciadas por rol.
-    \item Lobbies diferenciados por rol (Administrador, Evaluador, Responsable SGC, Operativo).
+    \item Lobbies diferenciados por rol (Administrador, Evaluador y Responsable SGC).
     \item Pruebas unitarias, de integración y de partición de equivalencia.
     \item Corrección de vulnerabilidades IDOR en endpoints de chat y acciones correctivas.
-    \item Refactorización de RequirementContent.jsx dividido en componentes más pequeños.
 \end{enumerate}
 
-\subsection{Progreso visual del frontend}
+\section{Progreso visual del frontend}
 
-Como evidencia complementaria del avance del MVP, se presentan capturas de las vistas más relevantes del frontend. Estas imágenes se incluyen solo como referencia visual del estado de implementación y no buscan documentar exhaustivamente todas las pantallas del sistema. Se omiten las vistas del rol Evaluador porque, respecto de las vistas del Responsable del SGC, el cambio principal corresponde a las funciones disponibles y permisos habilitados, manteniéndose una estructura visual equivalente.
+Como evidencia complementaria del avance del prototipo funcional, se presentan capturas de las vistas más relevantes del frontend. Estas imágenes se incluyen solo como referencia visual del estado de implementación y no buscan documentar exhaustivamente todas las pantallas del sistema. Se omiten las vistas del rol Evaluador porque, respecto de las vistas del Responsable del SGC, el cambio principal corresponde a las funciones disponibles y permisos habilitados, manteniéndose una estructura visual equivalente.
 
 \begin{figure}[H]
     \centering
     \begin{minipage}{0.48\textwidth}
         \centering
-        \includegraphics[width=\textwidth]{frontend/login.png}
+        \includegraphics[width=\textwidth]{img/login_updated.png}
         \caption{Vista de inicio de sesión del sistema.}
         \label{fig:frontend-login}
     \end{minipage}
     \hfill
     \begin{minipage}{0.48\textwidth}
         \centering
-        \includegraphics[width=\textwidth]{frontend/Dashboard.png}
-        \caption{Vista de dashboard principal.}
-        \label{fig:frontend-dashboard}
+        \includegraphics[width=\textwidth]{Imagenes_Vistas_Actualizadas/vista_cambio_contrasena_inicial.png}
+        \caption{Vista de cambio de contraseña en primer ingreso.}
+        \label{fig:frontend-cambio-contrasena}
     \end{minipage}
 \end{figure}
 
@@ -476,16 +630,16 @@ Como evidencia complementaria del avance del MVP, se presentan capturas de las v
     \centering
     \begin{minipage}{0.48\textwidth}
         \centering
-        \includegraphics[width=\textwidth]{frontend/Espacios.png}
-        \caption{Vista de gestión de espacios de trabajo.}
-        \label{fig:frontend-espacios}
+        \includegraphics[width=\textwidth]{Imagenes_Vistas_Actualizadas/dashboard_responsable.png}
+        \caption{Vista de dashboard del Responsable del SGC.}
+        \label{fig:frontend-dashboard}
     \end{minipage}
     \hfill
     \begin{minipage}{0.48\textwidth}
         \centering
-        \includegraphics[width=\textwidth]{frontend/Usuarios.png}
-        \caption{Vista de administración de usuarios.}
-        \label{fig:frontend-usuarios}
+        \includegraphics[width=\textwidth]{Imagenes_Vistas_Actualizadas/vista-configuracion-usuario.png}
+        \caption{Vista de configuración de usuario.}
+        \label{fig:frontend-configuracion-usuario}
     \end{minipage}
 \end{figure}
 
@@ -493,46 +647,69 @@ Como evidencia complementaria del avance del MVP, se presentan capturas de las v
     \centering
     \begin{minipage}{0.48\textwidth}
         \centering
-        \includegraphics[width=\textwidth]{frontend/Evidencias.png}
+        \includegraphics[width=\textwidth]{Imagenes_Vistas_Actualizadas/evidencias.png}
         \caption{Vista de gestión y revisión de evidencias.}
         \label{fig:frontend-evidencias}
     \end{minipage}
     \hfill
     \begin{minipage}{0.48\textwidth}
         \centering
-        \includegraphics[width=\textwidth]{frontend/NC.png}
-        \caption{Vista de seguimiento de No Conformidades.}
-        \label{fig:frontend-nc}
+        \includegraphics[width=\textwidth]{Imagenes_Vistas_Actualizadas/vista_de_brecha.png}
+        \caption{Vista de seguimiento de brechas.}
+        \label{fig:frontend-brecha}
     \end{minipage}
 \end{figure}
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.72\textwidth]{frontend/Chat.png}
-    \caption{Vista de chat contextual y comunicación operativa.}
-    \label{fig:frontend-chat}
+    \includegraphics[width=0.82\textwidth]{Imagenes_Vistas_Actualizadas/brechas_y_chat.png}
+    \caption{Vista de brechas con comunicación contextual mediante chat.}
+    \label{fig:frontend-brechas-chat}
 \end{figure}
 
+\chapter{Validación del trabajo}
 
-\subsection{Módulos pendientes y riesgos}
+La validación del prototipo funcional se plantea como un proceso incremental, asociado a los requisitos funcionales vigentes del SRS y a los criterios de aceptación de las historias de usuario que permanecen dentro del alcance luego de los ajustes. La validación no busca demostrar que el producto completo ya está terminado, sino comprobar que el núcleo implementado funciona de forma consistente, trazable y segura para los roles principales definidos.
 
-Los principales pendientes se concentran en cerrar las correcciones de seguridad IDOR documentadas en la deuda técnica (DT-003), realizar pruebas formales de aislamiento multi-tenancy, ejecutar las pruebas UAT con la contraparte y completar el cierre documental del proyecto.
+\section{Validación cualitativa e incremental con la contraparte}
 
-El riesgo técnico más importante es asegurar que la segregación multi-tenancy funcione correctamente en todos los endpoints, vistas y canales WebSocket. Si bien se realizó una auditoría parcial de endpoints (documentada en DT-003), algunos endpoints aún requieren verificación formal. El segundo riesgo corresponde a la deuda técnica acumulada en componentes frontend de alta complejidad, particularmente \texttt{RequirementContent.jsx}, cuyo tamaño y acoplamiento dificultan el mantenimiento futuro y ya están documentados como DT-001. Las 7 deudas técnicas registradas (DT-001 a DT-008) tienen severidad variable: una crítica (DT-003), cuatro altas y dos medias; la mayoría cuenta con plan de corrección definido para antes de la entrega final.
+Durante el desarrollo se realizaron reuniones periódicas de seguimiento con María Patiño y Ricardo Candia, en las cuales se presentaron avances, se revisaron decisiones funcionales y se ajustó el alcance de acuerdo con las necesidades de la empresa. Estas sesiones permitieron validar progresivamente que el prototipo constituye una base apropiada para la solución completa proyectada, así como revisar los flujos generales de evidencias, brechas, acciones correctivas, evaluaciones e indicadores del dashboard \cite{entrevista-maria,entrevista-whatsapp-maria}.
 
+Debido al carácter ágil de estas reuniones, no cada observación produjo un acta detallada. La evidencia disponible se distribuye entre comunicaciones de seguimiento, documentación interna, cambios incorporados al SRS y confirmaciones escritas posteriores. Por este motivo, sus resultados se presentan como validación experta cualitativa y continua, no como una prueba formal de aceptación. En particular, la confirmación escrita del 17 de julio respalda la regla automática de cumplimiento, mientras que la aprobación general de los flujos y cálculos corresponde a revisiones realizadas durante las reuniones de seguimiento.
 
+Esta distinción permite reconocer el valor de la retroalimentación recibida sin confundirla con UAT. La aceptación formal permanece pendiente porque requiere casos previamente definidos, criterios de aprobación, participantes identificados y resultados registrados. Las reuniones de seguimiento demuestran alineación funcional y pertinencia para el negocio; las futuras pruebas UAT deberán demostrar aceptación sistemática del prototipo mediante evidencia reproducible.
 
-\section{Validación del trabajo}
+\section{Pruebas unitarias e integración}
 
-La validación del MVP se plantea como un proceso incremental, asociado a los requisitos funcionales vigentes del SRS y a los criterios de aceptación de las historias de usuario que permanecen dentro del alcance luego de los ajustes. La validación no busca demostrar que el producto completo ya está terminado, sino comprobar que el núcleo implementado funciona de forma consistente, trazable y segura para los roles principales definidos.
+Las pruebas unitarias e integración existentes evalúan componentes básicos del prototipo funcional y deben interpretarse como una validación inicial, no como una cobertura completa de todos los escenarios funcionales, de seguridad o multi-cliente. Las pruebas unitarias se concentran en controladores y servicios aislados, mientras que las pruebas de integración disponibles verifican flujos base de autenticación, usuarios y servicio de evidencias. En el caso de Google Drive, la integración utilizada por el prototipo es real: las operaciones documentales se ejecutan contra la API del servicio y no contra un repositorio externo simulado. Por ello, aunque la suite ejecutada respalda el funcionamiento inicial de módulos relevantes, todavía no reemplaza las pruebas multi-tenancy ni las pruebas UAT planificadas para el cierre.
 
-\subsection{Pruebas unitarias e integración}
+La evidencia automatizada actual se organiza en dos carpetas principales. Para mejorar la legibilidad, los archivos considerados se listan verticalmente a continuación.
 
-Las pruebas unitarias e integración existentes evalúan componentes básicos del MVP y deben interpretarse como una validación inicial, no como una cobertura completa de todos los escenarios funcionales, de seguridad o multi-cliente. Las pruebas unitarias se concentran en controladores y servicios aislados, mientras que las pruebas de integración disponibles verifican flujos base de autenticación, usuarios y servicio de evidencias/Drive. Por ello, aunque la suite ejecutada respalda el funcionamiento inicial de módulos relevantes, todavía no reemplaza las pruebas multi-tenancy ni las pruebas UAT planificadas para el cierre.
+\begin{itemize}
+    \item \textbf{Pruebas de integración:}
+    \begin{itemize}
+        \item \path{auth.integration.test.js}
+        \item \path{driveService.integration.test.js}
+        \item \path{users.integration.test.js}
+    \end{itemize}
+    \item \textbf{Pruebas unitarias:}
+    \begin{itemize}
+        \item \path{accionesController.test.js}
+        \item \path{authController.test.js}
+        \item \path{chatController.test.js}
+        \item \path{driveService.unit.test.js}
+        \item \path{evidenceController.test.js}
+        \item \path{ncController.test.js}
+        \item \path{updateAction.equivalence.test.js}
+        \item \path{updateEvidence.test.js}
+        \item \path{userController.test.js}
+        \item \path{workspacesController.test.js}
+    \end{itemize}
+\end{itemize}
 
-La evidencia automatizada actual se organiza en dos carpetas principales. En integración se consideran los archivos \texttt{auth.integration.test.js}, \texttt{driveService.integration.test.js} y \texttt{users.integration.test.js}. En unitarias se consideran \texttt{accionesController.test.js}, \texttt{authController.test.js}, \texttt{chatController.test.js}, \texttt{driveService.unit.test.js}, \texttt{evidenceController.test.js}, \texttt{ncController.test.js}, \texttt{updateAction.equivalence.test.js}, \texttt{updateEvidence.test.js}, \texttt{userController.test.js} y \texttt{workspacesController.test.js}. Estos archivos cubren validaciones básicas de cada tema y sirven como evidencia de avance técnico.
+Estos archivos cubren validaciones básicas de cada tema y sirven como evidencia de avance técnico.
 
-De particular relevancia metodológica es el archivo \texttt{updateAction.equivalence.test.js}, que aplica la técnica de partición de equivalencia para validar la actualización de acciones correctivas. Esta técnica, propia del testing de caja negra, permite dividir el dominio de entrada en clases de equivalencia y seleccionar casos representativos que cubran comportamientos válidos, inválidos y límites. Su inclusión en la suite aporta rigor a la validación y constituye una evidencia concreta de la aplicación de técnicas formales de testing en el proyecto.
+De particular relevancia metodológica es el archivo \path{updateAction.equivalence.test.js}, que aplica la técnica de partición de equivalencia para validar la actualización de acciones correctivas. Esta técnica, propia del testing de caja negra, permite dividir el dominio de entrada en clases de equivalencia y seleccionar casos representativos que cubran comportamientos válidos, inválidos y límites. Su inclusión en la suite aporta rigor a la validación y constituye una evidencia concreta de la aplicación de técnicas formales de testing en el proyecto.
 
 Como evidencia de avance, se ejecutó la suite automatizada disponible en el proyecto y se obtuvieron resultados exitosos en las pruebas unitarias y de integración existentes. Las Figuras \ref{fig:pruebas-unitarias-1} y \ref{fig:pruebas-unitarias-2} muestran la salida de terminal correspondiente a una misma ejecución, separada en dos capturas para visualizar la totalidad de los resultados.
 
@@ -550,89 +727,105 @@ Como evidencia de avance, se ejecutó la suite automatizada disponible en el pro
     \label{fig:pruebas-unitarias-2}
 \end{figure}
 
-\subsection{Validación multi-tenancy}
+\section{Validación multi-tenancy}
 
-Dado que la plataforma operará con múltiples clientes, la validación de aislamiento multi-tenancy es prioritaria. Esta prueba debe comprobar que un usuario asociado a un espacio de trabajo no pueda consultar, modificar ni visualizar requisitos, evidencias, No Conformidades, acciones correctivas o historiales pertenecientes a otro cliente. Esta dimensión es crítica porque el valor del sistema depende de mantener confidencialidad y separación estricta de datos entre organizaciones.
+Dado que la plataforma operará con múltiples clientes, la validación de aislamiento multi-tenancy es prioritaria. Esta prueba debe comprobar que un usuario asociado a un espacio de trabajo no pueda consultar, modificar ni visualizar requisitos, evidencias, brechas, acciones correctivas o historiales pertenecientes a otro cliente. Esta dimensión es crítica porque el valor del sistema depende de mantener confidencialidad y separación estricta de datos entre organizaciones.
 
-Se ha realizado una auditoría parcial de endpoints (documentada en DT-003) que identificó vulnerabilidades IDOR en ciertos controladores, de las cuales varias ya fueron corregidas. La validación formal completa de todos los endpoints, vistas y canales WebSocket se encuentra en curso y constituye una de las tareas prioritarias para el cierre del proyecto. Adicionalmente, el documento \texttt{PlanDePrueba.md} en la raíz del repositorio define 9 fases de validación que incluyen una fase específica para pruebas de seguridad multi-tenancy.
+Se ha realizado una auditoría parcial de endpoints (documentada en DT-003) que identificó vulnerabilidades IDOR en ciertos controladores, de las cuales varias ya fueron corregidas. En este contexto, IDOR corresponde a una falla de control de acceso en la que un usuario puede intentar consultar o modificar recursos ajenos manipulando identificadores directos, como IDs de evidencias, brechas, acciones correctivas o espacios de trabajo. Por ello, su corrección exige validar permisos y pertenencia al workspace en cada endpoint sensible, no solo ocultar botones o vistas en el frontend. La validación formal completa de todos los endpoints, vistas y canales WebSocket se encuentra en curso y constituye una de las tareas prioritarias para el cierre del proyecto. Adicionalmente, el documento \texttt{PlanDePrueba.md} en la raíz del repositorio define 9 fases de validación que incluyen una fase específica para pruebas de seguridad multi-tenancy.
 
-\subsection{Pruebas de aceptación de usuario}
+\section{Pruebas de aceptación de usuario}
 
-Las pruebas UAT se proyectan sobre tres casos representativos: Administrador, Evaluador y Responsable del SGC. Para cada rol se espera verificar las historias de usuario vigentes y sus criterios de aceptación: administración de espacios y usuarios, navegación por requisitos ISO, apertura y seguimiento de No Conformidades, carga y revisión de evidencias, comentarios en tiempo real, notificaciones WebSocket e historial acotado. Estas pruebas aún están pendientes y se realizarán de acuerdo con el cronograma estipulado para el cierre del proyecto. Las historias relacionadas con correo transaccional, S3, carga CSV, edición documental, flujos complejos o soporte multi-norma quedan excluidas de esta validación porque fueron removidas del alcance del MVP.
+Las pruebas UAT se proyectan sobre tres casos representativos: Administrador, Evaluador y Responsable del SGC. Para cada rol se espera verificar las historias de usuario vigentes y sus criterios de aceptación: administración de espacios y usuarios, navegación por requisitos ISO, registro y seguimiento de brechas, carga y revisión de evidencias, comentarios en tiempo real, notificaciones internas consultadas desde la API e historial acotado. Estas pruebas aún están pendientes y se realizarán de acuerdo con el cronograma estipulado para el cierre del proyecto. Las historias relacionadas con correo transaccional, S3, carga CSV, edición documental, flujos complejos o herramientas avanzadas como FODA, PEST, matriz de responsabilidades y autoridades o AMEF quedan excluidas de esta validación porque fueron removidas del alcance del prototipo funcional.
 
 \begin{table}[H]
 \centering
-\begin{tabular}{|p{3.2cm}|p{7.2cm}|p{4cm}|}
+\small
+\begin{tabularx}{\textwidth}{|L{2.8cm}|Y|Y|}
 \hline
 \rowcolor{gray!20}\textbf{Tipo de prueba} & \textbf{Propósito} & \textbf{Estado esperado} \\ \hline
 Unitarias & Verificar controladores, servicios y funciones aisladas en escenarios básicos. & Ejecutadas exitosamente en los archivos unitarios disponibles; evidencia incorporada en capturas de terminal. \\ \hline
 Integración & Comprobar flujos base de autenticación, usuarios y servicio de evidencias/Drive. & Ejecutadas exitosamente en los archivos de integración disponibles; evidencia incorporada en capturas de terminal. \\ \hline
 Multi-tenancy & Confirmar aislamiento estricto entre espacios de trabajo. & Pendiente; se ejecutará según cronograma como validación crítica final. \\ \hline
 UAT & Validar flujos reales con Administrador, Evaluador y Responsable del SGC. & Pendiente; se preparará, ejecutará y cerrará según cronograma con la contraparte. \\ \hline
-\end{tabular}
-\caption{Plan de validación del MVP.}
+\end{tabularx}
+\normalsize
+\caption{Plan de validación del prototipo funcional.}
 \label{tab:validacion}
 \end{table}
 
 
-\section{Resultados}
+\chapter{Resultados}
 
-Los resultados obtenidos muestran que el núcleo del sistema cuenta con capacidades funcionales completas para ejecutar un flujo GAP integral. La plataforma permite administrar clientes y usuarios, iniciar sesión, acceder a espacios de trabajo, navegar requisitos ISO, marcar requisitos como No Aplica, abrir No Conformidades, registrar respuestas, gestionar acciones correctivas mediante tablero Kanban con estructura padre/hijo, cargar evidencias en Google Drive, visualizar dashboards analíticos con gráficos radar por rol y comunicarse mediante chat y notificaciones en tiempo real vía WebSockets. Esto significa que el proyecto ya superó la etapa de diseño conceptual y posee una base funcional sólida sobre la cual se pueden realizar pruebas de aceptación cercanas al uso real.
+Los resultados obtenidos muestran que el núcleo del prototipo funcional cuenta con las capacidades principales para ejecutar un flujo GAP integral. La plataforma permite administrar clientes y usuarios, iniciar sesión, exigir cambio de contraseña a usuarios nuevos, acceder a espacios de trabajo, navegar requisitos ISO, marcar requisitos como No Aplica, registrar brechas, registrar respuestas, gestionar acciones correctivas mediante tablero Kanban con secuencia trazable, cargar evidencias en Google Drive, visualizar dashboards analíticos con gráficos radar de cumplimiento porcentual por cláusula y por requisito, comunicarse mediante chat en tiempo real vía WebSockets y consultar notificaciones internas persistidas. Esto significa que el proyecto superó la etapa de diseño conceptual y dejó una base funcional sólida sobre la cual la empresa puede continuar la validación y evolución del producto.
 
-El avance cuantitativo debe interpretarse de forma conservadora. Las 245 unidades completadas representan un 87,2\% del total actualizado de 281 unidades, mientras que al considerar las 12 unidades en progreso el avance operativo observado sube a 91,5\%. La diferencia entre ambos indicadores es relevante: el 87,2\% refleja solo trabajo finalizado y verificable, mientras que el 91,5\% muestra el esfuerzo actualmente encaminado hacia cierre. Por esta razón, el indicador conservador es más apropiado para reportar estado real ante la contraparte y el profesor guía.
+Desde el punto de vista técnico, el principal resultado es la integración de módulos que antes operaban como necesidades separadas: autenticación, segregación por espacios de trabajo, requisitos ISO, brechas, evidencias, acciones correctivas, dashboard y comunicación en tiempo real. Desde el punto de vista metodológico, el proyecto deja documentación replicable mediante SRS, ADR, deuda técnica, diagramas C4 y plan de pruebas. Desde el punto de vista de negocio, el prototipo funcional permite a Asesorías ISO RCR SpA visualizar una ruta concreta para transformar su diagnóstico GAP desde un proceso basado en planillas y carpetas compartidas hacia una plataforma SaaS propia.
 
-La distribución de 245 unidades completadas, 12 en progreso y 24 pendientes indica que la mayor parte del núcleo técnico ya fue abordada, quedando pendientes tareas de validación final y cierre documental. Las tareas pendientes asociadas a correcciones IDOR, pruebas multi-tenancy formales, UAT y documentación final no son accesorias: son necesarias para demostrar que el sistema no solo funciona en módulos aislados, sino que también responde a criterios de seguridad, gobernanza y aceptación de usuario.
+Como resultado de validación experta, la contraparte especialista consideró que el prototipo responde adecuadamente como base inicial para la solución completa deseada por la empresa. Durante las revisiones incrementales se consideraron apropiados los flujos globales de los principales elementos del sistema y la formulación de los indicadores del dashboard; adicionalmente, la lógica automática del estado de cumplimiento de requisitos fue confirmada por escrito \cite{entrevista-whatsapp-maria}. Estos antecedentes respaldan la pertinencia funcional del diseño, pero se interpretan como evaluación cualitativa de especialista y no como resultados de una UAT formal.
+
+El avance cuantitativo debe interpretarse de forma conservadora. Las 254 horas completadas representan un 92,4\% del total actualizado de 275 horas estimadas. Este porcentaje refleja solo trabajo finalizado y verificable dentro de las tareas consideradas válidas para el cálculo, por lo que se utiliza como indicador real de avance ante la contraparte y el profesor guía. El gráfico de progreso por horas compara las horas trabajadas finalizadas con éxito por tarea frente a la cantidad de horas totales estimadas, permitiendo observar el avance desde la perspectiva del esfuerzo ejecutado y no solo desde el conteo de tareas completadas.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.88\textwidth]{img/grafico_progreso.png}
+    \caption{Progreso del prototipo funcional según horas trabajadas finalizadas con éxito por tarea frente a horas totales estimadas.}
+    \label{fig:grafico-progreso}
+\end{figure}
+
+La distribución de 254 horas completadas y 21 horas pendientes indica que una parte sustantiva del núcleo técnico ya fue abordada, aunque todavía quedan tareas relevantes de validación final, estabilización y cierre documental. Las horas pendientes se concentran en refinamientos funcionales del dashboard, filtros avanzados, conteos dinámicos de brechas, notificaciones automáticas, ajustes de asignación y corrección de indicadores que aún no están implementados completamente, como CSAT y próxima auditoría, además de validaciones finales necesarias para reforzar seguridad, gobernanza y aceptación de usuario.
 
 \begin{table}[H]
 \centering
-\begin{tabular}{|p{3.4cm}|p{4.1cm}|p{3.2cm}|p{4cm}|}
+\scriptsize
+\begin{tabularx}{\textwidth}{|L{2.6cm}|Y|L{2.6cm}|Y|}
 \hline
 \rowcolor{gray!20}\textbf{Validación} & \textbf{Propósito} & \textbf{Estado} & \textbf{Interpretación} \\ \hline
 Pruebas unitarias & Verificar controladores, servicios y funciones aisladas en escenarios básicos. & Ejecutadas exitosamente en la suite disponible. & Respaldan estabilidad inicial, pero no implican cobertura total. \\ \hline
 Pruebas de integración & Comprobar flujos base de autenticación, usuarios y servicio de evidencias/Drive. & Ejecutadas exitosamente en la suite disponible. & Respaldan integración inicial de módulos específicos, no todos los flujos del sistema. \\ \hline
-Multi-tenancy & Verificar separación estricta de datos entre clientes y espacios de trabajo. & Pendiente según cronograma. & Es condición crítica antes de considerar estable la entrega final. \\ \hline
-UAT & Validar flujos reales con Administrador, Evaluador y Responsable del SGC. & Pendiente según cronograma. & Permitirá confirmar aceptación funcional con contraparte. \\ \hline
-\end{tabular}
-\caption{Análisis de resultados de validación del MVP.}
+Multi-tenancy & Verificar separación estricta de datos entre clientes y espacios de trabajo. & Pendiente según cronograma. & Es condición crítica antes de un despliegue productivo con múltiples clientes reales. \\ \hline
+UAT & Validar flujos reales con Administrador, Evaluador y Responsable del SGC. & Pendiente según cronograma. & Permitirá complementar la validación técnica con aceptación formal de usuario. \\ \hline
+\end{tabularx}
+\normalsize
+\caption{Análisis de resultados de validación del prototipo funcional.}
 \label{tab:analisis-validacion-resultados}
 \end{table}
 
-Desde el punto de vista de ingeniería, la reducción de alcance permitió disminuir dependencias externas y concentrar el esfuerzo en estabilidad funcional. La incorporación de WebSockets para chat en tiempo real y notificaciones internas fue implementada exitosamente, reutilizando una única conexión para ambos propósitos y reduciendo la sobrecarga de mantener canales separados. Esta decisión, que en el informe preliminar figuraba como una reconsideración de la exclusión inicial, hoy constituye un componente estable y funcional del sistema. Se mantienen fuera del alcance el correo transaccional, S3, carga CSV y edición documental.
+Desde el punto de vista de ingeniería, la reducción de alcance permitió disminuir dependencias externas y concentrar el esfuerzo en estabilidad funcional. La incorporación de WebSockets para chat en tiempo real fue implementada exitosamente, mientras que las notificaciones internas se resolvieron mediante persistencia en base de datos, consultas periódicas desde la API y un worker de notificaciones programadas. Esta combinación evita mantener canales adicionales innecesarios y conserva una arquitectura simple para el prototipo funcional. Se mantienen fuera del alcance el correo transaccional, S3, carga CSV y edición documental.
 
-Comparado con alternativas comerciales como ISWO, GOAudits o GRCTools, el MVP actual todavía es más limitado en amplitud funcional. Sin embargo, la incorporación del dashboard analítico con gráficos radar por cláusula, el tablero Kanban de acciones correctivas y la integración con Google Drive para evidencias reduce significativamente la distancia con plataformas comerciales en cuanto a capacidades de visualización y trazabilidad. La entrevista de validación permite precisar que su valor inicial está en ser simple de utilizar, centralizado, ajustado al flujo real de la consultora y suficientemente comprensible para clientes que no tienen experiencia previa con ISO. Según la evaluación de María, el MVP ya resulta útil porque guarda los datos, organiza los componentes necesarios y permite comenzar a operar sobre el núcleo GAP/NC. La interpretación de los resultados, por tanto, es que el proyecto avanza correctamente como prototipo funcional y base de producto, pero requiere completar pruebas de seguridad, validación formal multi-tenancy y cierre documental antes de considerarse una entrega estable.
+Comparado con alternativas comerciales como ISWO, GOAudits o GRCTools, el prototipo funcional actual todavía es más limitado en amplitud funcional. Sin embargo, el dashboard analítico con gráficos radar por cláusula y por requisito, el tablero Kanban de acciones correctivas y la gestión de evidencias mediante Google Drive reducen significativamente la distancia con plataformas comerciales en cuanto a capacidades de visualización y trazabilidad. La entrevista de validación permite precisar que su valor inicial está en ser simple de utilizar, centralizado, ajustado al flujo real de la consultora y suficientemente comprensible para clientes que no tienen experiencia previa con ISO. Según la evaluación de María, el prototipo funcional ya resulta útil porque guarda los datos, organiza los componentes necesarios y permite comenzar a operar sobre el núcleo GAP/brechas. La interpretación de los resultados, por tanto, es que el Taller Profesional logró consolidar un prototipo funcional y una base de producto útil para la empresa, aunque su paso a operación productiva requiere completar pruebas de seguridad, validación formal multi-tenancy y aceptación de usuario.
 
 Un resultado metodológico relevante es la creación de un registro formal de deuda técnica (8 ítems documentados con severidad, tipo, estado y plan de corrección), así como 11 Architecture Decision Records (ADR) que documentan las decisiones arquitectónicas del proyecto con sus alternativas consideradas y razones de descarte. Ambos artefactos constituyen evidencia de rigor en la gestión del desarrollo y serán analizados en secciones dedicadas más adelante en este informe.
 
-\section{Deuda técnica y lecciones aprendidas}
+\chapter{Deuda técnica y lecciones aprendidas}
 
-Durante el desarrollo del MVP se adoptó un enfoque de alta velocidad de implementación que, si bien permitió alcanzar un avance funcional significativo en tiempo reducido, generó deuda técnica en varios frentes. Para gestionar este riesgo de forma transparente, se creó un registro formal de deuda técnica en la carpeta \texttt{docs/deuda-tecnica/}, donde cada ítem está documentado con severidad, tipo, archivos afectados, descripción del problema, impacto y plan de corrección.
+Durante el desarrollo del prototipo funcional se adoptó un enfoque de alta velocidad de implementación que, si bien permitió alcanzar un avance funcional significativo en tiempo reducido, generó deuda técnica en varios frentes. Para gestionar este riesgo de forma transparente, se creó un registro formal de deuda técnica en la carpeta \texttt{docs/deuda-tecnica/}, donde cada ítem está documentado con severidad, tipo, archivos afectados, descripción del problema, impacto y plan de corrección.
 
-\subsection{Registro de deuda técnica}
+\section{Registro de deuda técnica}
 
 \begin{table}[H]
 \centering
-\begin{tabular}{|p{1.8cm}|p{2.2cm}|p{1.5cm}|p{2cm}|p{5.2cm}|}
+\scriptsize
+\begin{tabularx}{\textwidth}{|L{0.8cm}|Y|L{1.55cm}|L{2.25cm}|Y|}
 \hline
 \rowcolor{gray!20}\textbf{ID} & \textbf{Título} & \textbf{Severidad} & \textbf{Tipo} & \textbf{Plan de corrección} \\ \hline
-DT-001 & \texttt{RequirementContent.jsx} gigante (+1200 líneas) & Media & Mantenibilidad & \textbf{CUMPLIDO}: Refactorizado en componentes más pequeños. \\ \hline
-DT-002 & Nomenclatura NC vs Brecha inconsistente en backend & Baja & Claridad & Se acepta como deuda consciente: el backend mantiene ``NC'' como término canónico, el frontend traduce a ``Brecha''. No se corregirá en esta etapa. \\ \hline
+DT-002 & Nomenclatura interna NC vs Brecha en backend & Baja & Claridad & Se acepta como deuda consciente: el backend mantiene ``NC'' por herencia técnica, mientras el frontend y la documentación usan ``Brecha'' como término funcional validado. No bloquea el prototipo funcional. \\ \hline
 DT-003 & Falta validación IDOR en algunos endpoints & Alta & Seguridad & \textbf{CUMPLIDO}: Auditoría y corrección de endpoints de chat y acciones correctivas. \\ \hline
-DT-004 & \texttt{console.log} de debug en producción & Baja & Limpieza & Reemplazar por logger con niveles configurable. Corrección simple, planificada para antes de la entrega. \\ \hline
+DT-004 & \path{console.log} de debug en producción & Baja & Limpieza & Reemplazar por logger con niveles configurables. Corrección simple, planificada para antes de la entrega. \\ \hline
 DT-005 & Falta de tests unitarios en controllers críticos & Media & Calidad & Incrementar cobertura de pruebas en controladores de acciones correctivas y evidencias. \\ \hline
 DT-007 & Historial de acciones se inserta en dos filas & Baja & Mantenibilidad & Unificar en una sola inserción con snapshot completo. Baja prioridad, no bloquea entrega. \\ \hline
 DT-008 & No se valida que acciones correctivas no queden vacías & Media & Validación & Agregar validación en backend y frontend para evitar creación de acciones sin descripción ni responsable. \\ \hline
-\end{tabular}
+\end{tabularx}
+\normalsize
 \caption{Registro de deuda técnica del proyecto (actualizado).}
 \label{tab:deuda-tecnica}
 \end{table}
 
-\subsection{Lecciones aprendidas sobre el uso de IA generativa}
+\section{Lecciones aprendidas sobre el uso de IA generativa}
 
-El proyecto constituye un caso de estudio sobre el uso de IA generativa (LLMs) como herramienta de productividad en el desarrollo de software. La experiencia permitió identificar una distinción relevante entre dos enfoques:
+El proyecto constituye un caso de estudio sobre el uso de IA generativa (LLMs) como herramienta de productividad en el desarrollo de software, en el contexto del desarrollo de un prototipo funcional y parcialmente validado. En este marco se considera el concepto de \textit{vibe coding}, popularizado por Andrej Karpathy para describir una forma de programación asistida por LLMs en la que el desarrollador delega gran parte de la generación y ajuste del código, interactuando mediante instrucciones de alto nivel y aceptando cambios con poca revisión inmediata\footnote{La nota de Karpathy se usa como referencia conceptual de una práctica emergente, no como fuente académica formal. Su valor en este informe es explicativo: permite nombrar un patrón observado durante el desarrollo y contrastarlo con una práctica más controlada de revisión, auditoría y diseño incremental.} \cite{karpathy-vibe-coding}. La experiencia del proyecto permitió identificar una distinción relevante entre dos enfoques:
 
 \begin{itemize}
-    \item \textbf{``Vibe coding'':} prioriza la velocidad de implementación sobre la revisión. Las funcionalidades se entregan sin revisión inmediata del código generado, las correcciones se postergan para ``un momento futuro'', y los archivos crecen sin refactorización. Este enfoque, utilizado en las primeras etapas del proyecto, generó la mayor parte de la deuda técnica registrada.
-    \item \textbf{``Vibe engineering'':} incorpora diseño previo, segmentación granular de tareas, revisión inmediata de cada entrega y tareas de auditoría intercaladas. La regla práctica adoptada es: si una tarea produce más de 50 líneas de código, debió dividirse en subtareas más pequeñas.
+    \item \textbf{\textit{Vibe coding}:} prioriza la velocidad de implementación sobre la revisión. Las funcionalidades se entregan sin revisión inmediata del código generado, las correcciones se postergan para un momento futuro y los archivos crecen sin refactorización. Este enfoque, utilizado en las primeras etapas del proyecto, generó la mayor parte de la deuda técnica registrada.
+    \item \textbf{\textit{Vibe engineering}:} denominación operativa utilizada en este proyecto para un enfoque que incorpora diseño previo, segmentación granular de tareas, revisión inmediata de cada entrega y tareas de auditoría intercaladas. La regla práctica adoptada es: si una tarea produce más de 50 líneas de código, debió dividirse en subtareas más pequeñas.
 \end{itemize}
 
 La transición del primer enfoque al segundo durante el desarrollo del proyecto permitió estabilizar la calidad del código en las etapas finales. Las lecciones extraídas son:
@@ -645,14 +838,26 @@ La transición del primer enfoque al segundo durante el desarrollo del proyecto 
 
 Estas lecciones son particularmente relevantes en el contexto de un taller de titulación, donde el uso de herramientas de IA generativa es cada vez más común y donde la capacidad de integrarlas con rigor metodológico constituye una competencia profesional diferenciadora.
 
+\section{Aprendizajes profesionales}
 
-\section{Decisiones de Arquitectura (ADR)}
+Más allá de la implementación técnica, el proyecto permitió comprender que el desarrollo de software para una organización requiere transformar necesidades expresadas en lenguaje de negocio en decisiones verificables de alcance, datos, permisos y validación. La interacción con la contraparte fue fundamental para corregir conceptos, como la distinción entre brecha y No Conformidad, y para priorizar aquello que aporta valor al flujo real de la consultora por sobre funcionalidades técnicamente atractivas pero secundarias.
+
+Un segundo aprendizaje fue la importancia de administrar el alcance de manera explícita. Reducir funcionalidades no significó disminuir la calidad del proyecto, sino concentrar el esfuerzo disponible en un núcleo coherente y documentar con transparencia lo implementado, lo excluido y lo pendiente. Esta experiencia fortaleció la capacidad de estimar trabajo, negociar prioridades y evitar presentar como terminado aquello que todavía requiere aceptación de usuario o validación de seguridad.
+
+En el ámbito de ingeniería, el desarrollo reforzó competencias de arquitectura por capas, modelado relacional, integración real con servicios externos, autorización por roles, segregación multi-cliente y trazabilidad mediante historiales. La detección de vulnerabilidades IDOR mostró que una interfaz que oculta opciones no constituye por sí sola un control de seguridad y que la pertenencia al espacio de trabajo debe comprobarse en cada operación sensible.
+
+También se adquirió una comprensión más rigurosa de la validación. Una prueba unitaria, una prueba de integración y una prueba de aceptación responden preguntas diferentes y no deben presentarse como equivalentes. Reconocer esta diferencia llevó a caracterizar el resultado como prototipo funcional, mantener UAT y aislamiento exhaustivo como trabajo futuro y separar el avance de gestión de la evidencia técnica del software.
+
+Finalmente, el uso intensivo de IA generativa permitió aprender que la productividad obtenida depende de la capacidad profesional para revisar, cuestionar y mantener el resultado. La experiencia condujo a adoptar tareas más pequeñas, registrar decisiones arquitectónicas, mantener un inventario de deuda técnica y realizar revisiones periódicas. En consecuencia, el principal aprendizaje no fue solamente utilizar una herramienta de IA, sino integrarla dentro de un proceso de ingeniería responsable y trazable.
+
+\chapter{Decisiones de Arquitectura (ADR)}
 
 Como parte del aseguramiento de la calidad del diseño, se documentaron 11 Architecture Decision Records (ADR) en el archivo \texttt{docs/ADR.md}. Cada ADR registra una decisión arquitectónica relevante, las alternativas consideradas, los criterios de evaluación y la justificación de la opción seleccionada. Esta práctica, inspirada en la metodología de Michael Nygard, permite mantener trazabilidad sobre las decisiones que dieron forma al sistema y facilita la incorporación de nuevos desarrolladores o la revisión futura del diseño.
 
 \begin{table}[H]
 \centering
-\begin{tabular}{|p{0.8cm}|p{4.2cm}|p{5.5cm}|p{4cm}|}
+\scriptsize
+\begin{tabularx}{\textwidth}{|L{1.25cm}|Y|Y|Y|}
 \hline
 \rowcolor{gray!20}\textbf{ADR} & \textbf{Decisión} & \textbf{Alternativas consideradas} & \textbf{Criterio principal} \\ \hline
 ADR-001 & JWT + refresh token en HTTP-only cookie & Sesiones server-side, OAuth2, Basic Auth & Seguridad stateless compatible con SPA \\ \hline
@@ -660,94 +865,161 @@ ADR-002 & MySQL con InnoDB & PostgreSQL, MongoDB, SQLite & Compatibilidad con in
 ADR-003 & Express.js sobre Node.js & Fastify, NestJS, Spring Boot & Curva de aprendizaje y productividad del equipo \\ \hline
 ADR-004 & REST API con JSON & GraphQL, gRPC, SOAP & Simplicidad, tooling y ecosistema frontend \\ \hline
 ADR-005 & Google Drive como repositorio de evidencias & AWS S3, Azure Blob, MySQL (BLOB) & Costo, simplicidad de integración y segregación por workspace \\ \hline
-ADR-006 & WebSockets con librería \texttt{ws} & Socket.io, SSE, polling & Misma conexión para chat + notificaciones, sin dependencias adicionales \\ \hline
+ADR-006 & WebSockets con librería \texttt{ws} & Socket.io, SSE, polling & Chat en tiempo real sin dependencias adicionales \\ \hline
 ADR-007 & Vite + React SPA & Next.js, Create React App, Angular & Velocidad de desarrollo y ecosistema de componentes \\ \hline
-ADR-008 & Multi-tenancy por workspace con middleware de autorización & Esquemas separados por BD, tenant ID en JWT, microservicios por cliente & Simplicidad operacional para MVP \\ \hline
-ADR-009 & RBAC con middleware encadenado & ABAC, ReBAC, Oso & Suficiente para 4 roles; extensible a futuro \\ \hline
+ADR-008 & Multi-tenancy por workspace con middleware de autorización & Esquemas separados por BD, tenant ID en JWT, microservicios por cliente & Simplicidad operacional para prototipo funcional \\ \hline
+ADR-009 & RBAC con middleware encadenado & ABAC, ReBAC, Oso & Suficiente para 3 roles; extensible a futuro \\ \hline
 ADR-010 & Seeding SQL idempotente para estructura ISO & Migraciones programáticas, carga dinámica CSV, API externa & Reproducibilidad y control de versiones \\ \hline
-ADR-011 & Estructura de acciones correctivas como linked-list (\texttt{accion\_previa\_id}) & Árbol jerárquico completo, tabla de relaciones muchos-a-muchos & Simple de implementar, suficiente para MVP, extensible \\ \hline
-\end{tabular}
+ADR-011 & Estructura de acciones correctivas como linked-list (\texttt{accion\_previa\_id}) & Árbol jerárquico completo, tabla de relaciones muchos-a-muchos & Simple de implementar, suficiente para prototipo funcional, extensible \\ \hline
+\end{tabularx}
+\normalsize
 \caption{Resumen de las 11 Architecture Decision Records del proyecto.}
 \label{tab:adr}
 \end{table}
 
 Cada ADR incluye una tabla comparativa detallada con las razones de descarte de cada alternativa no seleccionada, lo que demuestra que las decisiones no fueron arbitrarias sino el resultado de un análisis estructurado de trade-offs. La existencia de este registro constituye un activo valioso para la mantenibilidad futura del sistema y para la comunicación del diseño ante la contraparte técnica.
 
-\section{Plan de cierre}
+\chapter{Proyección y trabajo futuro}
 
-Para completar el proyecto se propone priorizar las tareas restantes en el siguiente orden:
+A partir del prototipo funcional desarrollado, se identifican tareas de continuidad que permitirán preparar la plataforma para un uso productivo más robusto. Estas actividades no invalidan el aporte del Taller Profesional, sino que ordenan la evolución posterior del sistema:
 
 \begin{enumerate}
     \item \textbf{Cerrado}: Corrección de vulnerabilidades IDOR en endpoints de chat y acciones correctivas (DT-003) - \textbf{CUMPLIDO}.
-    \item \textbf{Cerrado}: Refactorización de RequirementContent.jsx (DT-001) - \textbf{CUMPLIDO}.
-    \item \textbf{En progreso}: Ejecutar pruebas formales de aislamiento multi-tenancy sobre todos los endpoints, vistas y canales WebSocket.
-    \item \textbf{En progreso}: Preparar y ejecutar casos UAT representativos para los cuatro roles: Administrador, Evaluador, Responsable del SGC y Operativo.
-    \item \textbf{Pendiente}: Completar la cobertura de pruebas unitarias en controladores críticos (DT-005).
-    \item \textbf{Pendiente}: Corregir deudas técnicas de severidad baja (DT-004, DT-007, DT-008) y realizar limpieza general de código.
-    \item \textbf{Pendiente}: Actualizar capturas de frontend y diagramas C4 con el estado final del sistema.
-    \item \textbf{Pendiente}: Cerrar el informe final y preparar la presentación de defensa.
+    \item \textbf{Continuidad}: Ejecutar pruebas formales de aislamiento multi-tenancy sobre todos los endpoints, vistas y canales WebSocket.
+    \item \textbf{Continuidad}: Preparar y ejecutar casos UAT representativos para los tres roles: Administrador, Evaluador y Responsable del SGC.
+    \item \textbf{Continuidad}: Completar la cobertura de pruebas unitarias en controladores críticos (DT-005).
+    \item \textbf{Continuidad}: Corregir deudas técnicas de severidad baja (DT-004, DT-007, DT-008) y realizar limpieza general de código.
+    \item \textbf{Continuidad}: Actualizar capturas de frontend y diagramas C4 cuando la interfaz alcance su versión productiva.
 \end{enumerate}
 
-En cuanto al cierre de deuda técnica, se establece el siguiente criterio: los ítems DT-001 (refactoring de RequirementContent) y DT-003 (IDOR) se consideran \textbf{CUMPLIDOS}. Los ítems DT-002 (nomenclatura NC vs Brecha) y DT-007 (historial duplicado) se aceptan como deuda consciente que no bloquea la entrega del MVP. Los ítems DT-004, DT-005 y DT-008 se corregirán en la medida que el tiempo lo permita, priorizando DT-005 por su impacto en la confiabilidad de las pruebas.
+En cuanto a la deuda técnica, el ítem DT-003 (IDOR) se considera \textbf{CUMPLIDO}. Los ítems DT-002 (nomenclatura interna NC vs Brecha) y DT-007 (historial duplicado) se aceptan como deuda consciente que no bloquea la entrega académica del prototipo funcional. Los ítems DT-004, DT-005 y DT-008 quedan documentados como trabajo futuro priorizado, especialmente DT-005 por su impacto en la confiabilidad de las pruebas.
 
-\newpage
+\chapter{Conclusión}
 
-\section{Conclusión}
+El proyecto aborda una problemática concreta de Asesorías ISO RCR SpA: digitalizar y estandarizar el diagnóstico GAP, la gestión de evidencias y el seguimiento de brechas de cumplimiento para ISO 9001:2015. La solución desarrollada permite reemplazar un flujo basado en planillas, carpetas compartidas y comunicación manual por una base web centralizada, con roles, espacios de trabajo, trazabilidad y módulos orientados al flujo real de la consultora.
 
-El proyecto aborda una problemática concreta de Asesorías ISO RCR SpA: la necesidad de digitalizar y estandarizar el diagnóstico GAP, la gestión de evidencias y el seguimiento de No Conformidades para ISO 9001:2015. La solución propuesta tiene una relación directa con la operación de la empresa y con su posibilidad de ofrecer un servicio web escalable a sus clientes.
+Respecto del logro de objetivos, el proyecto alcanza el objetivo académico y profesional de diseñar e implementar un prototipo funcional y alineado al negocio. Se implementaron los módulos principales de autenticación, autorización, usuarios, cambio obligatorio de contraseña para usuarios nuevos, espacios de trabajo, seeding de requisitos ISO, motor GAP, brechas, acciones correctivas, evidencias, dashboard con gráficos radar, Kanban, chat y notificaciones. Además, se generó documentación técnica replicable mediante SRS v3.2, diagramas C4, ADR, registro de deuda técnica y plan de pruebas.
 
-Respecto del logro de objetivos, el primer objetivo específico se encuentra cubierto mediante el SRS, la definición de roles, el modelo multi-tenancy y la documentación C4 complementada con ADRs. El segundo objetivo muestra avance completo mediante autenticación JWT con refresh token, autorización RBAC con middleware encadenado, CRUD de usuarios y espacios de trabajo, activación de cuenta y timeout por inactividad. El tercer objetivo se aborda mediante el seeding idempotente de requisitos ISO 9001:2015. El cuarto objetivo presenta avance significativo: el motor GAP está funcional con evaluación de cumplimiento, marcado NA, apertura de No Conformidades con máquina de estados completa, acciones correctivas con estructura padre/hijo, tablero Kanban con drag-and-drop y dashboard analítico con gráficos radar por cláusula y KPIs segmentados por rol. El quinto objetivo se cumple mediante la integración con Google Drive para almacenamiento de evidencias con carpetas por workspace, flujo de validación (Pendiente/Aceptado/Rechazado) e historial visual. El sexto objetivo muestra avance parcial: las pruebas unitarias, de integración y de partición de equivalencia fueron ejecutadas exitosamente, las vulnerabilidades IDOR en controladores de chat y acciones fueron corregidas, pero las pruebas formales multi-tenancy y UAT con la contraparte permanecen como tareas de cierre.
+El estado final corresponde a un 92,4\% de avance medido por horas de trabajo (254 de 275 horas estimadas completadas). Este resultado debe interpretarse como un prototipo funcional y parcialmente validado, no como una plataforma SaaS productiva terminada. Las pruebas unitarias, de integración y de partición de equivalencia respaldan el funcionamiento inicial de módulos relevantes; sin embargo, antes de un despliegue productivo con múltiples clientes reales se requiere completar la validación multi-tenancy, ejecutar UAT con la contraparte y verificar exhaustivamente la separación de datos entre organizaciones.
 
-Las principales limitaciones del trabajo se relacionan con el alcance del MVP y con el tiempo disponible. La versión actual no incluye recuperación de contraseña por correo, onboarding automatizado, carga dinámica CSV, edición documental en línea, flujos complejos de aprobación, soporte multi-norma ni automatizaciones avanzadas. En contrapartida, el sistema incorpora capacidades no previstas originalmente que agregan valor significativo: WebSockets para chat y notificaciones en tiempo real, dashboard analítico con radares, Kanban de acciones correctivas, almacenamiento en Google Drive y registro formal de deuda técnica y decisiones arquitectónicas. El MVP no alcanza la amplitud funcional de plataformas comerciales existentes; su fortaleza está en ser una base propia, simple de usar, adaptable y rigurosamente alineada al flujo de negocio de la consultora.
+Las principales limitaciones se relacionan con el alcance y el tiempo disponible: no se incluyen recuperación de contraseña por correo, onboarding automatizado, carga dinámica CSV, edición documental en línea, flujos complejos de aprobación, trazabilidad microscópica sobre todos los campos ni herramientas avanzadas como FODA, PEST, matriz de responsabilidades y autoridades o AMEF. Aun así, el prototipo funcional incorpora capacidades de valor para la empresa, como almacenamiento de evidencias en Google Drive, dashboard analítico, Kanban de acciones correctivas, comunicación en tiempo real y documentación formal de decisiones arquitectónicas y deuda técnica.
 
-Como oportunidades de mejora para la empresa, se identifica la posibilidad de evolucionar el sistema hacia una plataforma diferenciada por cuatro atributos principales: simplicidad de uso, centralización de la información, auditabilidad detallada e inteligencia aplicada. Estas mejoras permitirían reducir trabajo duplicado, evitar el uso de múltiples sistemas, aumentar trazabilidad, proteger mejor la información de clientes, generar nuevos servicios digitales y fortalecer la propuesta comercial de Asesorías ISO RCR SpA.
+En el plano profesional, el Taller permitió avanzar desde una visión centrada principalmente en construir funcionalidades hacia una práctica de ingeniería que integra levantamiento de necesidades, negociación de alcance, modelado de datos, arquitectura, seguridad, pruebas y comunicación con la contraparte. El aprendizaje más relevante fue reconocer que un sistema no se considera validado solo porque sus módulos funcionan: también requiere criterios de aceptación, evidencia reproducible, control de riesgos y una declaración honesta de sus limitaciones. Asimismo, el uso de IA generativa exigió fortalecer la revisión crítica del código, la segmentación de tareas y la documentación de decisiones para evitar que la velocidad de desarrollo se traduzca en deuda técnica no controlada.
 
-El MVP es funcional como base operativa completa para el flujo GAP, pero no debe considerarse una entrega final estable hasta que las pruebas multi-tenancy y UAT estén cerradas, las correcciones IDOR estén completamente verificadas y la separación entre datos de clientes sea exhaustivamente validada.
+Como proyección, el trabajo futuro debe concentrarse en cerrar la deuda técnica prioritaria, consolidar pruebas de aceptación, estabilizar el despliegue y evolucionar hacia funcionalidades estratégicas como IA agente, importación inteligente, integración entre componentes, ampliación de historiales y herramientas metodológicas avanzadas para la operación multi-norma. En síntesis, el Taller deja una solución inicial funcional, documentada y extensible, que resuelve el núcleo del problema planteado y establece una base concreta para transformar el servicio de diagnóstico GAP de Asesorías ISO RCR SpA en una plataforma SaaS propia.
 
-\textbf{Estado final del proyecto:} 92,5\% de avance (260/281 unidades completadas). El proyecto alcanza el objetivo de entregar un MVP funcional, estable y alineado al flujo de negocio de Asesorías ISO RCR SpA, con todos los módulos del núcleo operativo implementados y verificados.
+% Iniciamos el resto de secciones adicionales al contenido: referencias
+\backmatter
 
-En términos del proceso de desarrollo, el proyecto deja como aprendizaje la importancia del diseño previo y la revisión inmediata del código generado con herramientas de IA. La transición desde un enfoque de ``vibe coding'' hacia ``vibe engineering'' —con tareas granulares, revisión inmediata y auditorías intercaladas— permitió estabilizar la calidad en las etapas finales. La documentación de deuda técnica y ADRs constituye un activo que trasciende el alcance del MVP y sienta las bases para una evolución ordenada del producto.
+\renewcommand{\bibname}{Referencias}
+\begin{thebibliography}{99}
 
-La proyección post-MVP consiste en consolidar las pruebas de aceptación, cerrar la deuda técnica prioritaria, estabilizar el despliegue y luego priorizar funcionalidades de mayor valor estratégico. En particular, la incorporación progresiva de IA agente, importación inteligente, integración entre componentes, historial detallado y soporte multi-norma permitiría transformar el MVP en una plataforma SaaS más robusta, competitiva y alineada con la visión de largo plazo del proyecto. El plan de pruebas documentado en \texttt{PlanDePrueba.md} proporciona una base metodológica para la validación futura del sistema en cada etapa de evolución.
+\bibitem{srs-interno}
+Asesorías ISO RCR SpA, ``Plataforma Web para la Ejecución de GAP Análisis y Gestión de Evidencias por Cláusulas en ISO 9001:2015,'' Documento de Especificación de Requisitos de Software, versión 3.2, 10 abr. 2026.
 
-\section{Referencias}
+\bibitem{avance-interno}
+M. E. Abascal Fredes, ``Avance Proyecto ISO,'' hoja interna de seguimiento de tareas y horas, 2026.
 
-\subsection{Documentación y evidencias internas}
+\bibitem{reporte-preliminar}
+M. E. Abascal Fredes, ``Reporte de Avances Taller de Titulación: Software web de gestión ISO,'' informe preliminar, 5 jun. 2026.
 
-\begin{enumerate}
-    \item Documento de Especificación de Requisitos de Software (SRS), ``Plataforma Web para la Ejecución de GAP Análisis y Gestión de Evidencias por Cláusulas en ISO 9001:2015'', versión 3.1, 10 de abril de 2026.
-    \item Hoja de seguimiento ``Avance Proyecto ISO.xlsx'', estado de tareas y horas del proyecto.
-    \item Reporte preliminar ``Reporte de Avances Taller de Titulación'', Software web de gestión ISO, 05 de junio de 2026.
-    \item Registro de Architecture Decision Records (ADR), 11 decisiones documentadas con alternativas y criterios de selección, 2026.
-    \item Registro de Deuda Técnica, 8 ítems documentados con severidad, tipo y plan de corrección, 2026.
-    \item Plan de Pruebas E2E, ``PlanDePrueba.md'', 9 fases de validación para el MVP, 2026.
-    \item Documento de componentes críticos C4, ``C4-componentes-criticos.md'', diagramas detallados de arquitectura, 2026.
-    \item Entrevista de validación estratégica y técnica del SGC con María, consultora especialista en sistemas de gestión ISO, 05 de junio de 2026. Disponible en: \url{https://docs.google.com/document/d/1ei6-ehbhsUr21Wq_-4oHyQDtDc5OqYl41NJ8X2qaqeA/edit?usp=sharing}.
-    \item Correos electrónicos de avance semanal del proyecto, ``Informe semanal de progreso -- Proyecto ISO'', comunicaciones de seguimiento, 05 de junio de 2026.
-    \item Carpeta de Google Drive con registro de avances del proyecto para revisión del profesor guía. Disponible en: \url{https://drive.google.com/drive/folders/1wh1V29T4QudkEej6gY3Nv1SmFBq_m3dH}.
-    \item Correo electrónico con validación de María, consultora especialista en sistemas de gestión ISO, comunicación personal incluida como evidencia de avance, 05 de junio de 2026.
-    \item Asesorías ISO RCR SpA. Certificado de aprobación del curso ``Interpretación de ISO 9001:2015'', emitido como apoyo formativo para el desarrollo del proyecto, 2026.
-\end{enumerate}
+\bibitem{adr-interno}
+M. E. Abascal Fredes, ``Registro de Architecture Decision Records,'' documentación interna del proyecto, 2026.
 
-\subsection{Fuentes externas}
+\bibitem{deuda-interna}
+M. E. Abascal Fredes, ``Registro de Deuda Técnica,'' documentación interna del proyecto, 2026.
 
-\begin{enumerate}
-    \item International Organization for Standardization, ISO 9001 Quality Management Systems. Disponible en: \url{https://www.iso.org/iso-9001-quality-management.html}.
-    \item React Documentation, componentes y arquitectura de interfaces. Disponible en: \url{https://react.dev/}.
-    \item Vite Documentation, herramienta de desarrollo frontend para aplicaciones web. Disponible en: \url{https://vite.dev/}.
-    \item Express.js Documentation, framework web para Node.js. Disponible en: \url{https://expressjs.com/}.
-    \item Stack Overflow Developer Survey, tendencias de tecnologías web. Disponible en: \url{https://survey.stackoverflow.co/2024/technology/}.
-    \item IBM, REST APIs y arquitectura de servicios. Disponible en: \url{https://www.ibm.com/topics/rest-apis}.
-    \item Amazon Web Services. Amazon S3, almacenamiento de objetos en la nube. Disponible en: \url{https://aws.amazon.com/es/s3/}.
-    \item MySQL Documentation, InnoDB y propiedades ACID. Disponible en: \url{https://dev.mysql.com/doc/refman/8.4/en/mysql-acid.html}.
-    \item IETF RFC 7519, JSON Web Token (JWT). Disponible en: \url{https://www.rfc-editor.org/rfc/rfc7519}.
-    \item IETF RFC 6455, The WebSocket Protocol. Disponible en: \url{https://www.rfc-editor.org/rfc/rfc6455}.
-    \item Atlassian, Kanban y gestión visual del trabajo. Disponible en: \url{https://www.atlassian.com/agile/kanban}.
-    \item Brown, Simon. The C4 Model for Visualising Software Architecture. Sitio web oficial. Disponible en: \url{https://c4model.com/}.
-    \item ISWO, SIG ISWO Software para sistemas de gestión ISO y HSEQ. Disponible en: \url{https://iswo.com.co/software/}.
-    \item GOAudits, software de auditorías e inspecciones. Disponible en: \url{https://goaudits.com/}.
-    \item GRCTools, herramientas para gestión GRC. Disponible en: \url{https://grctools.software/}.
-\end{enumerate}
+\bibitem{plan-pruebas-interno}
+M. E. Abascal Fredes, ``Plan de Pruebas E2E,'' documentación interna del prototipo funcional, 2026.
 
+\bibitem{c4-interno}
+M. E. Abascal Fredes, ``C4-componentes-criticos,'' documentación interna de arquitectura, 2026.
+
+\bibitem{entrevista-maria}
+M. Patiño, consultora especialista en sistemas de gestión ISO, ``Entrevista de validación estratégica y técnica del SGC,'' comunicación personal, 5 jun. 2026. [En línea]. Disponible en: \url{https://docs.google.com/document/d/1ei6-ehbhsUr21Wq_-4oHyQDtDc5OqYl41NJ8X2qaqeA/edit?usp=sharing}. [Consultado: 17 jul. 2026].
+
+\bibitem{entrevista-whatsapp-maria}
+M. Patiño, consultora especialista en sistemas de gestión ISO, entrevista mediante WhatsApp sobre línea base, duración del GAP Análisis y validación de la lógica automática de cumplimiento, comunicación personal, 17 jul. 2026.
+
+\bibitem{correos-avance}
+M. E. Abascal Fredes y Asesorías ISO RCR SpA, ``Informe semanal de progreso -- Proyecto ISO,'' comunicaciones internas de seguimiento, 5 jun. 2026.
+
+\bibitem{drive-avances}
+M. E. Abascal Fredes, ``Registro de avances del proyecto,'' carpeta de Google Drive. [En línea]. Disponible en: \url{https://drive.google.com/drive/folders/1wh1V29T4QudkEej6gY3Nv1SmFBq_m3dH}. [Consultado: 17 jul. 2026].
+
+\bibitem{validacion-maria-correo}
+M. Patiño, consultora especialista en sistemas de gestión ISO, validación del avance del proyecto, comunicación personal, 5 jun. 2026.
+
+\bibitem{curso-iso-rcr}
+Asesorías ISO RCR SpA, ``Certificado de aprobación del curso Interpretación de ISO 9001:2015,'' certificado de formación, 2026.
+
+\bibitem{iso9001}
+International Organization for Standardization, ``ISO 9001: Quality management systems,'' 2015. [En línea]. Disponible en: \url{https://www.iso.org/iso-9001-quality-management.html}. [Consultado: 17 jul. 2026].
+
+\bibitem{react-docs}
+Meta Platforms, Inc., ``React documentation.'' [En línea]. Disponible en: \url{https://react.dev/}. [Consultado: 17 jul. 2026].
+
+\bibitem{vite-docs}
+Vite, ``Vite documentation.'' [En línea]. Disponible en: \url{https://vite.dev/}. [Consultado: 17 jul. 2026].
+
+\bibitem{express-docs}
+OpenJS Foundation, ``Express web framework documentation.'' [En línea]. Disponible en: \url{https://expressjs.com/}. [Consultado: 17 jul. 2026].
+
+\bibitem{stackoverflow-survey}
+Stack Overflow, ``2024 Developer Survey: Technology.'' [En línea]. Disponible en: \url{https://survey.stackoverflow.co/2024/technology/}. [Consultado: 17 jul. 2026].
+
+\bibitem{karpathy-vibe-coding}
+A. Karpathy, ``There's a new kind of coding I call vibe coding,'' X, 2 feb. 2025. [En línea]. Disponible en: \url{https://x.com/karpathy/status/1886192184808149383}. [Consultado: 17 jul. 2026].
+
+\bibitem{ibm-rest}
+IBM, ``What is a REST API?'' [En línea]. Disponible en: \url{https://www.ibm.com/topics/rest-apis}. [Consultado: 17 jul. 2026].
+
+\bibitem{aws-s3}
+Amazon Web Services, ``Amazon Simple Storage Service (Amazon S3).'' [En línea]. Disponible en: \url{https://aws.amazon.com/es/s3/}. [Consultado: 17 jul. 2026].
+
+\bibitem{mysql-acid}
+Oracle, ``InnoDB and the ACID model,'' MySQL 8.4 Reference Manual. [En línea]. Disponible en: \url{https://dev.mysql.com/doc/refman/8.4/en/mysql-acid.html}. [Consultado: 17 jul. 2026].
+
+\bibitem{google-drive-create}
+Google for Developers, ``Google Drive API: Files.create.'' [En línea]. Disponible en: \url{https://developers.google.com/drive/api/reference/rest/v3/files/create?hl=es-419}. [Consultado: 17 jul. 2026].
+
+\bibitem{google-drive-folders}
+Google for Developers, ``Google Drive API: Crear y administrar carpetas.'' [En línea]. Disponible en: \url{https://developers.google.com/drive/api/guides/folder?hl=es-419}. [Consultado: 17 jul. 2026].
+
+\bibitem{google-drive-download}
+Google for Developers, ``Google Drive API: Files.download.'' [En línea]. Disponible en: \url{https://developers.google.com/drive/api/reference/rest/v3/files/download?hl=es-419}. [Consultado: 17 jul. 2026].
+
+\bibitem{google-drive-delete}
+Google for Developers, ``Google Drive API: Files.delete.'' [En línea]. Disponible en: \url{https://developers.google.com/drive/api/reference/rest/v3/files/delete?hl=es-419}. [Consultado: 17 jul. 2026].
+
+\bibitem{google-drive-update}
+Google for Developers, ``Google Drive API: Files.update.'' [En línea]. Disponible en: \url{https://developers.google.com/drive/api/reference/rest/v3/files/update?hl=es-419}. [Consultado: 17 jul. 2026].
+
+\bibitem{google-drive-revisions}
+Google for Developers, ``Google Drive API: Administrar revisiones de archivos.'' [En línea]. Disponible en: \url{https://developers.google.com/drive/api/guides/manage-revisions?hl=es-419}. [Consultado: 17 jul. 2026].
+
+\bibitem{rfc7519}
+M. Jones, J. Bradley y N. Sakimura, ``JSON Web Token (JWT),'' RFC 7519, Internet Engineering Task Force, may. 2015. [En línea]. Disponible en: \url{https://www.rfc-editor.org/rfc/rfc7519}.
+
+\bibitem{rfc6455}
+I. Fette y A. Melnikov, ``The WebSocket Protocol,'' RFC 6455, Internet Engineering Task Force, dic. 2011. [En línea]. Disponible en: \url{https://www.rfc-editor.org/rfc/rfc6455}.
+
+\bibitem{atlassian-kanban}
+Atlassian, ``Kanban: A brief introduction.'' [En línea]. Disponible en: \url{https://www.atlassian.com/agile/kanban}. [Consultado: 17 jul. 2026].
+
+\bibitem{c4-model}
+S. Brown, ``The C4 model for visualising software architecture.'' [En línea]. Disponible en: \url{https://c4model.com/}. [Consultado: 17 jul. 2026].
+
+\bibitem{iswo}
+ISWO, ``SIG ISWO: Software para sistemas de gestión ISO y HSEQ.'' [En línea]. Disponible en: \url{https://iswo.com.co/software/}. [Consultado: 17 jul. 2026].
+
+\bibitem{goaudits}
+GoAudits, ``Software de auditorías e inspecciones.'' [En línea]. Disponible en: \url{https://goaudits.com/}. [Consultado: 17 jul. 2026].
+
+\bibitem{grctools}
+GRC Tools, ``Herramientas para gestión GRC.'' [En línea]. Disponible en: \url{https://grctools.software/}. [Consultado: 17 jul. 2026].
+
+\end{thebibliography}
 
 \end{document}
+% that's all folks

@@ -1,0 +1,5 @@
+## Respecto a la carpeta "services": Se recomienda a futuro delegar las tareas pesadas de validacion, estructuracion, procesamiento, y operaciones con APIs externas, o servicios externos, a servicios especializados.
+
+La razon detras de esto es que permite mantener el controlador limpio y enfocado únicamente en la gestión de solicitudes HTTP, mientras que los servicios manejan la lógica de negocio compleja, la integración con APIs externas y la manipulación de datos. Esto mejora la mantenibilidad, facilita las pruebas unitarias y promueve la reutilización del código.
+
+Actualmente, ya se esta aplicando, pero podria probar ser buena practica aplicar esta recomendacion.
