@@ -76,9 +76,6 @@ Se ha probado a nivel de tests automatizados. La cobertura principal esta en:
 
 ## Pendiente real
 
-La deuda no deberia seguir marcada como "falta validacion IDOR" en bruto. El
-estado mas correcto es:
-
 > Riesgo IDOR mitigado en codigo y cubierto por tests automatizados, pendiente
 > de revision manual de pruebas y validacion exploratoria de flujos reales.
 
