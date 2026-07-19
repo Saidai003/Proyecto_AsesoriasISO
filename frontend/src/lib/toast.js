@@ -1,5 +1,3 @@
-// lets explain this code line by line.
-
 export function showToast({ title='Notificación', message='', type='info', ttl=5000 } = {}){
     // here, we dispatch a CustomEvent 'toast:show' on the global window object.
     // The Toast component listens for this event and will show a toast with the provided details.

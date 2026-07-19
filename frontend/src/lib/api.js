@@ -22,7 +22,8 @@ export async function fetchWithAuth(input, init = {}){
   const envBase = import.meta.env.VITE_API_BASE || import.meta.env.VITE_BACKEND_URL
   const isDev = import.meta.env.DEV
   // In development use relative paths so Vite dev server proxy forwards requests
-  const API_BASE = isDev ? '' : (envBase || 'http://localhost:3000')
+  // In production, default to relative paths (same domain) if no envBase is provided
+  const API_BASE = isDev ? '' : (envBase || '')
   // If current page includes a workspace query param (e.g. /lobby?workspace=123)
   // forward it to backend so Admin can request data scoped to that workspace.
   const appendWorkspaceFromLocation = (u) => {

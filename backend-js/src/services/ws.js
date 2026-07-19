@@ -2,6 +2,7 @@
 const WebSocket = require('ws')
 const url = require('url')
 const { verifyAccessToken } = require('../auth')
+const { verifyWorkspaceAccess } = require('../lib/workspaceAuth')
 
 // roomKey -> Set of client objects
 const rooms = new Map()
@@ -27,7 +28,7 @@ function init(server) {
     })
   })
 
-  wss.on('connection', (ws, req) => {
+  wss.on('connection', async (ws, req) => {
     const query = url.parse(req.url, true).query || {}
 
     // Optional JWT authentication via ?token=...
@@ -43,21 +44,47 @@ function init(server) {
       rooms: new Set()
     }
 
+    // Helper to check workspace access
+    const checkAccess = async (resourceId, type) => {
+      if (!user) return false
+      if (user.role === 'Admin') return true
+      if (!user.workspace_id) return false
+      return await verifyWorkspaceAccess(resourceId, type, Number(user.workspace_id))
+    }
+
     // Subscribe to rooms based on query params
     let hasRoom = false
     if (query.requisito_id) {
-      const key = `requisito:${Number(query.requisito_id)}`
+      const reqId = Number(query.requisito_id)
+      const allowed = await checkAccess(reqId, 'evaluacion')
+      if (!allowed) {
+        ws.close(4003, 'Forbidden: Workspace access required')
+        return
+      }
+      const key = `requisito:${reqId}`
       addToRoom(key, client)
       hasRoom = true
     }
     if (query.nc_id) {
-      const key = `nc:${Number(query.nc_id)}`
+      const ncId = Number(query.nc_id)
+      const allowed = await checkAccess(ncId, 'nc')
+      if (!allowed) {
+        ws.close(4003, 'Forbidden: Workspace access required')
+        return
+      }
+      const key = `nc:${ncId}`
       addToRoom(key, client)
       hasRoom = true
     }
     // Global fallback
     if (!hasRoom) {
-      addToRoom('global', client)
+      // Only allow global subscription if user is Admin
+      if (user && user.role === 'Admin') {
+        addToRoom('global', client)
+      } else {
+        ws.close(4003, 'Forbidden: Global channel restricted to admins')
+        return
+      }
     }
 
     ws.on('close', () => {

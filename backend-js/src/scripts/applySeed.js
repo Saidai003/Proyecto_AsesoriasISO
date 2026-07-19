@@ -2,13 +2,14 @@ const fs = require('fs')
 const path = require('path')
 const mysql = require('mysql2/promise')
 
-async function run(){
+async function run() {
   const seedPath = path.resolve(__dirname, '../../../seeds/seedISO_data_only.sql')
-  if(!fs.existsSync(seedPath)){
+  if (!fs.existsSync(seedPath)) {
     console.error('Seed file not found at', seedPath); process.exit(1)
   }
   const sql = fs.readFileSync(seedPath, 'utf8')
 
+  // this function uses the credentials from the docker-compose.yml file
   const connection = await mysql.createConnection({
     host: process.env.DB_HOST || 'mysql',
     user: process.env.DB_USER || 'proyecto_user',
@@ -18,14 +19,14 @@ async function run(){
     charset: 'utf8mb4'
   })
 
-  try{
+  try {
     console.log('Executing seed SQL...')
     await connection.query(sql)
     console.log('Seed applied successfully')
-  }catch(err){
+  } catch (err) {
     console.error('Error applying seed:', err)
     process.exit(2)
-  }finally{
+  } finally {
     await connection.end()
   }
 }
