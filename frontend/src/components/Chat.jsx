@@ -4,7 +4,7 @@ import { useAuth } from '../AuthContext'
 import { showToast } from '../lib/ui'
 import { useNavigate } from 'react-router-dom'
 
-export default function Chat({ requisitoId, evaluacionId, evidences = [], ncList = [] }){
+export default function Chat({ evaluacionId, requisitoBaseId, evidences = [], ncList = [] }){
   const { accessToken, user } = useAuth()
   const navigate = useNavigate()
   const [messages, setMessages] = useState([])
@@ -21,11 +21,11 @@ export default function Chat({ requisitoId, evaluacionId, evidences = [], ncList
   const [sending, setSending] = useState(false)
 
   useEffect(() => {
-    if(!requisitoId) return
+    if(!evaluacionId) return
     let mounted = true
     ;(async () => {
       try{
-        const r = await fetchWithAuth(`/api/chat?requisito_id=${requisitoId}`)
+        const r = await fetchWithAuth(`/api/chat?requisito_id=${evaluacionId}`)
         if(!r.ok) return
         const json = await r.json()
         if(!mounted) return
@@ -40,15 +40,15 @@ export default function Chat({ requisitoId, evaluacionId, evidences = [], ncList
       }catch(e){ console.error('load chat', e) }
     })()
     return () => { mounted = false }
-  }, [requisitoId])
+  }, [evaluacionId])
 
   useEffect(() => {
-    if(!accessToken || !requisitoId) return
+    if(!accessToken || !evaluacionId) return
     
-    // Conectarse SOLO al canal de este requisito via WebSocket
+    // Conectarse al canal de la evaluación del requisito dentro del workspace via WebSocket
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
     const host = window.location.host
-    const wsUrl = `${protocol}//${host}/ws?token=${encodeURIComponent(accessToken)}&requisito_id=${requisitoId}`
+    const wsUrl = `${protocol}//${host}/ws?token=${encodeURIComponent(accessToken)}&requisito_id=${evaluacionId}`
     const ws = new window.WebSocket(wsUrl)
     esRef.current = ws
 
@@ -79,7 +79,7 @@ export default function Chat({ requisitoId, evaluacionId, evidences = [], ncList
 
     ws.onerror = (err) => { console.error('ws error', err) }
     return () => { try{ ws.close() }catch(_){ } }
-  }, [accessToken, requisitoId])
+  }, [accessToken, evaluacionId])
 
   useEffect(() => {
     if(listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight
@@ -129,10 +129,10 @@ export default function Chat({ requisitoId, evaluacionId, evidences = [], ncList
 
   const send = async () => {
     if(sending) return
-    if(!text || !requisitoId) return
+    if(!text || !evaluacionId) return
     setSending(true)
     const attachments = attachSelected.map(a => ({ type: a.type, id: a.id, title: a.title }))
-    const payload = { requisito_id: requisitoId, contenido: text, metadata: { attachments } }
+    const payload = { requisito_id: evaluacionId, contenido: text, metadata: { attachments } }
     try{
       const r = await fetchWithAuth('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
       if(!r.ok){
@@ -160,8 +160,8 @@ export default function Chat({ requisitoId, evaluacionId, evidences = [], ncList
 
   const loadAttachItems = async (type) => {
     try{
-      if(type === 'evidencia' && requisitoId){
-        const r = await fetchWithAuth(`/api/evidencias/requisito/${requisitoId}`)
+      if(type === 'evidencia' && requisitoBaseId){
+        const r = await fetchWithAuth(`/api/evidencias/requisito/${requisitoBaseId}`)
         if(!r.ok) return
         const j = await r.json()
         setAttachItems(j.evidencias || [])
@@ -331,7 +331,16 @@ export default function Chat({ requisitoId, evaluacionId, evidences = [], ncList
       </div>
       <div className="mt-3">
         <div className="flex gap-2 items-center">
-          <input onKeyDown={(e)=>{ if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); send() } }} value={text} onChange={(e)=>setText(e.target.value)} placeholder="Escribe un mensaje..." className="flex-1 p-2 border rounded" />
+          <input
+            type="text"
+            name="chat-message"
+            autoComplete="off"
+            onKeyDown={(e)=>{ if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); send() } }}
+            value={text}
+            onChange={(e)=>setText(e.target.value)}
+            placeholder="Escribe un mensaje..."
+            className="flex-1 p-2 border rounded"
+          />
           <button onClick={()=>{ setAttachOpen(o => !o); if(!attachOpen && attachType) loadAttachItems(attachType) }} className="px-2 py-1 border rounded text-sm">Adjuntar</button>
           <button onClick={send} disabled={sending} className={`px-3 py-1 ${sending ? 'bg-slate-400' : 'bg-blue-600'} text-white rounded`}>Enviar</button>
         </div>

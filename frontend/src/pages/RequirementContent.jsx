@@ -1095,7 +1095,7 @@ export default function RequirementContent({ node, onRequestCreateNc, onStatusCh
         </div>
         {/* --- FIN DEL CONTENEDOR DE BRECHAS --- */}
 
-        <Chat requisitoId={node && node.id} evaluacionId={evaluacionId} evidences={evidences} ncList={ncList} />
+        <Chat evaluacionId={evaluacionId} requisitoBaseId={node && node.id} evidences={evidences} ncList={ncList} />
       </div>
 
       {selectedEvidence && (

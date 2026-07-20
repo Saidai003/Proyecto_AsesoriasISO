@@ -50,11 +50,22 @@ function mockRes() {
 }
 
 describe('Multi-tenancy isolation', () => {
-  beforeEach(() => { jest.resetAllMocks(); });
+  // Reset mocks before each test to ensure isolation and prevent state leakage between tests.
+  beforeEach(() => { jest.resetAllMocks(); });  
 
   // -----------------------------------------------------------------------
   // verifyWorkspaceAccess utility
   // -----------------------------------------------------------------------
+
+  // verifyWorkspaceAccess expects resourceId, resourceType, and workspaceId. 
+  // It returns true if the resource belongs to the workspace, false otherwise.
+
+  // resourceId is the ID of the resource (evaluacion, nc, accion), 
+  // resourceType is a string indicating the type ('evaluacion', 'nc', 'accion'), 
+  // and workspaceId is the ID of the workspace to check against.
+
+  // The following tests check various scenarios for this function, including missing parameters, 
+  // unknown resource types, and valid/invalid workspace associations.
   describe('verifyWorkspaceAccess (lib/workspaceAuth)', () => {
     test('returns false when resourceId is missing', async () => {
       expect(await verifyWorkspaceAccess(null, 'nc', 1)).toBe(false);
@@ -519,7 +530,7 @@ describe('Multi-tenancy isolation', () => {
         body: { requisito_id: 5, contenido: 'hola' },
         user: { workspace_id: 1, id: 2 }
       };
-      const res = mockRes();
+      const res = mockRes(); // mockRest() lo que hace es devolver un objeto con status() y json()
       await postMessage(req, res);
       expect(res.status).toHaveBeenCalledWith(201);
       expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ id: 99, contenido: 'hola' }));

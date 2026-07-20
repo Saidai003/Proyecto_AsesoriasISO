@@ -1,7 +1,11 @@
 describe('driveService environment folder naming', () => {
-  const originalEnv = process.env.NODE_ENV
+  const originalEnv = process.env.NODE_ENV //NODE_ENV is set by jest
+  // What is NODE_ENV?
+  // Answer: https://nodejs.org/api/process.html#process_process_env
+  // It contains the user's enviroment, basically.
 
   afterEach(() => {
+    // we are deleting it because we want to reset the environment variable to its original state after each test.
     if(originalEnv === undefined) delete process.env.NODE_ENV
     else process.env.NODE_ENV = originalEnv
     delete process.env.GOOGLE_DRIVE_ENV_FOLDER

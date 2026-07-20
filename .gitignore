@@ -25,3 +25,11 @@ informe-de-avances.tex
 # Script local para backups de base de datos (no versionado)
 backend-js/scripts/dbBackup.js
 backend-js/backups/
+# Cobertura de Jest/Istanbul (artefactos locales regenerables)
+coverage/
+coverage/coverage-final.json
+coverage/lcov.info
+coverage/lcov-report/index.html
+
+# Reportes locales de NYC/Istanbul
+.nyc_output/

@@ -56,3 +56,5 @@ describe('userController (unit)', () => {
     expect(res.json).toHaveBeenCalledWith({ id: 5 });
   });
 });
+
+// It requires tests for updateUser and for change password scenario.

@@ -139,20 +139,6 @@ async function downloadEvidence(req, res){
 const fs = require('fs').promises
 const driveService = require('../services/driveService')
 
-// Sanitize a title into a filesystem/Drive-friendly name fragment
-function sanitizeForFolderName(s){
-  if(!s) return ''
-  try{
-    return String(s)
-      .normalize('NFKD')
-      .replace(/[\u0300-\u036f]/g, '') // strip diacritics
-      .replace(/[^\w\s.-]/g, '') // remove non word/space/dot/dash
-      .trim()
-      .replace(/\s+/g, '-')
-      .slice(0,60)
-  }catch(_){ return String(s).replace(/[^\w\s.-]/g,'').replace(/\s+/g,'-').slice(0,60) }
-}
-
 // Build a numeric hierarchical folder name for a requisito from evaluacion_requisito id
 // Produces names like "4-1" or "4-1-1" (clauseNumber - requisitoIndex - subIndex...)
 async function buildRequisitoFolderNameByEvaluacionId(evaluacionId){
