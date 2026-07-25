@@ -1,13 +1,13 @@
 const Router = require('express').Router;
 const router = Router();
-const { requireAuth, requireRoles } = require('../middleware/auth');
+const { requireAuth, requireRole } = require('../middleware/auth');
 const { createNC, deleteNC, listByEvaluacion, updateNC, listActions, getNC, getNCHistory, getNCHistoryByEvaluacion } = require('../controllers/ncController');
 const { createAction } = require('../controllers/accionesController');
 
 // create NC (evaluator or admin)
-router.post('/', requireAuth, requireRoles('Evaluador'), createNC);
+router.post('/', requireAuth, requireRole('Evaluador', 'Admin'), createNC);
 // delete NC (evaluator or admin)
-router.delete('/:id', requireAuth, requireRoles('Evaluador'), deleteNC);
+router.delete('/:id', requireAuth, requireRole('Evaluador', 'Admin'), deleteNC);
 // list NCs for an evaluacion
 router.get('/evaluacion/:id', requireAuth, listByEvaluacion);
 // get NC history for evaluacion

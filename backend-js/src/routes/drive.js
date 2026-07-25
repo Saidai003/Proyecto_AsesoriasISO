@@ -1,9 +1,10 @@
 const express = require('express')
 const router = express.Router()
 const driveService = require('../services/driveService')
+const { requireAuth, requireRole } = require('../middleware/auth')
 
 // Returns an authorization URL to initiate OAuth2 flow
-router.get('/authurl', (req, res) => {
+router.get('/authurl', requireAuth, requireRole('Evaluador', 'Responsable SGC'), (req, res) => {
   try{
     const url = driveService.generateAuthUrl()
     return res.json({ url })
@@ -14,7 +15,7 @@ router.get('/authurl', (req, res) => {
 })
 
 // Direct redirect to the Google consent screen (convenience endpoint)
-router.get('/auth', (req, res) => {
+router.get('/auth', requireAuth, requireRole('Evaluador', 'Responsable SGC'), (req, res) => {
   try{
     const url = driveService.generateAuthUrl()
     return res.redirect(url)
@@ -25,12 +26,13 @@ router.get('/auth', (req, res) => {
 })
 
 // Exchange an authorization code for tokens and save them server-side
-router.post('/token', async (req, res) => {
+router.post('/token', requireAuth, requireRole('Evaluador', 'Responsable SGC'), async (req, res) => {
   const code = req.body && req.body.code
   if(!code) return res.status(400).json({ error: 'missing_code' })
   try{
     const tokens = await driveService.getTokenFromCode(code)
-    return res.json({ ok: true, tokens })
+    // OAuth tokens are stored server-side; never return them to the browser.
+    return res.json({ ok: true })
   }catch(err){
     console.error('getTokenFromCode error', err)
     return res.status(500).json({ error: 'token_exchange_failed', message: err.message || String(err) })
@@ -52,7 +54,7 @@ router.get('/callback', async (req, res) => {
 })
 
 // Status: whether tokens are present
-router.get('/status', async (req, res) => {
+router.get('/status', requireAuth, requireRole('Evaluador', 'Responsable SGC'), async (req, res) => {
   try{
     const ok = await driveService.hasSavedToken()
     return res.json({ authorized: ok })

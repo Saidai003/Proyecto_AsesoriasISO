@@ -9,7 +9,7 @@ const mysql = require('mysql2/promise')
 
 // Ahora busca la carpeta seeds dentro del propio backend-js
 const SEEDS_DIR = process.env.SEEDS_DIR || path.resolve(__dirname, '../seeds')
-const SEED_FILES = ['init.sql', 'seedISO_utf8.sql', 'seed_users_workspaces.sql']
+const SEED_FILES = ['seedISO_utf8.sql', 'seed_users_workspaces.sql']
 
 async function createConnection(){
   return mysql.createConnection({
@@ -51,6 +51,45 @@ async function applySeedFile(connection, filename){
   await connection.query(sql)
 }
 
+/**
+ * Repairs only ISO seed strings that were previously imported through a
+ * latin1 MySQL client. That import replaced every UTF-8 byte outside latin1
+ * with `?`, which cannot be repaired in the browser.
+ *
+ * The canonical values stay in seedISO_utf8.sql; this deliberately does not
+ * duplicate or reformulate the seed data in application code.
+ */
+async function repairCorruptedIsoText(connection){
+  const seedPath = path.join(SEEDS_DIR, 'seedISO_utf8.sql')
+  if(!fs.existsSync(seedPath)) return
+
+  const sql = fs.readFileSync(seedPath, 'utf8').replace(/^\uFEFF/, '')
+  const clauseMatches = [...sql.matchAll(/VALUES\s*\(@ISO_ID,\s*(\d+),\s*'([^']+)'\);/g)]
+  const requirementMatches = [...sql.matchAll(/\(@CLAUSULA(\d+)_ID,\s*(?:NULL|@\w+),\s*'([^']+)'\)/g)]
+
+  for(const [, number, title] of clauseMatches){
+    await connection.execute(
+      `UPDATE CLAUSULAS SET titulo = ?
+       WHERE numero_clausula = ? AND titulo LIKE '%?%'`,
+      [title, Number(number)]
+    )
+  }
+
+  for(const [, clauseNumber, description] of requirementMatches){
+    const prefix = description.match(/^(\d+(?:\.\d+)*)\b/)?.[1]
+    if(!prefix) continue
+    await connection.execute(
+      `UPDATE REQUISITOS_BASE rb
+       INNER JOIN CLAUSULAS c ON c.id = rb.clausula_id
+       SET rb.descripcion_normativa = ?
+       WHERE c.numero_clausula = ?
+         AND rb.descripcion_normativa LIKE '%?%'
+         AND rb.descripcion_normativa REGEXP ?`,
+      [description, Number(clauseNumber), `^${prefix.replace(/\./g, '\\.')}( |$)`]
+    )
+  }
+}
+
 async function run(){
   let connection
   try{
@@ -62,12 +101,14 @@ async function run(){
       for(const file of SEED_FILES){
         await applySeedFile(connection, file)
       }
+      await repairCorruptedIsoText(connection)
       console.log('[ensureSeed] Seeds aplicados correctamente.')
       return
     }
 
     console.log('[ensureSeed] La base ya tiene datos ISO; aplicando/verificando seed de usuarios demo...')
     await applySeedFile(connection, 'seed_users_workspaces.sql')
+    await repairCorruptedIsoText(connection)
     console.log('[ensureSeed] Seed de usuarios demo aplicado/verificado correctamente.')
   }catch(err){
     console.error('[ensureSeed] Error:', err.message || err)
@@ -78,3 +119,4 @@ async function run(){
 }
 
 run()
+

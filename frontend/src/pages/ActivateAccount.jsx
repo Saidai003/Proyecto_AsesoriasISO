@@ -47,7 +47,7 @@ export default function ActivateAccount() {
     try {
       const envBase = import.meta.env.VITE_API_BASE
       const isDev = import.meta.env.DEV
-      const API_BASE = isDev ? '' : (envBase || 'http://localhost:3000')
+      const API_BASE = isDev ? '' : (envBase || '')
 
       const res = await fetch(`${API_BASE}/auth/first-login-password`, {
         method: 'POST',

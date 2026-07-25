@@ -181,16 +181,13 @@ function checkEvaluatorRestrictions(role, payload){
 
 function checkStatusChangePermission(role, existing, uid, payload){
   if(!Object.prototype.hasOwnProperty.call(payload, 'estado_validacion_archivo')) return true
-  // Only Admin and Evaluador may change approval state
-  return role === 'Admin' || role === 'Evaluador'
+  // La aprobación de una evidencia es exclusiva del Evaluador.
+  return role === 'Evaluador'
 }
 
 function checkGeneralPermission(role, existing, uid){
-  if(role === 'Admin') return true
-  // Evaluador: field-level restrictions in checkEvaluatorRestrictions
-  if(role === 'Evaluador') return true
-  // Responsable and others: only their own uploads
-  return _toNumber(existing.usuario_carga_id) === _toNumber(uid)
+  // Solo el Responsable SGC propietario puede editar el archivo o sus metadatos.
+  return role === 'Responsable SGC' && _toNumber(existing.usuario_carga_id) === _toNumber(uid)
 }
 
 // Checked. Now supports Drive-hosted files
@@ -348,6 +345,13 @@ async function updateEvidence(req, res){
     const uid = req.user && req.user.id ? req.user.id : null
     const payload = req.body || {}
 
+    if(Object.prototype.hasOwnProperty.call(payload, 'estado_validacion_archivo')){
+      const allowedStates = ['Pendiente', 'Aceptado', 'Rechazado']
+      if(!allowedStates.includes(payload.estado_validacion_archivo)){
+        return res.status(400).json({ error: 'invalid_estado_validacion_archivo', allowed: allowedStates })
+      }
+    }
+
     // If user is Evaluador, only allow setting approval state
 
     // Where does estado_validacion_archivo come from and what are its possible values?
@@ -363,7 +367,8 @@ async function updateEvidence(req, res){
       return res.status(403).json({ error: 'forbidden' })
     }
 
-    if(!checkGeneralPermission(role, existing, uid)){
+    const isStatusChange = Object.prototype.hasOwnProperty.call(payload, 'estado_validacion_archivo')
+    if(!isStatusChange && !checkGeneralPermission(role, existing, uid)){
       return res.status(403).json({ error: 'forbidden' })
     }
 
@@ -527,7 +532,7 @@ async function deleteEvidence(req, res){
     const existing = lookup.evidence
     const role = req.user && req.user.role ? req.user.role : ''
     const uid = req.user && req.user.id ? req.user.id : null
-    const canDelete = role === 'Admin' || _toNumber(existing.usuario_carga_id) === _toNumber(uid)
+    const canDelete = role === 'Responsable SGC' && _toNumber(existing.usuario_carga_id) === _toNumber(uid)
     if(!canDelete) return res.status(403).json({ error: 'forbidden' })
     // Insert delete log before removing the evidence row so history is preserved.
     try{

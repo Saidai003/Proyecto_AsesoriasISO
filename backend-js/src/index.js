@@ -16,8 +16,6 @@ app.use(cookieParser());
 // Mount feature routers
 const authRouter = require('./routes/auth');
 const usersRouter = require('./routes/users');
-const operationalRouter = require('./routes/operational');
-const evaluatorRouter = require('./routes/evaluator');
 const seedRouter = require('./routes/seed');
 const workspacesRouter = require('./routes/workspaces');
 const isoRouter = require('./routes/iso');
@@ -32,8 +30,6 @@ const dashboardsRouter = require('./routes/dashboards');
 
 app.use('/auth', authRouter);
 app.use('/api/users', usersRouter);
-app.use('/api/operational', operationalRouter);
-app.use('/api/evaluator', evaluatorRouter);
 app.use('/seed', seedRouter);
 app.use('/api/workspaces', workspacesRouter);
 app.use('/api/isos', isoRouter);
@@ -41,8 +37,11 @@ app.use('/api/evidencias', evidencesRouter);
 app.use('/google-drive', driveRouter);
 
 const path = require('path');
+const { requireAuth } = require('./middleware/auth');
 const uploadsPath = path.join(__dirname, '..', 'uploads');
-app.use('/uploads', express.static(uploadsPath));
+// Static files must not be anonymously retrievable. Resource/workspace-level
+// authorization remains the responsibility of the evidence download endpoint.
+app.use('/uploads', requireAuth, express.static(uploadsPath));
 
 app.use('/api/nc', ncRouter);
 app.use('/api/notifications', notificationsRouter);

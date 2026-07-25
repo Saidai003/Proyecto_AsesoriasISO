@@ -653,8 +653,7 @@ export default function RequirementContent({ node, onRequestCreateNc, onStatusCh
 
   const canModifyEvidence = (ev) => {
     if(!user) return false
-    if(hasRole(user, 'admin')) return true
-    return user.id === ev.usuario_carga_id
+    return hasRole(user, 'responsable') && user.id === ev.usuario_carga_id
   }
 
   const canReviewEvidence = () => {
@@ -671,7 +670,7 @@ export default function RequirementContent({ node, onRequestCreateNc, onStatusCh
 
   const updateEvidenceStatus = async (ev, status) => {
     try{
-      const res = await fetchWithAuth(`/api/evidencias/${ev.id}`, {
+      const res = await fetchWithAuth(`/api/evidencias/${ev.id}/estado`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ estado_validacion_archivo: status })
@@ -773,7 +772,7 @@ export default function RequirementContent({ node, onRequestCreateNc, onStatusCh
             <div className="border rounded p-3 mb-3 bg-slate-50">
               <p className="text-sm text-slate-500 text-center">No hay evidencias cargadas para este requisito.</p>
             </div>
-          ) : !isEvaluador ? (
+          ) : hasRole(user, 'responsable') ? (
             <UploadArea evaluacionId={evaluacionId} onUploaded={(newEv)=>{
               setEvidences(prev => [newEv, ...prev])
               syncRequirementStatus(evaluacionId)

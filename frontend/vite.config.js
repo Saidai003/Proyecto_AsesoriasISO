@@ -11,7 +11,7 @@ export default defineConfig(({ command, mode }) => ({
     proxy: {
       // Proxy API and auth requests to backend to keep same-origin for cookies
       '/api': {
-        target: process.env.VITE_BACKEND_URL || 'http://localhost:3000',
+        target: process.env.VITE_API_BASE || 'http://localhost:3000',
         changeOrigin: true,
         secure: false,
         cookieDomainRewrite: '',
@@ -23,18 +23,18 @@ export default defineConfig(({ command, mode }) => ({
         rewrite: (path) => path.replace(/^\/api/, '/api')
       },
       '/auth': {
-        target: process.env.VITE_BACKEND_URL || 'http://localhost:3000',
+        target: process.env.VITE_API_BASE || 'http://localhost:3000',
         changeOrigin: true,
         secure: false,
         cookieDomainRewrite: '',
       },
       '/google-drive': {
-        target: process.env.VITE_BACKEND_URL || 'http://localhost:3000',
+        target: process.env.VITE_API_BASE || 'http://localhost:3000',
         changeOrigin: true,
         secure: false,
       },
       '/ws': {
-        target: process.env.VITE_BACKEND_URL || 'http://localhost:3000',
+        target: process.env.VITE_API_BASE || 'http://localhost:3000',
         changeOrigin: true,
         secure: false,
         ws: true,

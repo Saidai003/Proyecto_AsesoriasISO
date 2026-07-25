@@ -15,21 +15,14 @@ function requireAuth(req, res, next){
   }
 }
 
-function requireRole(roleName){
-  return (req, res, next) => {
-    if(!req.user) return res.status(401).json({ error: 'unauthenticated' });
-    if(req.user.role !== roleName && req.user.role !== 'Admin') return res.status(403).json({ error: 'forbidden' });
-    next();
-  };
-}
-
-function requireRoles(...roles){
+function requireRole(...roles){
   const allowed = Array.isArray(roles[0]) ? roles[0] : roles;
   return (req, res, next) => {
     if(!req.user) return res.status(401).json({ error: 'unauthenticated' });
-    if(allowed.includes(req.user.role) || req.user.role === 'Admin') return next();
-    return res.status(403).json({ error: 'forbidden' });
+    if(!allowed.includes(req.user.role)) return res.status(403).json({ error: 'forbidden' });
+    return next();
   };
 }
 
-module.exports = { requireAuth, requireRole, requireRoles };
+
+module.exports = { requireAuth, requireRole };

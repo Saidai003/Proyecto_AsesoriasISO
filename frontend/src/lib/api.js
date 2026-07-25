@@ -17,9 +17,9 @@
 // like fetchWithAuth allows for more control and avoids adding an 
 // additional dependency to the project.
 export async function fetchWithAuth(input, init = {}){
-  // Prefer explicit VITE_API_BASE; in local dev fall back to localhost:3000
+  // VITE_API_BASE is the single public backend URL used by production builds.
   // In development use relative paths so Vite dev server proxy can forward requests
-  const envBase = import.meta.env.VITE_API_BASE || import.meta.env.VITE_BACKEND_URL
+  const envBase = import.meta.env.VITE_API_BASE
   const isDev = import.meta.env.DEV
   // In development use relative paths so Vite dev server proxy forwards requests
   // In production, default to relative paths (same domain) if no envBase is provided

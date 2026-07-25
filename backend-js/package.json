@@ -8,7 +8,8 @@
     "test": "jest",
     "test:unit": "jest pruebas/unitarias --runInBand",
     "test:integration": "cross-env RUN_INTEGRATION=true jest pruebas/integracion --runInBand",
-    "test:all": "npm run test:unit && npm run test:integration"
+    "test:all": "npm run test:unit && npm run test:integration",
+    "seed:demo-scenarios": "node scripts/seed_demo_scenarios.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

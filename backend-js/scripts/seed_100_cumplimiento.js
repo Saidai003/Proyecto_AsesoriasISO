@@ -15,10 +15,29 @@ require('dotenv').config();
 const { pool } = require('../src/db');
 
 // --- CONFIGURACIÓN ---
-const WORKSPACE_ID = 1;
-const EVALUADOR_ID = 2;      // evaluador@demo.local
-const RESPONSABLE_ID = 1;    // responsable@demo.local
+const WORKSPACE_ID = Number(process.env.DEMO_WORKSPACE_ID || 1);
+const EVALUADOR_EMAIL = process.env.DEMO_EVALUADOR_EMAIL || 'evaluador@demo.local';
+const RESPONSABLE_EMAIL = process.env.DEMO_RESPONSABLE_EMAIL || 'responsable@demo.local';
 
+async function resolveScenarioUsers(conn) {
+  const [rows] = await conn.execute(
+    `SELECT u.id, u.email, u.workspace_id, r.nombre AS rol
+     FROM USUARIOS u
+     JOIN ROLES r ON r.id = u.role_id
+     WHERE u.email IN (?, ?)`,
+    [EVALUADOR_EMAIL, RESPONSABLE_EMAIL]
+  );
+  const byEmail = new Map(rows.map((row) => [row.email, row]));
+  const evaluador = byEmail.get(EVALUADOR_EMAIL);
+  const responsable = byEmail.get(RESPONSABLE_EMAIL);
+  if (!evaluador || evaluador.rol !== 'Evaluador' || Number(evaluador.workspace_id) !== WORKSPACE_ID) {
+    throw new Error(`Evaluador de demo inválido para workspace ${WORKSPACE_ID}: ${EVALUADOR_EMAIL}`);
+  }
+  if (!responsable || responsable.rol !== 'Responsable SGC' || Number(responsable.workspace_id) !== WORKSPACE_ID) {
+    throw new Error(`Responsable de demo inválido para workspace ${WORKSPACE_ID}: ${RESPONSABLE_EMAIL}`);
+  }
+  return { evaluadorId: evaluador.id, responsableId: responsable.id };
+}
 // Comentarios variados para evidencias aceptadas
 const COMENTARIOS_EVIDENCIAS = [
   'Documento aprobado - cumple con los requisitos normativos',
@@ -52,6 +71,7 @@ async function run() {
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
+    const { evaluadorId, responsableId } = await resolveScenarioUsers(conn);
 
     // Obtener todos los requisitos base
     const [requisitos] = await conn.execute('SELECT id, descripcion_normativa FROM REQUISITOS_BASE ORDER BY id');
@@ -107,7 +127,7 @@ async function run() {
       const [erResult] = await conn.execute(
         `INSERT INTO EVALUACION_REQUISITO (requisito_base_id, workspace_id, estado_cumplimiento, ultima_edicion_por, fecha_ultima_edicion)
          VALUES (?, ?, 'Cumple', ?, NOW() - INTERVAL ? DAY)`,
-        [req.id, WORKSPACE_ID, EVALUADOR_ID, createdDaysAgo]
+        [req.id, WORKSPACE_ID, evaluadorId, createdDaysAgo]
       );
       const evaluacionId = erResult.insertId;
 
@@ -118,12 +138,12 @@ async function run() {
       await conn.execute(
         `INSERT INTO EVIDENCIAS (evaluacion_requisito_id, usuario_carga_id, nombre_archivo, url_archivo, tipo_formato, estado_validacion_archivo, comentario_evidencia, fecha_carga)
          VALUES (?, ?, ?, ?, 'pdf', 'Aceptado', ?, NOW() - INTERVAL ? DAY)`,
-        [evaluacionId, RESPONSABLE_ID, `evidencia_${req.id}_01.pdf`, `drive://seed_ev_${req.id}_01`, comentario1, createdDaysAgo + 4]
+        [evaluacionId, responsableId, `evidencia_${req.id}_01.pdf`, `drive://seed_ev_${req.id}_01`, comentario1, createdDaysAgo + 4]
       );
       await conn.execute(
         `INSERT INTO EVIDENCIAS (evaluacion_requisito_id, usuario_carga_id, nombre_archivo, url_archivo, tipo_formato, estado_validacion_archivo, comentario_evidencia, fecha_carga)
          VALUES (?, ?, ?, ?, 'docx', 'Aceptado', ?, NOW() - INTERVAL ? DAY)`,
-        [evaluacionId, RESPONSABLE_ID, `registro_${req.id}_02.docx`, `drive://seed_ev_${req.id}_02`, comentario2, createdDaysAgo + 2]
+        [evaluacionId, responsableId, `registro_${req.id}_02.docx`, `drive://seed_ev_${req.id}_02`, comentario2, createdDaysAgo + 2]
       );
       totalEvidencias += 2;
 
@@ -134,7 +154,7 @@ async function run() {
       const [ncResult] = await conn.execute(
         `INSERT INTO AUDITORIA_NC (evaluacion_requisito_id, evaluador_id, estado_flujo, estado_validacion, comentario_nc, titulo, descripcion, ultima_edicion_por, fecha_ultima_edicion)
          VALUES (?, ?, 'Cerrada', 'Acepto', ?, ?, ?, ?, NOW() - INTERVAL ? DAY)`,
-        [evaluacionId, EVALUADOR_ID, brecha.comentario, brecha.titulo, brecha.desc, EVALUADOR_ID, ncCreatedDaysAgo]
+        [evaluacionId, evaluadorId, brecha.comentario, brecha.titulo, brecha.desc, evaluadorId, ncCreatedDaysAgo]
       );
       const ncId = ncResult.insertId;
       totalBrechas++;
@@ -142,32 +162,32 @@ async function run() {
       // Asignar responsable a la brecha
       await conn.execute(
         'INSERT INTO AUDITORIA_NC_RESPONSABLES (auditoria_nc_id, usuario_id) VALUES (?, ?)',
-        [ncId, RESPONSABLE_ID]
+        [ncId, responsableId]
       );
 
       // Historial de la brecha (abierta -> cerrada)
       await conn.execute(
         `INSERT INTO AUDITORIA_NC_HIST (nc_id, estado_flujo, estado_validacion, ultima_edicion_por, fecha_snapshot)
          VALUES (?, 'Abierta', 'Parcial', ?, NOW() - INTERVAL ? DAY)`,
-        [ncId, EVALUADOR_ID, requisitos.length - i + 10]
+        [ncId, evaluadorId, requisitos.length - i + 10]
       );
       await conn.execute(
         `INSERT INTO AUDITORIA_NC_HIST (nc_id, estado_flujo, estado_validacion, ultima_edicion_por, fecha_snapshot)
          VALUES (?, 'Cerrada', 'Acepto', ?, NOW() - INTERVAL ? DAY)`,
-        [ncId, EVALUADOR_ID, requisitos.length - i]
+        [ncId, evaluadorId, requisitos.length - i]
       );
 
       // 4. Acción correctiva eficaz
       await conn.execute(
         `INSERT INTO ACCIONES_CORRECTIVAS (auditoria_nc_id, autor_id, tipo_autor, nc, accion, estado_accion, fecha_accion)
          VALUES (?, ?, 'Responsable SGC', ?, 'Se implementaron las correcciones necesarias y se verificó su eficacia', 'Eficaz', NOW() - INTERVAL ? DAY)`,
-        [ncId, RESPONSABLE_ID, brecha.desc, actionDaysAgo]
+        [ncId, responsableId, brecha.desc, actionDaysAgo]
       );
       totalAcciones++;
 
       // 5. Mensajes de chat en el requisito
       for (const msg of MENSAJES_CHAT) {
-        const autorId = msg.autor === 'EVALUADOR' ? EVALUADOR_ID : RESPONSABLE_ID;
+        const autorId = msg.autor === 'EVALUADOR' ? evaluadorId : responsableId;
         await conn.execute(
           `INSERT INTO CHAT_MESSAGES (requisito_id, nc_id, autor_id, contenido, created_at)
            VALUES (?, ?, ?, ?, NOW() - INTERVAL ? HOUR)`,

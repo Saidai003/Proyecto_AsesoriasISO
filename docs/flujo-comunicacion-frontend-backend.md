@@ -116,7 +116,7 @@ El flujo verificado en el código para la administración multi-tenant funciona 
 2. **Almacenamiento Local:** El frontend guarda el ID de ese workspace mediante `sessionStorage.setItem('actingWorkspace', id)`.
 3. **Interceptación de API:** Al realizar cualquier petición, la función `fetchWithAuth` en [api.js (línea 29)](file:///c:/Users/Maxim/Desktop/ProyectoISO/frontend/src/lib/api.js#L29) ejecuta la subfunción `appendWorkspaceFromLocation`.
 4. **Propagación en URL de API:** Si `sessionStorage` tiene un valor para `actingWorkspace`, este se anexa automáticamente como parámetro de consulta a la petición interna de la API (ej. `/api/evidencias/...?workspace=ID`).
-5. **Validación en Backend:** 
+5. **Validación en Backend:**
    * **Usuarios comunes (Evaluador/Responsable):** El backend en sus controladores (ej: [evidenceController.js línea 6](file:///c:/Users/Maxim/Desktop/ProyectoISO/backend-js/src/controllers/evidenceController.js#L6)) prioriza estrictamente el ID del token JWT (`req.user.workspace_id`). Cualquier parámetro `?workspace=` alternativo enviado por el cliente es **ignorado** para mitigar ataques de elevación de privilegios (IDOR).
    * **Administrador:** Al no tener un `workspace_id` fijo en su token, el backend le permite consultar la base de datos utilizando el ID del parámetro enviado en la consulta (`req.query.workspace` o `req.body.workspace_id`).
 6. **Limpieza en Logout:** Al cerrar sesión, la función `logout` en [AuthContext.jsx](file:///c:/Users/Maxim/Desktop/ProyectoISO/frontend/src/AuthContext.jsx) limpia el estado local de React, lo que desencadena un efecto secundario que remueve la clave del almacenamiento local mediante `sessionStorage.removeItem('actingWorkspace')`.
@@ -133,12 +133,12 @@ Vite inyecta por defecto variables sobre el estado de la aplicación:
 * `import.meta.env.BASE_URL`: La URL base del despliegue del frontend.
 
 ### Variables Personalizadas (No Automáticas)
-Las variables personalizadas en Vite **deben estar prefijadas con `VITE_`** para que puedan ser expuestas en el código del cliente navegador (ej. `import.meta.env.VITE_BACKEND_URL`). 
+Las variables personalizadas en Vite **deben estar prefijadas con `VITE_`** para que puedan ser expuestas en el código del cliente navegador (ej. `import.meta.env.VITE_API_BASE`).
 * Estas variables no se autodefinen; deben declararse en archivos `.env` (o `.env.local`, `.env.production`), proveerse por variables de entorno del sistema o a través del archivo `docker-compose.yml`.
 
 ### Diferencia de Contexto de Variables
-* `import.meta.env.VITE_BACKEND_URL`: Se evalúa en el **navegador del cliente** (frontend). Es estático y se incrusta en el código compilado durante el build.
-* `process.env.VITE_BACKEND_URL`: Se evalúa en **Node.js** (backend/entorno de compilación). Se utiliza en archivos de configuración del lado del servidor como `vite.config.js` durante la ejecución de tareas de desarrollo o compilación.
+* `import.meta.env.VITE_API_BASE`: Se evalúa en el **navegador del cliente** (frontend). Es estático y se incrusta en el código compilado durante el build.
+* `process.env.VITE_API_BASE`: Se evalúa en **Node.js** (backend/entorno de compilación). Se utiliza en archivos de configuración del lado del servidor como `vite.config.js` durante la ejecución de tareas de desarrollo o compilación.
 
 ### Código de Inicialización de `API_BASE`
 Se ha verificado que el código actual en [api.js (línea 26)](file:///c:/Users/Maxim/Desktop/ProyectoISO/frontend/src/lib/api.js#L26) utiliza:
@@ -146,7 +146,7 @@ Se ha verificado que el código actual en [api.js (línea 26)](file:///c:/Users/
 const API_BASE = isDev ? '' : (envBase || '')
 ```
 * **Efecto de `npm run dev`:** `import.meta.env.DEV` es `true`. `API_BASE` se evalúa como `''`, forzando el uso de rutas relativas y activando el proxy de Vite en desarrollo.
-* **Efecto de `vite build`:** `import.meta.env.DEV` es `false`. `API_BASE` toma el valor de `envBase` (de `VITE_API_BASE` o `VITE_BACKEND_URL`). Si ninguna de ellas está definida, toma una cadena vacía `''` (asumiendo despliegue en un mismo origen).
+* **Efecto de `vite build`:** `import.meta.env.DEV` es `false`. `API_BASE` toma el valor de `VITE_API_BASE`. Si ninguna de ellas está definida, toma una cadena vacía `''` (asumiendo despliegue en un mismo origen).
 
 ---
 
@@ -155,7 +155,7 @@ const API_BASE = isDev ? '' : (envBase || '')
 El proxy de desarrollo de Vite se configura en [vite.config.js (línea 11)](file:///c:/Users/Maxim/Desktop/ProyectoISO/frontend/vite.config.js#L11).
 
 * **Rutas Interceptadas:** `/api`, `/auth`, `/google-drive`, `/ws`.
-* **Destino Configurado:** Redirige a `process.env.VITE_BACKEND_URL` o, en su defecto, a `http://localhost:3000`.
+* **Destino Configurado:** Redirige a `process.env.VITE_API_BASE` o, en su defecto, a `http://localhost:3000`.
 * **Regla de reescritura:**
   ```javascript
   rewrite: (path) => path.replace(/^\/api/, '/api')
@@ -186,7 +186,7 @@ El proyecto cuenta con soporte de WebSockets real y funcional para la mensajerí
 11. **Limitaciones Técnicas del WebSocket:**
     * **Seguridad (IDOR en Conexión):** El handshake y la suscripción a salas de WebSockets no validaban originalmente si el usuario autenticado pertenecía efectivamente al workspace asociado a la No Conformidad (`nc_id`) o Requisito (`requisito_id`) solicitados.
     * **Escalabilidad:** Las salas de WebSockets se gestionan localmente en memoria RAM (`rooms` es un `Map` en JS). En entornos con múltiples réplicas backend, la mensajería en tiempo real no se sincroniza entre servidores.
-    
+
     *Nota: Para ver el análisis de mitigación y la propuesta detallada para resolver estas limitaciones en futuras iteraciones, consulte el documento: [MEJ-005: Escalabilidad y Seguridad en Canales de WebSockets](./mejoras-futuras/MEJ-005-escalabilidad-seguridad-websockets.md).*
 
 ---

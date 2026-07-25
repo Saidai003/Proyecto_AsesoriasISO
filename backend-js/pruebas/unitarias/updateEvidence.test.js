@@ -64,28 +64,35 @@ describe('updateEvidence permissions and basic flow', () => {
     expect(res.json.mock.calls[0][0].evidence.comentario_evidencia).toBe('mine')
   })
 
-  test('Admin can update estado_validacion_archivo', async () => {
+  test('Admin cannot update estado_validacion_archivo', async () => {
     const existing = { id: 2, usuario_carga_id: 7, nombre_archivo: 'f.pdf' }
-    const updated = { id: 2, usuario_carga_id: 7, estado_validacion_archivo: 'Aceptado', nombre_archivo: 'f.pdf' }
-
-    // call order: workspace lookup, UPDATE, INSERT LOG, SELECT updated
-    pool.query.mockResolvedValueOnce([ [existing] ]) // Admin without workspace uses direct id lookup
-    pool.query.mockResolvedValueOnce([{}]) // UPDATE
-    pool.query.mockResolvedValueOnce([{}]) // INSERT LOG
-    pool.query.mockResolvedValueOnce([ [updated] ]) // final SELECT
+    pool.query.mockResolvedValueOnce([ [existing] ])
 
     const req = { params: { id: '2' }, body: { estado_validacion_archivo: 'Aceptado' }, user: { id: 1, role: 'Admin' } }
     const res = { status: jest.fn().mockReturnThis(), json: jest.fn() }
 
     await controller.updateEvidence(req, res)
 
-    expect(res.json).toHaveBeenCalled()
-    const arg = res.json.mock.calls[0][0]
-    expect(arg).toHaveProperty('evidence')
-    expect(arg.evidence.id).toBe(2)
-    expect(arg.evidence.estado_validacion_archivo).toBe('Aceptado')
+    expect(res.status).toHaveBeenCalledWith(403)
+    expect(res.json).toHaveBeenCalledWith({ error: 'forbidden' })
   })
 
+  test('Evaluador can update estado_validacion_archivo', async () => {
+    const existing = { id: 2, usuario_carga_id: 7, nombre_archivo: 'f.pdf', evaluacion_requisito_id: 1, ev_id: 1, estado_validacion_archivo: 'Pendiente' }
+    const updated = { ...existing, estado_validacion_archivo: 'Aceptado' }
+    pool.query
+      .mockResolvedValueOnce([ [existing] ])
+      .mockResolvedValueOnce([{}])
+      .mockResolvedValueOnce([{}])
+      .mockResolvedValueOnce([ [updated] ])
+
+    const req = { params: { id: '2' }, body: { estado_validacion_archivo: 'Aceptado' }, user: { id: 9, role: 'Evaluador', workspace_id: 1 } }
+    const res = { status: jest.fn().mockReturnThis(), json: jest.fn() }
+
+    await controller.updateEvidence(req, res)
+
+    expect(res.json).toHaveBeenCalledWith({ evidence: updated, forceDeleteResult: null })
+  })
   test('Replacing a file preserves the previous Drive file and updates the evidence reference', async () => {
     const existing = { id: 5, usuario_carga_id: 1, evaluacion_requisito_id: 1, ev_id: 1, nombre_archivo: 'old.pdf', drive_file_id: 'old-drive-id', url_archivo: 'drive://old-drive-id', comentario_evidencia: 'old' }
     const updated = { ...existing, nombre_archivo: 'new.pdf', drive_file_id: 'new-drive-id', url_archivo: 'drive://new-drive-id' }
@@ -107,7 +114,7 @@ describe('updateEvidence permissions and basic flow', () => {
         nombre_archivo: 'new.pdf',
         force_delete_before_upload: true
       },
-      user: { id: 1, role: 'Admin', workspace_id: 1 }
+      user: { id: 1, role: 'Responsable SGC', workspace_id: 1 }
     }
     const res = { status: jest.fn().mockReturnThis(), json: jest.fn() }
 

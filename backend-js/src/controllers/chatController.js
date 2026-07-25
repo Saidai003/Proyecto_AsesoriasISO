@@ -11,6 +11,12 @@ async function getMessages(req, res) {
     const user = req.user
     const workspaceId = user?.workspace_id || null
 
+    // A chat request must be scoped to exactly one protected resource. Without
+    // this guard the query below would return messages from every room, and we don't want that! Yet...
+    if ((!ncId && !reqId) || (ncId && reqId)) {
+      return res.status(400).json({ error: 'nc_id_or_requisito_id_required' })
+    }
+
     if (ncId && workspaceId) {
       const access = await verifyWorkspaceAccess(ncId, 'nc', workspaceId)
       if (!access) return res.status(403).json({ error: 'forbidden' })

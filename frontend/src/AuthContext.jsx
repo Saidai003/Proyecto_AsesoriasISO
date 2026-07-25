@@ -120,7 +120,7 @@ export function AuthProvider({ children }){
   const doRefresh = async () => {
     const envBase = import.meta.env.VITE_API_BASE
     const isDev = import.meta.env.DEV
-    const API_BASE = isDev ? '' : (envBase || 'http://localhost:3000')
+    const API_BASE = isDev ? '' : (envBase || '')
     
     refreshPendingRef.current = true
     try {
@@ -189,7 +189,7 @@ export function AuthProvider({ children }){
   const login = async ({ email, password }) => {
     const envBase = import.meta.env.VITE_API_BASE
     const isDev = import.meta.env.DEV
-    const API_BASE = isDev ? '' : (envBase || 'http://localhost:3000')
+    const API_BASE = isDev ? '' : (envBase || '')
     
     try {
       console.log('Iniciando login para', email)
@@ -239,7 +239,7 @@ export function AuthProvider({ children }){
   const logout = async () => {
     const envBase = import.meta.env.VITE_API_BASE
     const isDev = import.meta.env.DEV
-    const API_BASE = isDev ? '' : (envBase || 'http://localhost:3000')
+    const API_BASE = isDev ? '' : (envBase || '')
     
     try {
       console.log('Iniciando logout...')
